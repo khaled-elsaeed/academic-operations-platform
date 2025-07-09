@@ -28,7 +28,7 @@ class UpdateStudentRequest extends FormRequest
             'academic_id' => 'required|string|max:50|unique:students,academic_id,' . $studentId,
             'national_id' => 'required|string|max:50|unique:students,national_id,' . $studentId,
             'academic_email' => 'required|email|unique:students,academic_email,' . $studentId,
-            'level' => 'required|string|max:50',
+            'level_id' => 'required|exists:levels,id',
             'cgpa' => 'required|numeric|min:0|max:4',
             'program_id' => 'required|exists:programs,id',
         ];

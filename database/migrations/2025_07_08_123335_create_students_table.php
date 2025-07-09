@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('academic_id')->unique();
             $table->string('national_id')->unique();
             $table->string('academic_email')->unique();
-            $table->string('level');
+            $table->foreignId('level_id')->constrained()->restrictOnDelete()->cascadeOnUpdate();
             $table->decimal('cgpa', 4, 3);
             $table->enum('gender', ['male', 'female']);
             $table->foreignId('program_id')->constrained()->restrictOnDelete()->cascadeOnUpdate();

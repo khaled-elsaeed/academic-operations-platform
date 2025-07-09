@@ -11,8 +11,12 @@ class FacultyFactory extends Factory
 
     public function definition(): array
     {
+        // Generate a realistic Egyptian faculty name without using example arrays
+        $facultyPrefix = 'Faculty of ';
+        $field = ucfirst($this->faker->unique()->word());
+        $university = 'Cairo University';
         return [
-            'name' => $this->faker->unique()->company . ' Faculty',
+            'name' => $facultyPrefix . $field . ', ' . $university,
         ];
     }
 } 

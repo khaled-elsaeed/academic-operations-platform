@@ -15,7 +15,7 @@ class TermController extends Controller
     public function index(Request $request)
     {
         $terms = \App\Models\Term::all();
-        return response()->json($terms);
+        return successResponse('Terms fetched successfully.', $terms);
     }
 
     /**

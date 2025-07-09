@@ -1,6 +1,6 @@
 @extends('layouts.home')
 
-@section('title', 'Admin Dashboard | AcadOps')
+@section('title', 'Admin Home | AcadOps')
 
 @section('page-content')
 <div class="container-xxl flex-grow-1 container-p-y">
@@ -78,15 +78,18 @@
   </div>
 
   <!-- Page Header and Actions -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold">Students</h4>
-    <div>
-      <button class="btn btn-success me-2" id="importStudentsBtn" type="button" data-bs-toggle="modal" data-bs-target="#importStudentsModal">
-        Import Students
-      </button>
-      <button class="btn btn-primary" id="addStudentBtn" type="button" data-bs-toggle="modal" data-bs-target="#studentModal">Add Student</button>
-    </div>
-  </div>
+  <x-ui.page-header 
+    title="Students"
+    description="Manage all student records, add new students, or import in bulk using the options on the right."
+    icon="bx bx-group"
+  >
+    <button class="btn btn-success me-2" id="importStudentsBtn" type="button" data-bs-toggle="modal" data-bs-target="#importStudentsModal">
+      <i class="bx bx-upload me-1"></i> Import Students
+    </button>
+    <button class="btn btn-primary" id="addStudentBtn" type="button" data-bs-toggle="modal" data-bs-target="#studentModal">
+      <i class="bx bx-plus me-1"></i> Add Student
+    </button>
+  </x-ui.page-header>
 
   <!-- Students DataTable -->
   <x-ui.datatable
@@ -141,8 +144,11 @@
             <input type="email" class="form-control" id="academic_email" name="academic_email" required>
           </div>
           <div class="col-md-6 mb-3">
-            <label for="level" class="form-label">Level</label>
-            <input type="text" class="form-control" id="level" name="level" required>
+            <label for="level_id" class="form-label">Level</label>
+            <select class="form-control" id="level_id" name="level_id" required>
+              <option value="">Select Level</option>
+              <!-- Options will be loaded via AJAX -->
+            </select>
           </div>
           <div class="col-md-6 mb-3">
             <label for="cgpa" class="form-label">CGPA</label>
@@ -206,165 +212,302 @@
       <button type="submit" class="btn btn-success" id="importStudentsSubmitBtn" form="importStudentsForm">Import</button>
     </x-slot>
   </x-ui.modal>
+
+  {{-- Add the modal for downloading enrollment document by term --}}
+  <x-ui.modal 
+      id="downloadEnrollmentModal"
+      title="Download Enrollment Document"
+      size="md"
+      :scrollable="false"
+      class="download-enrollment-modal"
+  >
+      <x-slot name="slot">
+          <form id="downloadEnrollmentForm">
+              <input type="hidden" id="modal_student_id" name="student_id">
+              <div class="mb-3">
+                  <label for="term_id" class="form-label">Select Term</label>
+                  <select class="form-control" id="term_id" name="term_id" required>
+                      <option value="">Select Term</option>
+                  </select>
+              </div>
+          </form>
+      </x-slot>
+      <x-slot name="footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+              Close
+          </button>
+          <button type="button" class="btn btn-primary" id="downloadEnrollmentBtn">Download</button>
+      </x-slot>
+  </x-ui.modal>
 </div>
 @endsection
 
 @push('scripts')
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    // Load programs into select
-    function loadPrograms(selectedId = null) {
-      $.ajax({
-        url: '{{ route('admin.programs.index') }}',
-        method: 'GET',
-        success: function (data) {
-          let $programSelect = $('#program_id');
-          $programSelect.empty().append('<option value="">Select Program</option>');
-          data.forEach(function (program) {
-            $programSelect.append(
-              $('<option>', { value: program.id, text: program.name })
-            );
-          });
-          if (selectedId) $programSelect.val(selectedId);
-        }
+/**
+ * Loads all programs into the program select dropdown.
+ * @function loadPrograms
+ * @param {number|null} selectedId - The program ID to preselect (optional).
+ * @returns {void}
+ */
+function loadPrograms(selectedId = null) {
+  $.ajax({
+    url: '{{ route('admin.programs.index') }}',
+    method: 'GET',
+    success: function (response) {
+      let data = response.data;
+      let $programSelect = $('#program_id');
+      $programSelect.empty().append('<option value="">Select Program</option>');
+      data.forEach(function (program) {
+        $programSelect.append(
+          $('<option>', { value: program.id, text: program.name })
+        );
       });
+      if (selectedId) $programSelect.val(selectedId);
     }
+  });
+}
 
-    // Add Student Button
-    $('#addStudentBtn').on('click', function () {
-      $('#studentForm')[0].reset();
-      $('#student_id').val('');
-      $('#studentModal .modal-title').text('Add Student');
-      $('#saveStudentBtn').text('Save');
-      loadPrograms();
-      $('#studentModal').modal('show');
+/**
+ * Loads all levels into the level select dropdown.
+ * @function populateLevelDropdown
+ * @param {number|null} selectedLevelId - The level ID to preselect (optional).
+ * @returns {void}
+ */
+function fetchLevels() {
+  return $.getJSON("{{ route('admin.levels.index') }}");
+}
+function populateLevelDropdown(selectedLevelId = null) {
+  fetchLevels().done(function(levels) {
+    let levelSelect = $('#level_id');
+    levelSelect.empty().append('<option value="">Select Level</option>');
+    (levels.data || levels).forEach(function(item) {
+      levelSelect.append($('<option>', { value: item.id, text: item.name }));
     });
+    if (selectedLevelId) {
+      levelSelect.val(selectedLevelId);
+    }
+  });
+}
 
-    // Handle Add/Edit Student Form Submit
-    $('#studentForm').on('submit', function (e) {
-      e.preventDefault();
-      let studentId = $('#student_id').val();
-      let url = studentId
-        ? '{{ url('admin/students') }}/' + studentId
-        : '{{ route('admin.students.store') }}';
-      let method = studentId ? 'PUT' : 'POST';
-      let formData = $(this).serialize();
-      $.ajax({
-        url: url,
-        method: method,
-        data: formData,
-        success: function (response) {
-          $('#studentModal').modal('hide');
-          $('#students-table').DataTable().ajax.reload(null, false);
-          Swal.fire('Success', 'Student has been saved successfully.', 'success');
-        },
-        error: function (xhr) {
-          $('#studentModal').modal('hide');
-          Swal.fire('Error', 'An error occurred. Please check your input.', 'error');
-        }
-      });
-    });
+/**
+ * Loads student statistics and updates stat cards.
+ * @function loadStudentStats
+ * @returns {void}
+ */
+function loadStudentStats() {
+  // Show spinners and hide stat values before AJAX
+  $('#stat-students, #stat-male-students, #stat-female-students, #stat-students-updated, #stat-male-students-updated, #stat-female-students-updated').hide();
+  $('#stat-students-spinner, #stat-male-students-spinner, #stat-female-students-spinner').show();
 
-    // Edit Student Button (delegated)
-    $(document).on('click', '.editStudentBtn', function () {
-      let student = $(this).data('student');
-      $('#student_id').val(student.id);
-      $('#name_en').val(student.name_en);
-      $('#name_ar').val(student.name_ar);
-      $('#academic_id').val(student.academic_id);
-      $('#national_id').val(student.national_id);
-      $('#academic_email').val(student.academic_email);
-      $('#level').val(student.level);
-      $('#cgpa').val(student.cgpa);
-      $('#gender').val(student.gender);
-      loadPrograms(student.program_id);
-      $('#studentModal .modal-title').text('Edit Student');
-      $('#saveStudentBtn').text('Update');
-      $('#studentModal').modal('show');
-    });
+  $.ajax({
+    url: '{{ route('admin.students.stats') }}',
+    method: 'GET',
+    success: function (response) {
+      let data = response.data;
+      $('#stat-students').text(data.students.total ?? '--');
+      $('#stat-students-updated').text(data.students.lastUpdateTime ?? '--');
+      $('#stat-male-students').text(data.maleStudents.total ?? '--');
+      $('#stat-male-students-updated').text(data.maleStudents.lastUpdateTime ?? '--');
+      $('#stat-female-students').text(data.femaleStudents.total ?? '--');
+      $('#stat-female-students-updated').text(data.femaleStudents.lastUpdateTime ?? '--');
+      // Hide spinners and show stat values
+      $('#stat-students, #stat-male-students, #stat-female-students, #stat-students-updated, #stat-male-students-updated, #stat-female-students-updated').show();
+      $('#stat-students-spinner, #stat-male-students-spinner, #stat-female-students-spinner').hide();
+    },
+    error: function() {
+      $('#stat-students, #stat-male-students, #stat-female-students, #stat-students-updated, #stat-male-students-updated, #stat-female-students-updated').text('N/A');
+      $('#stat-students, #stat-male-students, #stat-female-students, #stat-students-updated, #stat-male-students-updated, #stat-female-students-updated').show();
+      $('#stat-students-spinner, #stat-male-students-spinner, #stat-female-students-spinner').hide();
+    }
+  });
+}
 
-    // Delete Student Button (delegated)
-    $(document).on('click', '.deleteStudentBtn', function () {
-      let studentId = $(this).data('id');
-      Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          $.ajax({
-            url: '{{ url('admin/students') }}/' + studentId,
-            method: 'DELETE',
-            success: function () {
-              $('#students-table').DataTable().ajax.reload(null, false);
-              Swal.fire('Deleted!', 'Student has been deleted.', 'success');
-            },
-            error: function () {
-              Swal.fire('Error', 'Failed to delete student.', 'error');
-            }
-          });
-        }
-      });
-    });
+/**
+ * Handles the Add Student button click event.
+ * @function handleAddStudentBtn
+ * @returns {void}
+ */
+function handleAddStudentBtn() {
+  $('#addStudentBtn').on('click', function () {
+    $('#studentForm')[0].reset();
+    $('#student_id').val('');
+    $('#studentModal .modal-title').text('Add Student');
+    $('#saveStudentBtn').text('Save');
+    loadPrograms();
+    populateLevelDropdown();
+    $('#studentModal').modal('show');
+  });
+}
 
-    // Show spinners and hide stat values before AJAX
-    $('#stat-students, #stat-male-students, #stat-female-students, #stat-students-updated, #stat-male-students-updated, #stat-female-students-updated').hide();
-    $('#stat-students-spinner, #stat-male-students-spinner, #stat-female-students-spinner').show();
-
-    // Load student statistics
+/**
+ * Handles the Add/Edit Student form submission.
+ * @function handleStudentFormSubmit
+ * @returns {void}
+ */
+function handleStudentFormSubmit() {
+  $('#studentForm').on('submit', function (e) {
+    e.preventDefault();
+    let studentId = $('#student_id').val();
+    let url = studentId
+      ? '{{ url('admin/students') }}/' + studentId
+      : '{{ route('admin.students.store') }}';
+    let method = studentId ? 'PUT' : 'POST';
+    let formData = $(this).serialize();
     $.ajax({
-      url: '{{ route('admin.students.stats') }}',
-      method: 'GET',
-      success: function(data) {
-        $('#stat-students').text(data.students.total ?? '--');
-        $('#stat-students-updated').text(data.students.lastUpdateTime ?? '--');
-        $('#stat-male-students').text(data.maleStudents.total ?? '--');
-        $('#stat-male-students-updated').text(data.maleStudents.lastUpdateTime ?? '--');
-        $('#stat-female-students').text(data.femaleStudents.total ?? '--');
-        $('#stat-female-students-updated').text(data.femaleStudents.lastUpdateTime ?? '--');
-        // Hide spinners and show stat values
-        $('#stat-students, #stat-male-students, #stat-female-students, #stat-students-updated, #stat-male-students-updated, #stat-female-students-updated').show();
-        $('#stat-students-spinner, #stat-male-students-spinner, #stat-female-students-spinner').hide();
+      url: url,
+      method: method,
+      data: formData,
+      success: function (response) {
+        $('#studentModal').modal('hide');
+        $('#students-table').DataTable().ajax.reload(null, false);
+        Swal.fire('Success', 'Student has been saved successfully.', 'success');
       },
-      error: function() {
-        $('#stat-students, #stat-male-students, #stat-female-students, #stat-students-updated, #stat-male-students-updated, #stat-female-students-updated').text('N/A');
-        // Hide spinners and show stat values
-        $('#stat-students, #stat-male-students, #stat-female-students, #stat-students-updated, #stat-male-students-updated, #stat-female-students-updated').show();
-        $('#stat-students-spinner, #stat-male-students-spinner, #stat-female-students-spinner').hide();
+      error: function (xhr) {
+        $('#studentModal').modal('hide');
+        Swal.fire('Error', 'An error occurred. Please check your input.', 'error');
       }
     });
+  });
+}
 
-    // Import Students AJAX
-    $('#importStudentsForm').on('submit', function(e) {
-      e.preventDefault();
-      let formData = new FormData(this);
-      $('#importStudentsSubmitBtn').prop('disabled', true).text('Importing...');
-      $.ajax({
-        url: '{{ route('admin.students.import') }}',
-        method: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function(response) {
-          $('#importStudentsModal').modal('hide');
-          $('#students-table').DataTable().ajax.reload(null, false);
-          Swal.fire('Success', response.message, 'success');
-        },
-        error: function(xhr) {
-          $('#importStudentsModal').modal('hide');
-          let msg = xhr.responseJSON?.message || 'Import failed. Please check your file.';
-          Swal.fire('Error', msg, 'error');
-        },
-        complete: function() {
-          $('#importStudentsSubmitBtn').prop('disabled', false).text('Import');
-        }
-      });
+/**
+ * Handles the Edit Student button click event (delegated).
+ * @function handleEditStudentBtn
+ * @returns {void}
+ */
+function handleEditStudentBtn() {
+  $(document).on('click', '.editStudentBtn', function () {
+    let studentId = $(this).data('id');
+    $.ajax({
+      url: '{{ url('admin/students') }}/' + studentId,
+      method: 'GET',
+      success: function (student) {
+        $('#student_id').val(student.id);
+        $('#name_en').val(student.name_en);
+        $('#name_ar').val(student.name_ar);
+        $('#academic_id').val(student.academic_id);
+        $('#national_id').val(student.national_id);
+        $('#academic_email').val(student.academic_email);
+        $('#cgpa').val(student.cgpa);
+        $('#gender').val(student.gender);
+        loadPrograms(student.program_id);
+        populateLevelDropdown(student.level_id);
+        $('#studentModal .modal-title').text('Edit Student');
+        $('#saveStudentBtn').text('Update');
+        $('#studentModal').modal('show');
+      },
+      error: function () {
+        Swal.fire('Error', 'Failed to fetch student data.', 'error');
+      }
     });
   });
+}
+
+/**
+ * Handles the Delete Student button click event (delegated).
+ * @function handleDeleteStudentBtn
+ * @returns {void}
+ */
+function handleDeleteStudentBtn() {
+  $(document).on('click', '.deleteStudentBtn', function () {
+    let studentId = $(this).data('id');
+    Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        $.ajax({
+          url: '{{ url('admin/students') }}/' + studentId,
+          method: 'DELETE',
+          success: function () {
+            $('#students-table').DataTable().ajax.reload(null, false);
+            Swal.fire('Deleted!', 'Student has been deleted.', 'success');
+          },
+          error: function () {
+            Swal.fire('Error', 'Failed to delete student.', 'error');
+          }
+        });
+      }
+    });
+  });
+}
+
+/**
+ * Handles the Import Students form submission via AJAX.
+ * @function handleImportStudentsForm
+ * @returns {void}
+ */
+function handleImportStudentsForm() {
+  $('#importStudentsForm').on('submit', function(e) {
+    e.preventDefault();
+    let formData = new FormData(this);
+    $('#importStudentsSubmitBtn').prop('disabled', true).text('Importing...');
+    $.ajax({
+      url: '{{ route('admin.students.import') }}',
+      method: 'POST',
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function(response) {
+        $('#importStudentsModal').modal('hide');
+        $('#students-table').DataTable().ajax.reload(null, false);
+        Swal.fire('Success', response.message, 'success');
+      },
+      error: function(xhr) {
+        $('#importStudentsModal').modal('hide');
+        let msg = xhr.responseJSON?.message || 'Import failed. Please check your file.';
+        Swal.fire('Error', msg, 'error');
+      },
+      complete: function() {
+        $('#importStudentsSubmitBtn').prop('disabled', false).text('Import');
+      }
+    });
+  });
+}
+
+// Handle click on download button
+$(document).on('click', '.downloadEnrollmentBtn', function() {
+    var studentId = $(this).data('id');
+    $('#modal_student_id').val(studentId);
+    // Fetch terms and populate dropdown
+    $.getJSON("{{ route('admin.terms.index') }}", function(response) {
+        var $termSelect = $('#term_id');
+        $termSelect.empty().append('<option value="">Select Term</option>');
+        (response.data || []).forEach(function(term) {
+            $termSelect.append('<option value="'+term.id+'">'+term.name+'</option>');
+        });
+        $('#downloadEnrollmentModal').modal('show');
+    });
+});
+
+// Handle download button in modal
+$('#downloadEnrollmentBtn').on('click', function() {
+    var studentId = $('#modal_student_id').val();
+    var termId = $('#term_id').val();
+    if (!termId) {
+        Swal.fire('Error', 'Please select a term.', 'error');
+        return;
+    }
+    // Download enrollment document for selected term
+    window.location.href = '/enrollment/download/' + studentId + '?term_id=' + termId;
+    $('#downloadEnrollmentModal').modal('hide');
+});
+
+// Main entry point
+$(document).ready(function () {
+  loadStudentStats();
+  handleAddStudentBtn();
+  handleStudentFormSubmit();
+  handleEditStudentBtn();
+  handleDeleteStudentBtn();
+  handleImportStudentsForm();
+});
 </script>
 @endpush
 

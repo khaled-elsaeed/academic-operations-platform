@@ -43,7 +43,7 @@ class Course extends Model
     /**
      * Get a comma-separated string of prerequisite course names.
      */
-    protected function prerequisite_names(): Attribute
+    protected function prerequisiteNames(): Attribute
     {
         return Attribute::make(
             get: fn () => $this->prerequisites->pluck('name')->join(', ')

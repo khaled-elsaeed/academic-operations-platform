@@ -36,7 +36,12 @@
 <script src="{{ asset('vendor/libs/datatables/dataTables.responsive.min.js') }}?v={{ config('app.version') }}"></script>
 <script src="{{ asset('vendor/libs/datatables/responsive.bootstrap5.min.js') }}?v={{ config('app.version') }}"></script>
 <script>
-$(document).ready(function() {
+/**
+ * Initializes the DataTable with server-side processing and filter support.
+ * @function initializeDataTable
+ * @returns {void}
+ */
+function initializeDataTable() {
     var table = $('#{{ $tableId }}').DataTable({
         processing: true,
         serverSide: true,
@@ -63,6 +68,11 @@ $(document).ready(function() {
             table.ajax.reload();
         });
     @endforeach
+}
+
+// Main entry point
+$(document).ready(function() {
+    initializeDataTable();
 });
 </script>
 @endpush

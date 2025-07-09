@@ -8,12 +8,20 @@ use Illuminate\View\Component;
 
 class Stat extends Component
 {
+    public $color;
+    public $icon;
+    public $label;
+    public $id;
+
     /**
      * Create a new component instance.
      */
-    public function __construct()
+    public function __construct($color = 'primary', $icon = 'bx bx-user', $label = '', $id = null)
     {
-        //
+        $this->color = $color;
+        $this->icon = $icon;
+        $this->label = $label;
+        $this->id = $id ? 'stat-' . $id : 'stat-card';
     }
 
     /**

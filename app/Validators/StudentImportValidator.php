@@ -21,7 +21,7 @@ class StudentImportValidator
             'academic_id'    => 'required|max:50|unique:students,academic_id',
             'national_id'    => 'required|max:50',
             'academic_email' => 'required|email|unique:students,academic_email',
-            'level'          => 'required|max:50',
+            'level'          => 'required|exists:levels,name',
             'cgpa'           => 'nullable|numeric|min:0|max:4',
             'gender'         => 'required|in:male,female',
             'program_name'     => 'required|exists:programs,name',

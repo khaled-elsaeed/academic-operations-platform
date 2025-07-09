@@ -15,22 +15,46 @@ use App\Validators\StudentImportValidator;
 
 class StudentService
 {
+    /**
+     * Create a new student.
+     *
+     * @param array $data
+     * @return Student
+     */
     public function createStudent(array $data): Student
     {
         return Student::create($data);
     }
 
+    /**
+     * Update an existing student.
+     *
+     * @param Student $student
+     * @param array $data
+     * @return Student
+     */
     public function updateStudent(Student $student, array $data): Student
     {
         $student->update($data);
         return $student;
     }
 
+    /**
+     * Delete a student.
+     *
+     * @param Student $student
+     * @return void
+     */
     public function deleteStudent(Student $student): void
     {
         $student->delete();
     }
 
+    /**
+     * Get student statistics.
+     *
+     * @return array
+     */
     public function getStats(): array
     {
         $latestStudent = Student::latest('created_at')->value('created_at');
@@ -53,12 +77,20 @@ class StudentService
         ];
     }
 
-    public function getDatatable(): \Illuminate\Http\JsonResponse
+    /**
+     * Get datatable JSON response for students.
+     *
+     * @return JsonResponse
+     */
+    public function getDatatable(): JsonResponse
     {
-        $query = Student::with('program');
+        $query = Student::with(['program', 'level']);
         return DataTables::of($query)
             ->addColumn('program', function($student) {
                 return $student->program ? $student->program->name : '-';
+            })
+            ->addColumn('level', function($student) {
+                return $student->level ? $student->level->name : '-';
             })
             ->addColumn('action', function($student) {
                 return $this->renderActionButtons($student);
@@ -67,13 +99,19 @@ class StudentService
             ->make(true);
     }
 
-    protected function renderActionButtons($student)
+    /**
+     * Render action buttons for datatable rows.
+     *
+     * @param Student $student
+     * @return string
+     */
+    protected function renderActionButtons($student): string
     {
         return '
         <div class="d-flex gap-2">
           <button type="button"
             class="btn btn-sm btn-icon btn-primary rounded-circle editStudentBtn"
-            data-student=\'' . e(json_encode($student)) . '\'
+            data-id="' . e($student->id) . '"
             title="Edit">
             <i class="bx bx-edit"></i>
           </button>
@@ -83,12 +121,19 @@ class StudentService
             title="Delete">
             <i class="bx bx-trash"></i>
           </button>
+          <button type="button"
+            class="btn btn-sm btn-info ms-1 downloadEnrollmentBtn"
+            data-id="' . e($student->id) . '"
+            title="Download Enrollment Document">
+            <i class="bx bx-download"></i>
+          </button>
         </div>
         ';
     }
 
     /**
      * Import students from an uploaded Excel file. Throws on first invalid row.
+     *
      * @param UploadedFile $file
      * @return array [success => bool, message => string]
      * @throws \Illuminate\Validation\ValidationException
@@ -106,6 +151,7 @@ class StudentService
 
     /**
      * Validate student rows. Throws on first invalid row.
+     *
      * @param array $rows
      * @return array
      * @throws \Illuminate\Validation\ValidationException
@@ -113,7 +159,7 @@ class StudentService
     public function validateStudents(array $rows): array
     {
         $validRows = [];
-        $rowNumber = 1; 
+        $rowNumber = 1;
         foreach ($rows as $row) {
             $rowNumber++;
             StudentImportValidator::validateRow($row, $rowNumber);
@@ -124,6 +170,7 @@ class StudentService
 
     /**
      * Create students from valid rows.
+     *
      * @param array $validRows
      * @return void
      */
@@ -153,12 +200,11 @@ class StudentService
 
     /**
      * Download the students import template as an Excel file.
+     *
      * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
      */
     public function downloadTemplate()
     {
         return Excel::download(new StudentsTemplateExport, 'students_import_template.xlsx');
     }
-
-   
 } 

@@ -25,7 +25,7 @@ class AuthController extends Controller
         ]);
         $result = $this->authService->login($validated);
         if ($result) {
-            return redirect()->intended('admin/dashboard');
+            return redirect()->intended('admin/home');
         }
         return back()->withErrors(['email' => 'Invalid credentials.']);
     }

@@ -36,7 +36,7 @@ class Sidebar extends Component
     }
 
     /**
-     * Get Admin menu items (only Dashboard)
+     * Get Admin menu items
      */
     private function getAdminMenuItems(): array
     {
@@ -54,10 +54,44 @@ class Sidebar extends Component
                 'active' => request()->routeIs('admin.students.*'),
             ],
             [
+                'title' => 'Enrollments',
+                'icon' => 'bx bx-list-check',
+                'route' => '#',
+                'active' => request()->routeIs('admin.enrollments.*'),
+                'children' => [
+                    [
+                        'title' => 'View Enrollments',
+                        'icon' => 'bx bx-table',
+                        'route' => route('admin.enrollments.index'),
+                        'active' => request()->routeIs('admin.enrollments.index'),
+                    ],
+                    [
+                        'title' => 'Add Enrollment',
+                        'icon' => 'bx bx-plus',
+                        'route' => route('admin.enrollments.add'),
+                        'active' => request()->routeIs('admin.enrollments.add'),
+                    ],
+                ],
+            ],
+            [
                 'title' => 'Available Courses',
                 'icon' => 'bx bx-book',
-                'route' => route('admin.available_courses.index'),
+                'route' => '#',
                 'active' => request()->routeIs('admin.available_courses.*'),
+                'children' => [
+                    [
+                        'title' => 'View Available Courses',
+                        'icon' => 'bx bx-table',
+                        'route' => route('admin.available_courses.index'),
+                        'active' => request()->routeIs('admin.available_courses.index'),
+                    ],
+                    [
+                        'title' => 'Add Available Course',
+                        'icon' => 'bx bx-plus',
+                        'route' => route('admin.available_courses.add'),
+                        'active' => request()->routeIs('admin.available_courses.add'),
+                    ],
+                ],
             ],
         ];
     }

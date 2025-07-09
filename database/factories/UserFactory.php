@@ -23,13 +23,17 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $arabicNames = ['أحمد', 'محمد', 'محمود', 'مصطفى', 'عبدالله', 'سارة', 'فاطمة', 'مريم', 'ياسمين', 'نور'];
+        $arabicSurnames = ['حسن', 'سعيد', 'عبدالعزيز', 'علي', 'إبراهيم', 'يوسف', 'رمضان', 'سليمان', 'فاروق', 'منصور'];
+        $firstName = $this->faker->randomElement(['Ahmed','Mohamed','Mahmoud','Mostafa','Abdallah','Sara','Fatma','Mariam','Yasmin','Nour']);
+        $lastName = $this->faker->randomElement(['Hassan','Saeed','Abdelaziz','Ali','Ibrahim','Youssef','Ramadan','Suleiman','Farouk','Mansour']);
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'email' => strtolower($firstName) . '.' . strtolower($lastName) . $this->faker->unique()->numberBetween(1, 9999) . '@cu.edu.eg',
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
-            'gender' => fake()->randomElement(['male', 'female']),
         ];
     }
 

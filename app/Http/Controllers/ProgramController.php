@@ -7,9 +7,9 @@ use Illuminate\Http\JsonResponse;
 
 class ProgramController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(): \Illuminate\Http\JsonResponse
     {
         $programs = Program::all();
-        return response()->json($programs);
+        return successResponse('Programs fetched successfully.', $programs);
     }
 } 

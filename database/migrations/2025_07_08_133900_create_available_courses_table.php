@@ -15,10 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('course_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
             $table->foreignId('term_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
-            $table->foreignId('program_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
-            $table->integer('level');
-            $table->integer('capacity')->default(30);
-            $table->unique(['course_id', 'term_id', 'program_id']);
+            $table->integer('min_capacity')->default(1);
+            $table->integer('max_capacity')->default(30);
+            $table->boolean('is_universal')->default(false);
             $table->timestamps();
         });
     }

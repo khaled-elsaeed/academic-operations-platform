@@ -1,4 +1,4 @@
-<div class="modal fade {{ $class }}" id="{{ $id }}" tabindex="-1" aria-hidden="true">
+<div class="modal fade {{ $class }}" id="{{ $id }}" tabindex="-1">
     <div class="modal-dialog {{ $scrollable ? 'modal-dialog-scrollable' : '' }} {{ $size ? 'modal-' . $size : '' }}" role="document">
         <div class="modal-content">
             <div class="modal-header">

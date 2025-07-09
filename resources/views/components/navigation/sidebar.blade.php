@@ -13,12 +13,31 @@
 
     <ul class="menu-inner py-1">
         @foreach($menuItems as $item)
-            <li class="menu-item {{ $item['active'] ? 'active' : '' }}">
-                <a href="{{ $item['route'] }}" class="menu-link">
-                    <i class="menu-icon tf-icons {{ $item['icon'] }}"></i>
-                    <div>{{ $item['title'] }}</div>
-                </a>
-            </li>
+            @if(isset($item['children']))
+                <li class="menu-item {{ $item['active'] ? 'active open' : '' }}">
+                    <a href="javascript:void(0);" class="menu-link menu-toggle">
+                        <i class="menu-icon tf-icons {{ $item['icon'] }}"></i>
+                        <div>{{ $item['title'] }}</div>
+                    </a>
+                    <ul class="menu-sub">
+                        @foreach($item['children'] as $child)
+                            <li class="menu-item {{ $child['active'] ? 'active' : '' }}">
+                                <a href="{{ $child['route'] }}" class="menu-link">
+                                    <i class="menu-icon tf-icons {{ $child['icon'] }}"></i>
+                                    <div>{{ $child['title'] }}</div>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </li>
+            @else
+                <li class="menu-item {{ $item['active'] ? 'active' : '' }}">
+                    <a href="{{ $item['route'] }}" class="menu-link">
+                        <i class="menu-icon tf-icons {{ $item['icon'] }}"></i>
+                        <div>{{ $item['title'] }}</div>
+                    </a>
+                </li>
+            @endif
         @endforeach
     </ul>
 </aside>

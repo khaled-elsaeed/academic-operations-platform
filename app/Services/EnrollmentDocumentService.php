@@ -4,9 +4,10 @@ namespace App\Services;
 
 use App\Models\Student;
 use App\Services\EnrollmentTemplateService;
-use PDF;
 use Exception;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Mpdf\Mpdf;
 
 class EnrollmentDocumentService
 {
@@ -43,13 +44,44 @@ class EnrollmentDocumentService
             // Prepare data for PDF
             $pdfData = $this->prepareDataForDocument($studentWithEnrollments, $enrollments, 'pdf');
 
-            // Configure PDF settings for better performance
-            $pdf = PDF::loadView('pdf.enrollment', $pdfData);
-            
-            
+            // Render Blade view to HTML
+            $html = view('pdf.enrollment', $pdfData)->render();
+
+            // Create mPDF instance with custom Cairo font configuration
+            $defaultConfig = (new \Mpdf\Config\ConfigVariables())->getDefaults();
+            $fontDirs = $defaultConfig['fontDir'];
+
+            $defaultFontConfig = (new \Mpdf\Config\FontVariables())->getDefaults();
+            $fontData = $defaultFontConfig['fontdata'];
+
+            $mpdf = new Mpdf([
+                'mode' => 'utf-8',
+                'format' => 'A4',
+                'fontDir' => array_merge($fontDirs, [
+                    base_path('public/fonts/KFGQPC'),
+                ]),
+                'fontdata' => $fontData + [
+                    'kfgqpc' => [
+                        'R' => 'ArbFONTS-UthmanTN1-Ver10.otf',
+                        'B' => 'ArbFONTS-Uthman-tahaTN1-bold.otf',
+                        'I' => 'ArbFONTS-4_6.otf',
+                        'BI' => 'ArbFONTS-UthmanTN1B-Ver10.otf',
+                        'useOTL' => 0xFF,
+                        'useKashida' => 75,
+                    ],
+                ],
+                'default_font' => 'kfgqpc', 
+            ]);
+
+            // Write HTML to mPDF
+            $mpdf->WriteHTML($html);
+
             $filename = "enrollment_{$student->academic_id}.pdf";
-            
-            return $pdf->stream($filename);
+
+            // Output as stream
+            return response($mpdf->Output($filename, 'S'), 200)
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', "inline; filename=\"$filename\"");
 
         } catch (Exception $e) {
             Log::error('EnrollmentDocumentService@downloadAsPdf', [
@@ -160,17 +192,27 @@ class EnrollmentDocumentService
             $enrollmentData = [];
             $totalHours = 0;
             
+            \Log::info('Preparing enrollment data for PDF', [
+                'student_id' => $student->id,
+                'enrollments_count' => $enrollments->count(),
+            ]);
             for ($i = 1; $i <= 10; $i++) {
                 if (isset($enrollments[$i - 1])) {
                     $enrollment = $enrollments[$i - 1];
                     $enrollmentData["course_code_{$i}"] = $enrollment->course->code ?? '';
-                    $enrollmentData["course_name_{$i}"] = $enrollment->course->title ?? '';
+                    $enrollmentData["course_title_{$i}"] = Str::limit($enrollment->course->title ?? '', 40, '...');
                     $enrollmentData["course_hours_{$i}"] = $enrollment->course->credit_hours ?? '';
                     $totalHours += (int)($enrollment->course->credit_hours ?? 0);
+                    \Log::info("Enrollment row {$i} populated", [
+                        'course_code' => $enrollmentData["course_code_{$i}"],
+                        'course_title' => $enrollmentData["course_title_{$i}"],
+                        'course_hours' => $enrollmentData["course_hours_{$i}"],
+                    ]);
                 } else {
                     $enrollmentData["course_code_{$i}"] = '';
-                    $enrollmentData["course_name_{$i}"] = '';
+                    $enrollmentData["course_title_{$i}"] = '';
                     $enrollmentData["course_hours_{$i}"] = '';
+                    \Log::info("Enrollment row {$i} left blank");
                 }
             }
             

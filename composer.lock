@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a402ddcc3daa4eae34a3bf25bd98437d",
+    "content-hash": "c356d8df73421f2f1275cdbcc9e532c0",
     "packages": [
         {
             "name": "brick/math",
@@ -134,62 +134,6 @@
                 }
             ],
             "time": "2024-02-09T16:56:22+00:00"
-        },
-        {
-            "name": "carlos-meneses/laravel-mpdf",
-            "version": "2.1.13",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/mccarlosen/laravel-mpdf.git",
-                "reference": "f2461faf0c5d328d28de13c3dcc14e70d77aef83"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/mccarlosen/laravel-mpdf/zipball/f2461faf0c5d328d28de13c3dcc14e70d77aef83",
-                "reference": "f2461faf0c5d328d28de13c3dcc14e70d77aef83",
-                "shasum": ""
-            },
-            "require": {
-                "mpdf/mpdf": "^8.0|^8.1",
-                "php": "^5.6|^7.0|^8.0"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "aliases": {
-                        "PDF": "Mccarlosen\\LaravelMpdf\\Facades\\LaravelMpdf"
-                    },
-                    "providers": [
-                        "Mccarlosen\\LaravelMpdf\\LaravelMpdfServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Mccarlosen\\LaravelMpdf\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "description": "Laravel Mpdf: Using Mpdf in Laravel to generate Pdfs.",
-            "keywords": [
-                "laravel",
-                "mpdf",
-                "pdf"
-            ],
-            "support": {
-                "issues": "https://github.com/mccarlosen/laravel-mpdf/issues",
-                "source": "https://github.com/mccarlosen/laravel-mpdf/tree/2.1.13"
-            },
-            "funding": [
-                {
-                    "url": "https://www.paypal.me/mccarlosen",
-                    "type": "custom"
-                }
-            ],
-            "time": "2023-09-01T15:09:05+00:00"
         },
         {
             "name": "composer/pcre",

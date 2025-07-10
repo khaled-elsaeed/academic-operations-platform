@@ -14,7 +14,7 @@ class TermController extends Controller
      */
     public function index(Request $request)
     {
-        $terms = \App\Models\Term::all();
+        $terms = \App\Models\Term::orderByDesc('year')->get();
         return successResponse('Terms fetched successfully.', $terms);
     }
 

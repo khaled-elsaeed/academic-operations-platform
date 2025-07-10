@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Exports\StudentsTemplateExport;
 use Illuminate\View\View;
 use Exception;
+use App\Exceptions\BusinessValidationException;
 
 class StudentController extends Controller
 {
@@ -152,22 +153,14 @@ class StudentController extends Controller
     {
         try {
             $termId = request()->query('term_id');
-            
-            // Check if student has enrollments
-            $enrollments = $student->enrollments();
-            if ($termId) {
-                $enrollments = $enrollments->where('term_id', $termId);
-            }
-            
-            if (!$enrollments->exists()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No enrollments found for this student' . ($termId ? ' in the selected term' : '')
-                ], 404);
-            }
-            
-            return $this->studentService->downloadEnrollmentPdf($student, $termId);
-            
+            $serviceResponse = $this->studentService->downloadEnrollmentPdf($student, $termId);
+            $data = $serviceResponse instanceof \Illuminate\Http\JsonResponse ? $serviceResponse->getData(true) : $serviceResponse;
+            return response()->json(['url' => $data['url'] ?? null]);
+        } catch (BusinessValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
         } catch (Exception $e) {
             logError('StudentController@downloadPdf', $e, ['student_id' => $student->id]);
             return errorResponse('Failed to generate PDF.', 500);
@@ -181,7 +174,14 @@ class StudentController extends Controller
     {
         try {
             $termId = request()->query('term_id');
-            return $this->studentService->downloadEnrollmentWord($student, $termId);
+            $serviceResponse = $this->studentService->downloadEnrollmentWord($student, $termId);
+            $data = $serviceResponse instanceof \Illuminate\Http\JsonResponse ? $serviceResponse->getData(true) : $serviceResponse;
+            return response()->json(['url' => $data['url'] ?? null]);
+        } catch (BusinessValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
         } catch (Exception $e) {
             logError('StudentController@downloadWord', $e, ['student_id' => $student->id]);
             return errorResponse('Failed to generate Word document.', 500);

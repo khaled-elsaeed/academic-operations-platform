@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Http\JsonResponse;
 use App\Validators\StudentImportValidator;
 use App\Services\EnrollmentDocumentService;
+use App\Exceptions\BusinessValidationException;
+use App\Models\Term;
 
 class StudentService
 {
@@ -228,10 +230,22 @@ class StudentService
      * @param Student $student
      * @param int|null $termId
      * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     * @throws BusinessValidationException
      */
     public function downloadEnrollmentPdf(Student $student, ?int $termId = null)
     {
-        return $this->enrollmentDocumentService->downloadAsPdf($student, $termId);
+        if ($termId !== null) {
+            $term = Term::find($termId);
+            if (!$term) {
+                throw new BusinessValidationException('The selected term does not exist.');
+            }
+        }
+        if (!$this->enrollmentDocumentService->hasEnrollments($student, $termId)) {
+            $msg = 'No enrollments found for this student' . ($termId ? ' in the selected term' : '');
+            throw new BusinessValidationException($msg);
+        }
+        // Return the JSON response from EnrollmentDocumentService
+        return $this->enrollmentDocumentService->generatePdf($student, $termId);
     }
 
     /**
@@ -240,10 +254,22 @@ class StudentService
      * @param Student $student
      * @param int|null $termId
      * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     * @throws BusinessValidationException
      */
     public function downloadEnrollmentWord(Student $student, ?int $termId = null)
     {
-        return $this->enrollmentDocumentService->downloadAsWord($student, $termId);
+        if ($termId !== null) {
+            $term = Term::find($termId);
+            if (!$term) {
+                throw new BusinessValidationException('The selected term does not exist.');
+            }
+        }
+        if (!$this->enrollmentDocumentService->hasEnrollments($student, $termId)) {
+            $msg = 'No enrollments found for this student' . ($termId ? ' in the selected term' : '');
+            throw new BusinessValidationException($msg);
+        }
+        // Return the JSON response from EnrollmentDocumentService
+        return $this->enrollmentDocumentService->generateWord($student, $termId);
     }
 
     /**

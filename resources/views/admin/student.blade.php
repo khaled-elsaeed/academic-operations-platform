@@ -226,11 +226,10 @@
               <input type="hidden" id="modal_student_id" name="student_id">
               <input type="hidden" id="download_type" name="download_type">
               <div class="mb-3">
-                  <label for="term_id" class="form-label">Select Term (Optional)</label>
-                  <select class="form-control" id="term_id" name="term_id">
-                      <option value="">All Terms</option>
+                  <label for="term_id" class="form-label">Select Term <span class="text-danger">(Required)</span></label>
+                  <select class="form-control" id="term_id" name="term_id" required>
                   </select>
-                  <small class="form-text text-muted">Leave empty to download all enrollments, or select a specific term.</small>
+                  <small class="form-text text-muted">You must select a term to download the enrollment document.</small>
               </div>
           </form>
       </x-slot>
@@ -247,88 +246,193 @@
 @push('scripts')
 <script>
 /**
- * Loads all programs into the program select dropdown.
- * @function loadPrograms
- * @param {number|null} selectedId - The program ID to preselect (optional).
- * @returns {void}
+ * Student Management System JavaScript
+ * Handles CRUD operations, imports, and document downloads for students
+ */
+
+// ===========================
+// UTILITY FUNCTIONS
+// ===========================
+
+/**
+ * Shows success notification
+ * @param {string} message - Success message to display
+ */
+function showSuccess(message) {
+  Swal.fire('Success', message, 'success');
+}
+
+/**
+ * Shows error notification
+ * @param {string} message - Error message to display
+ */
+function showError(message) {
+  Swal.fire('Error', message, 'error');
+}
+
+/**
+ * Shows/hides loading spinners and content
+ * @param {string} elementId - Base element ID
+ * @param {boolean} isLoading - Whether to show loading state
+ */
+function toggleLoadingState(elementId, isLoading) {
+  const $element = $(`#${elementId}`);
+  const $spinner = $(`#${elementId}-spinner`);
+  const $updated = $(`#${elementId}-updated`);
+  
+  if (isLoading) {
+    $element.hide();
+    $updated.hide();
+    $spinner.show();
+  } else {
+    $element.show();
+    $updated.show();
+    $spinner.hide();
+  }
+}
+
+// ===========================
+// DROPDOWN POPULATION
+// ===========================
+
+/**
+ * Loads all programs into the program select dropdown
+ * @param {number|null} selectedId - The program ID to preselect (optional)
+ * @returns {Promise} jQuery promise
  */
 function loadPrograms(selectedId = null) {
-  $.ajax({
+  return $.ajax({
     url: '{{ route('admin.programs.index') }}',
     method: 'GET',
     success: function (response) {
-      let data = response.data;
-      let $programSelect = $('#program_id');
+      const data = response.data;
+      const $programSelect = $('#program_id');
+      
       $programSelect.empty().append('<option value="">Select Program</option>');
+      
       data.forEach(function (program) {
         $programSelect.append(
           $('<option>', { value: program.id, text: program.name })
         );
       });
-      if (selectedId) $programSelect.val(selectedId);
+      
+      if (selectedId) {
+        $programSelect.val(selectedId);
+      }
+    },
+    error: function() {
+      showError('Failed to load programs');
     }
   });
 }
 
 /**
- * Loads all levels into the level select dropdown.
- * @function populateLevelDropdown
- * @param {number|null} selectedLevelId - The level ID to preselect (optional).
- * @returns {void}
+ * Fetches all levels from the server
+ * @returns {Promise} jQuery promise
  */
 function fetchLevels() {
   return $.getJSON("{{ route('admin.levels.index') }}");
 }
+
+/**
+ * Populates the level dropdown with available levels
+ * @param {number|null} selectedLevelId - The level ID to preselect (optional)
+ */
 function populateLevelDropdown(selectedLevelId = null) {
-  fetchLevels().done(function(levels) {
-    let levelSelect = $('#level_id');
-    levelSelect.empty().append('<option value="">Select Level</option>');
-    (levels.data || levels).forEach(function(item) {
-      levelSelect.append($('<option>', { value: item.id, text: item.name }));
+  fetchLevels()
+    .done(function(levels) {
+      const $levelSelect = $('#level_id');
+      $levelSelect.empty().append('<option value="">Select Level</option>');
+      
+      (levels.data || levels).forEach(function(item) {
+        $levelSelect.append($('<option>', { value: item.id, text: item.name }));
+      });
+      
+      if (selectedLevelId) {
+        $levelSelect.val(selectedLevelId);
+      }
+    })
+    .fail(function() {
+      showError('Failed to load levels');
     });
-    if (selectedLevelId) {
-      levelSelect.val(selectedLevelId);
-    }
-  });
 }
 
 /**
- * Loads student statistics and updates stat cards.
- * @function loadStudentStats
- * @returns {void}
+ * Loads terms into the term select dropdown
+ * @param {number|null} selectedTermId - The term ID to preselect (optional)
+ * @returns {Promise} jQuery promise
+ */
+function loadTerms(selectedTermId = null) {
+  return $.getJSON("{{ route('admin.terms.index') }}")
+    .done(function(response) {
+      const $termSelect = $('#term_id');
+      $termSelect.empty().append('<option value="">All Terms</option>');
+      
+      (response.data || []).forEach(function(term) {
+        $termSelect.append('<option value="' + term.id + '">' + term.name + '</option>');
+      });
+      
+      if (selectedTermId) {
+        $termSelect.val(selectedTermId);
+      }
+    })
+    .fail(function() {
+      showError('Failed to load terms');
+    });
+}
+
+// ===========================
+// STATISTICS MANAGEMENT
+// ===========================
+
+/**
+ * Loads student statistics and updates stat cards
  */
 function loadStudentStats() {
-  // Show spinners and hide stat values before AJAX
-  $('#stat-students, #stat-male-students, #stat-female-students, #stat-students-updated, #stat-male-students-updated, #stat-female-students-updated').hide();
-  $('#stat-students-spinner, #stat-male-students-spinner, #stat-female-students-spinner').show();
-
+  // Show loading state for all stats
+  toggleLoadingState('stat-students', true);
+  toggleLoadingState('stat-male-students', true);
+  toggleLoadingState('stat-female-students', true);
+  
   $.ajax({
     url: '{{ route('admin.students.stats') }}',
     method: 'GET',
     success: function (response) {
-      let data = response.data;
+      const data = response.data;
+      
+      // Update student statistics
       $('#stat-students').text(data.students.total ?? '--');
       $('#stat-students-updated').text(data.students.lastUpdateTime ?? '--');
       $('#stat-male-students').text(data.maleStudents.total ?? '--');
       $('#stat-male-students-updated').text(data.maleStudents.lastUpdateTime ?? '--');
       $('#stat-female-students').text(data.femaleStudents.total ?? '--');
       $('#stat-female-students-updated').text(data.femaleStudents.lastUpdateTime ?? '--');
-      // Hide spinners and show stat values
-      $('#stat-students, #stat-male-students, #stat-female-students, #stat-students-updated, #stat-male-students-updated, #stat-female-students-updated').show();
-      $('#stat-students-spinner, #stat-male-students-spinner, #stat-female-students-spinner').hide();
+      
+      // Hide loading state
+      toggleLoadingState('stat-students', false);
+      toggleLoadingState('stat-male-students', false);
+      toggleLoadingState('stat-female-students', false);
     },
     error: function() {
-      $('#stat-students, #stat-male-students, #stat-female-students, #stat-students-updated, #stat-male-students-updated, #stat-female-students-updated').text('N/A');
-      $('#stat-students, #stat-male-students, #stat-female-students, #stat-students-updated, #stat-male-students-updated, #stat-female-students-updated').show();
-      $('#stat-students-spinner, #stat-male-students-spinner, #stat-female-students-spinner').hide();
+      // Show error state
+      $('#stat-students, #stat-male-students, #stat-female-students').text('N/A');
+      $('#stat-students-updated, #stat-male-students-updated, #stat-female-students-updated').text('N/A');
+      
+      toggleLoadingState('stat-students', false);
+      toggleLoadingState('stat-male-students', false);
+      toggleLoadingState('stat-female-students', false);
+      
+      showError('Failed to load student statistics');
     }
   });
 }
 
+// ===========================
+// STUDENT CRUD OPERATIONS
+// ===========================
+
 /**
- * Handles the Add Student button click event.
- * @function handleAddStudentBtn
- * @returns {void}
+ * Handles the Add Student button click event
  */
 function handleAddStudentBtn() {
   $('#addStudentBtn').on('click', function () {
@@ -336,55 +440,67 @@ function handleAddStudentBtn() {
     $('#student_id').val('');
     $('#studentModal .modal-title').text('Add Student');
     $('#saveStudentBtn').text('Save');
+    
+    // Load dropdown data
     loadPrograms();
     populateLevelDropdown();
+    
     $('#studentModal').modal('show');
   });
 }
 
 /**
- * Handles the Add/Edit Student form submission.
- * @function handleStudentFormSubmit
- * @returns {void}
+ * Handles the Add/Edit Student form submission
  */
 function handleStudentFormSubmit() {
   $('#studentForm').on('submit', function (e) {
     e.preventDefault();
-    let studentId = $('#student_id').val();
-    let url = studentId
+    
+    const studentId = $('#student_id').val();
+    const url = studentId
       ? '{{ url('admin/students') }}/' + studentId
       : '{{ route('admin.students.store') }}';
-    let method = studentId ? 'PUT' : 'POST';
-    let formData = $(this).serialize();
+    const method = studentId ? 'PUT' : 'POST';
+    const formData = $(this).serialize();
+    
+    // Disable submit button during request
+    const $submitBtn = $('#saveStudentBtn');
+    const originalText = $submitBtn.text();
+    $submitBtn.prop('disabled', true).text('Saving...');
+    
     $.ajax({
       url: url,
       method: method,
       data: formData,
-      success: function (response) {
+      success: function () {
         $('#studentModal').modal('hide');
         $('#students-table').DataTable().ajax.reload(null, false);
-        Swal.fire('Success', 'Student has been saved successfully.', 'success');
+        showSuccess('Student has been saved successfully.');
+        loadStudentStats(); // Refresh stats
       },
       error: function (xhr) {
-        $('#studentModal').modal('hide');
-        Swal.fire('Error', 'An error occurred. Please check your input.', 'error');
+        const message = xhr.responseJSON?.message || 'An error occurred. Please check your input.';
+        showError(message);
+      },
+      complete: function() {
+        $submitBtn.prop('disabled', false).text(originalText);
       }
     });
   });
 }
 
 /**
- * Handles the Edit Student button click event (delegated).
- * @function handleEditStudentBtn
- * @returns {void}
+ * Handles the Edit Student button click event (delegated)
  */
 function handleEditStudentBtn() {
   $(document).on('click', '.editStudentBtn', function () {
-    let studentId = $(this).data('id');
+    const studentId = $(this).data('id');
+    
     $.ajax({
       url: '{{ url('admin/students') }}/' + studentId,
       method: 'GET',
       success: function (student) {
+        // Populate form fields
         $('#student_id').val(student.id);
         $('#name_en').val(student.name_en);
         $('#name_ar').val(student.name_ar);
@@ -393,27 +509,30 @@ function handleEditStudentBtn() {
         $('#academic_email').val(student.academic_email);
         $('#cgpa').val(student.cgpa);
         $('#gender').val(student.gender);
+        
+        // Load dropdowns with preselected values
         loadPrograms(student.program_id);
         populateLevelDropdown(student.level_id);
+        
+        // Update modal
         $('#studentModal .modal-title').text('Edit Student');
         $('#saveStudentBtn').text('Update');
         $('#studentModal').modal('show');
       },
       error: function () {
-        Swal.fire('Error', 'Failed to fetch student data.', 'error');
+        showError('Failed to fetch student data.');
       }
     });
   });
 }
 
 /**
- * Handles the Delete Student button click event (delegated).
- * @function handleDeleteStudentBtn
- * @returns {void}
+ * Handles the Delete Student button click event (delegated)
  */
 function handleDeleteStudentBtn() {
   $(document).on('click', '.deleteStudentBtn', function () {
-    let studentId = $(this).data('id');
+    const studentId = $(this).data('id');
+    
     Swal.fire({
       title: 'Are you sure?',
       text: "You won't be able to revert this!",
@@ -429,10 +548,11 @@ function handleDeleteStudentBtn() {
           method: 'DELETE',
           success: function () {
             $('#students-table').DataTable().ajax.reload(null, false);
-            Swal.fire('Deleted!', 'Student has been deleted.', 'success');
+            showSuccess('Student has been deleted.');
+            loadStudentStats(); // Refresh stats
           },
           error: function () {
-            Swal.fire('Error', 'Failed to delete student.', 'error');
+            showError('Failed to delete student.');
           }
         });
       }
@@ -440,16 +560,22 @@ function handleDeleteStudentBtn() {
   });
 }
 
+// ===========================
+// IMPORT FUNCTIONALITY
+// ===========================
+
 /**
- * Handles the Import Students form submission via AJAX.
- * @function handleImportStudentsForm
- * @returns {void}
+ * Handles the Import Students form submission via AJAX
  */
 function handleImportStudentsForm() {
   $('#importStudentsForm').on('submit', function(e) {
     e.preventDefault();
-    let formData = new FormData(this);
-    $('#importStudentsSubmitBtn').prop('disabled', true).text('Importing...');
+    
+    const formData = new FormData(this);
+    const $submitBtn = $('#importStudentsSubmitBtn');
+    
+    $submitBtn.prop('disabled', true).text('Importing...');
+    
     $.ajax({
       url: '{{ route('admin.students.import') }}',
       method: 'POST',
@@ -459,132 +585,176 @@ function handleImportStudentsForm() {
       success: function(response) {
         $('#importStudentsModal').modal('hide');
         $('#students-table').DataTable().ajax.reload(null, false);
-        Swal.fire('Success', response.message, 'success');
+        showSuccess(response.message);
+        loadStudentStats(); // Refresh stats
       },
       error: function(xhr) {
-        $('#importStudentsModal').modal('hide');
-        let msg = xhr.responseJSON?.message || 'Import failed. Please check your file.';
-        Swal.fire('Error', msg, 'error');
+        const message = xhr.responseJSON?.message || 'Import failed. Please check your file.';
+        showError(message);
       },
       complete: function() {
-        $('#importStudentsSubmitBtn').prop('disabled', false).text('Import');
+        $submitBtn.prop('disabled', false).text('Import');
       }
     });
   });
 }
 
-// Handle click on download button
-$(document).on('click', '.downloadEnrollmentBtn', function() {
-    var studentId = $(this).data('id');
-    $('#modal_student_id').val(studentId);
-    $('#download_type').val('legacy');
-    
-    // Fetch terms and populate dropdown
-    $.getJSON("{{ route('admin.terms.index') }}", function(response) {
-        var $termSelect = $('#term_id');
-        $termSelect.empty().append('<option value="">All Terms</option>');
-        (response.data || []).forEach(function(term) {
-            $termSelect.append('<option value="'+term.id+'">'+term.name+'</option>');
-        });
-        $('#downloadEnrollmentModal .modal-title').text('Download Enrollment Document');
-        $('#downloadEnrollmentModal').modal('show');
-    });
-});
+// ===========================
+// DOCUMENT DOWNLOAD FUNCTIONALITY
+// ===========================
 
-// Handle PDF download button
-$(document).on('click', '.downloadPdfBtn', function(e) {
+/**
+ * Handles download enrollment button click (legacy)
+ */
+function handleDownloadEnrollmentBtn() {
+  $(document).on('click', '.downloadEnrollmentBtn', function() {
+    const studentId = $(this).data('id');
+    setupDownloadModal(studentId, 'legacy', 'Download Enrollment Document');
+  });
+}
+
+/**
+ * Handles PDF download button click
+ */
+function handleDownloadPdfBtn() {
+  $(document).on('click', '.downloadPdfBtn', function(e) {
     e.preventDefault();
-    var studentId = $(this).data('id');
-    
-    // Show term selection modal for PDF
-    $('#modal_student_id').val(studentId);
-    $('#download_type').val('pdf');
-    
-    $.getJSON("{{ route('admin.terms.index') }}", function(response) {
-        var $termSelect = $('#term_id');
-        $termSelect.empty().append('<option value="">All Terms</option>');
-        (response.data || []).forEach(function(term) {
-            $termSelect.append('<option value="'+term.id+'">'+term.name+'</option>');
-        });
-        $('#downloadEnrollmentModal .modal-title').text('Download Enrollment as PDF');
-        $('#downloadEnrollmentModal').modal('show');
-    });
-});
+    const studentId = $(this).data('id');
+    setupDownloadModal(studentId, 'pdf', 'Download Enrollment as PDF');
+  });
+}
 
-// Handle Word download button
-$(document).on('click', '.downloadWordBtn', function(e) {
+/**
+ * Handles Word download button click
+ */
+function handleDownloadWordBtn() {
+  $(document).on('click', '.downloadWordBtn', function(e) {
     e.preventDefault();
-    var studentId = $(this).data('id');
-    
-    // Show term selection modal for Word
-    $('#modal_student_id').val(studentId);
-    $('#download_type').val('word');
-    
-    $.getJSON("{{ route('admin.terms.index') }}", function(response) {
-        var $termSelect = $('#term_id');
-        $termSelect.empty().append('<option value="">All Terms</option>');
-        (response.data || []).forEach(function(term) {
-            $termSelect.append('<option value="'+term.id+'">'+term.name+'</option>');
-        });
-        $('#downloadEnrollmentModal .modal-title').text('Download Enrollment as Word');
-        $('#downloadEnrollmentModal').modal('show');
-    });
-});
+    const studentId = $(this).data('id');
+    setupDownloadModal(studentId, 'word', 'Download Enrollment as Word');
+  });
+}
 
-// Updated download button handler
-$('#downloadEnrollmentBtn').on('click', function() {
-    var studentId = $('#modal_student_id').val();
-    var termId = $('#term_id').val();
-    var downloadType = $('#download_type').val();
-    
+/**
+ * Sets up the download modal with student ID and type
+ * @param {number} studentId - The student ID
+ * @param {string} downloadType - Type of download (legacy, pdf, word)
+ * @param {string} modalTitle - Title for the modal
+ */
+function setupDownloadModal(studentId, downloadType, modalTitle) {
+  $('#modal_student_id').val(studentId);
+  $('#download_type').val(downloadType);
+  
+  loadTerms().done(function() {
+    $('#downloadEnrollmentModal .modal-title').text(modalTitle);
+    $('#downloadEnrollmentModal').modal('show');
+  });
+}
+
+/**
+ * Handles the actual download process
+ */
+function handleDownloadProcess() {
+  $('#downloadEnrollmentBtn').on('click', function() {
+    const studentId = $('#modal_student_id').val();
+    const termId = $('#term_id').val();
+    const downloadType = $('#download_type').val();
+
+    // Validation
     if (!downloadType) {
-        Swal.fire('Error', 'Please select a download type.', 'error');
-        return;
+      showError('Please select a download type.');
+      return;
     }
-    
-    var url;
-    if (downloadType === 'pdf') {
+
+    if (!termId) {
+      showError('Please select a term.');
+      return;
+    }
+
+    // Build URL based on download type
+    let url;
+    switch (downloadType) {
+      case 'pdf':
         url = '{{ url('admin/students') }}/' + studentId + '/download/pdf';
-    } else if (downloadType === 'word') {
+        break;
+      case 'word':
         url = '{{ url('admin/students') }}/' + studentId + '/download/word';
-    } else {
-        // Legacy enrollment download
+        break;
+      default:
         url = '/enrollment/download/' + studentId;
     }
-    
-    if (termId) {
-        url += '?term_id=' + termId;
-    }
-    
-    // Show loading message
-    Swal.fire({
-        title: 'Generating Document...',
-        text: 'Please wait while we prepare your download.',
-        allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
-    
-    // Trigger download
-    window.location.href = url;
-    $('#downloadEnrollmentModal').modal('hide');
-    
-    // Close loading message after a short delay
-    setTimeout(() => {
-        Swal.close();
-    }, 2000);
-});
 
-// Main entry point
-$(document).ready(function () {
+    // Add term parameter
+    if (termId) {
+      url += '?term_id=' + termId;
+    }
+
+    // Show loading
+    Swal.fire({
+      title: 'Generating Document...',
+      text: 'Please wait while we prepare your document.',
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      willOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    $.ajax({
+      url: url,
+      method: 'GET',
+      dataType: 'json',
+      success: function(response) {
+        if (response.url) {
+          window.open(response.url, '_blank');
+          Swal.close();
+          $('#downloadEnrollmentModal').modal('hide');
+        } else {
+          showError('Invalid response from server.');
+        }
+      },
+      error: function(xhr) {
+        Swal.close();
+        const message = xhr.responseJSON?.message || 'Failed to generate document.';
+        showError(message);
+      }
+    });
+  });
+}
+
+// ===========================
+// INITIALIZATION
+// ===========================
+
+/**
+ * Initialize all event handlers and load initial data
+ */
+function initializeStudentManagement() {
+  // Load initial data
   loadStudentStats();
+  
+  // Initialize CRUD handlers
   handleAddStudentBtn();
   handleStudentFormSubmit();
   handleEditStudentBtn();
   handleDeleteStudentBtn();
+  
+  // Initialize import functionality
   handleImportStudentsForm();
+  
+  // Initialize download functionality
+  handleDownloadEnrollmentBtn();
+  handleDownloadPdfBtn();
+  handleDownloadWordBtn();
+  handleDownloadProcess();
+}
+
+// ===========================
+// DOCUMENT READY
+// ===========================
+
+$(document).ready(function () {
+  initializeStudentManagement();
 });
 </script>
 @endpush
-

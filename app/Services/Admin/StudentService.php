@@ -12,9 +12,17 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\JsonResponse;
 use App\Validators\StudentImportValidator;
+use App\Services\EnrollmentDocumentService;
 
 class StudentService
 {
+    private $enrollmentDocumentService;
+
+    public function __construct(EnrollmentDocumentService $enrollmentDocumentService)
+    {
+        $this->enrollmentDocumentService = $enrollmentDocumentService;
+    }
+
     /**
      * Create a new student.
      *
@@ -121,12 +129,18 @@ class StudentService
             title="Delete">
             <i class="bx bx-trash"></i>
           </button>
-          <button type="button"
-            class="btn btn-sm btn-info ms-1 downloadEnrollmentBtn"
-            data-id="' . e($student->id) . '"
-            title="Download Enrollment Document">
-            <i class="bx bx-download"></i>
-          </button>
+          <div class="dropdown">
+            <button type="button"
+              class="btn btn-sm btn-info dropdown-toggle"
+              data-bs-toggle="dropdown"
+              title="Download Enrollment Document">
+              <i class="bx bx-download"></i>
+            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item downloadPdfBtn" href="#" data-id="' . e($student->id) . '">Download as PDF</a></li>
+              <li><a class="dropdown-item downloadWordBtn" href="#" data-id="' . e($student->id) . '">Download as Word</a></li>
+            </ul>
+          </div>
         </div>
         ';
     }
@@ -206,5 +220,40 @@ class StudentService
     public function downloadTemplate()
     {
         return Excel::download(new StudentsTemplateExport, 'students_import_template.xlsx');
+    }
+
+    /**
+     * Download enrollment document as PDF
+     *
+     * @param Student $student
+     * @param int|null $termId
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function downloadEnrollmentPdf(Student $student, ?int $termId = null)
+    {
+        return $this->enrollmentDocumentService->downloadAsPdf($student, $termId);
+    }
+
+    /**
+     * Download enrollment document as Word
+     *
+     * @param Student $student
+     * @param int|null $termId
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function downloadEnrollmentWord(Student $student, ?int $termId = null)
+    {
+        return $this->enrollmentDocumentService->downloadAsWord($student, $termId);
+    }
+
+    /**
+     * Get available download formats for a student
+     *
+     * @param Student $student
+     * @return array
+     */
+    public function getDownloadOptions(Student $student): array
+    {
+        return $this->enrollmentDocumentService->getDownloadOptions($student);
     }
 } 

@@ -224,11 +224,13 @@
       <x-slot name="slot">
           <form id="downloadEnrollmentForm">
               <input type="hidden" id="modal_student_id" name="student_id">
+              <input type="hidden" id="download_type" name="download_type">
               <div class="mb-3">
-                  <label for="term_id" class="form-label">Select Term</label>
-                  <select class="form-control" id="term_id" name="term_id" required>
-                      <option value="">Select Term</option>
+                  <label for="term_id" class="form-label">Select Term (Optional)</label>
+                  <select class="form-control" id="term_id" name="term_id">
+                      <option value="">All Terms</option>
                   </select>
+                  <small class="form-text text-muted">Leave empty to download all enrollments, or select a specific term.</small>
               </div>
           </form>
       </x-slot>
@@ -475,28 +477,103 @@ function handleImportStudentsForm() {
 $(document).on('click', '.downloadEnrollmentBtn', function() {
     var studentId = $(this).data('id');
     $('#modal_student_id').val(studentId);
+    $('#download_type').val('legacy');
+    
     // Fetch terms and populate dropdown
     $.getJSON("{{ route('admin.terms.index') }}", function(response) {
         var $termSelect = $('#term_id');
-        $termSelect.empty().append('<option value="">Select Term</option>');
+        $termSelect.empty().append('<option value="">All Terms</option>');
         (response.data || []).forEach(function(term) {
             $termSelect.append('<option value="'+term.id+'">'+term.name+'</option>');
         });
+        $('#downloadEnrollmentModal .modal-title').text('Download Enrollment Document');
         $('#downloadEnrollmentModal').modal('show');
     });
 });
 
-// Handle download button in modal
+// Handle PDF download button
+$(document).on('click', '.downloadPdfBtn', function(e) {
+    e.preventDefault();
+    var studentId = $(this).data('id');
+    
+    // Show term selection modal for PDF
+    $('#modal_student_id').val(studentId);
+    $('#download_type').val('pdf');
+    
+    $.getJSON("{{ route('admin.terms.index') }}", function(response) {
+        var $termSelect = $('#term_id');
+        $termSelect.empty().append('<option value="">All Terms</option>');
+        (response.data || []).forEach(function(term) {
+            $termSelect.append('<option value="'+term.id+'">'+term.name+'</option>');
+        });
+        $('#downloadEnrollmentModal .modal-title').text('Download Enrollment as PDF');
+        $('#downloadEnrollmentModal').modal('show');
+    });
+});
+
+// Handle Word download button
+$(document).on('click', '.downloadWordBtn', function(e) {
+    e.preventDefault();
+    var studentId = $(this).data('id');
+    
+    // Show term selection modal for Word
+    $('#modal_student_id').val(studentId);
+    $('#download_type').val('word');
+    
+    $.getJSON("{{ route('admin.terms.index') }}", function(response) {
+        var $termSelect = $('#term_id');
+        $termSelect.empty().append('<option value="">All Terms</option>');
+        (response.data || []).forEach(function(term) {
+            $termSelect.append('<option value="'+term.id+'">'+term.name+'</option>');
+        });
+        $('#downloadEnrollmentModal .modal-title').text('Download Enrollment as Word');
+        $('#downloadEnrollmentModal').modal('show');
+    });
+});
+
+// Updated download button handler
 $('#downloadEnrollmentBtn').on('click', function() {
     var studentId = $('#modal_student_id').val();
     var termId = $('#term_id').val();
-    if (!termId) {
-        Swal.fire('Error', 'Please select a term.', 'error');
+    var downloadType = $('#download_type').val();
+    
+    if (!downloadType) {
+        Swal.fire('Error', 'Please select a download type.', 'error');
         return;
     }
-    // Download enrollment document for selected term
-    window.location.href = '/enrollment/download/' + studentId + '?term_id=' + termId;
+    
+    var url;
+    if (downloadType === 'pdf') {
+        url = '{{ url('admin/students') }}/' + studentId + '/download/pdf';
+    } else if (downloadType === 'word') {
+        url = '{{ url('admin/students') }}/' + studentId + '/download/word';
+    } else {
+        // Legacy enrollment download
+        url = '/enrollment/download/' + studentId;
+    }
+    
+    if (termId) {
+        url += '?term_id=' + termId;
+    }
+    
+    // Show loading message
+    Swal.fire({
+        title: 'Generating Document...',
+        text: 'Please wait while we prepare your download.',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    // Trigger download
+    window.location.href = url;
     $('#downloadEnrollmentModal').modal('hide');
+    
+    // Close loading message after a short delay
+    setTimeout(() => {
+        Swal.close();
+    }, 2000);
 });
 
 // Main entry point

@@ -145,6 +145,62 @@ class StudentController extends Controller
         return response()->json(['data' => $terms]);
     }
 
+    /**
+     * Download enrollment document as PDF
+     */
+    public function downloadPdf(Student $student)
+    {
+        try {
+            $termId = request()->query('term_id');
+            
+            // Check if student has enrollments
+            $enrollments = $student->enrollments();
+            if ($termId) {
+                $enrollments = $enrollments->where('term_id', $termId);
+            }
+            
+            if (!$enrollments->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No enrollments found for this student' . ($termId ? ' in the selected term' : '')
+                ], 404);
+            }
+            
+            return $this->studentService->downloadEnrollmentPdf($student, $termId);
+            
+        } catch (Exception $e) {
+            logError('StudentController@downloadPdf', $e, ['student_id' => $student->id]);
+            return errorResponse('Failed to generate PDF.', 500);
+        }
+    }
+
+    /**
+     * Download enrollment document as Word
+     */
+    public function downloadWord(Student $student)
+    {
+        try {
+            $termId = request()->query('term_id');
+            return $this->studentService->downloadEnrollmentWord($student, $termId);
+        } catch (Exception $e) {
+            logError('StudentController@downloadWord', $e, ['student_id' => $student->id]);
+            return errorResponse('Failed to generate Word document.', 500);
+        }
+    }
+
+    /**
+     * Get download options for a student
+     */
+    public function getDownloadOptions(Student $student): \Illuminate\Http\JsonResponse
+    {
+        try {
+            $options = $this->studentService->getDownloadOptions($student);
+            return successResponse('Download options fetched successfully.', $options);
+        } catch (Exception $e) {
+            logError('StudentController@getDownloadOptions', $e, ['student_id' => $student->id]);
+            return errorResponse('Failed to get download options.', 500);
+        }
+    }
 
     /**
      * Display the specified student.

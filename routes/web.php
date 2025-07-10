@@ -69,6 +69,10 @@ Route::middleware(['auth', 'role:admin'])
                 Route::put('{student}', 'update')->name('update');
                 Route::patch('{student}', 'update');
                 Route::delete('{student}', 'destroy')->name('destroy');
+                // Download options
+                Route::get('{student}/download/pdf', 'downloadPdf')->name('download.pdf');
+                Route::get('{student}/download/word', 'downloadWord')->name('download.word');
+                Route::get('{student}/download-options', 'getDownloadOptions')->name('download.options');
             });
 
         // Programs (for AJAX dropdown)
@@ -134,3 +138,5 @@ Route::middleware(['auth', 'role:admin'])
     });
 
 Route::get('/enrollment/download/{student}', [EnrollmentDocumentController::class, 'downloadEnrollmentDocument'])->name('enrollment.download');
+// Add new routes for PDF invoice and users PDF
+Route::get('/pdf/invoice', [App\Http\Controllers\PdfController::class, 'invoice'])->name('pdf.invoice');

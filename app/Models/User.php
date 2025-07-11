@@ -56,4 +56,24 @@ class User extends Authenticatable
             get: fn () => "{$this->first_name} {$this->last_name}"
         );
     }
+
+    /**
+     * Determine if the user has the 'admin' role.
+     *
+     * @return bool
+     */
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('admin');
+    }
+
+    /**
+     * Determine if the user has the 'academic_advisor' role.
+     *
+     * @return bool
+     */
+    public function isAcademicAdvisor(): bool
+    {
+        return $this->hasRole('advisor');
+    }
 }

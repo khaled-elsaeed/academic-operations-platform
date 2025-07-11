@@ -302,7 +302,7 @@ function toggleLoadingState(elementId, isLoading) {
  */
 function loadPrograms(selectedId = null) {
   return $.ajax({
-    url: '{{ route('admin.programs.index') }}',
+    url: '{{ route('admin.programs.legacy.index') }}',
     method: 'GET',
     success: function (response) {
       const data = response.data;

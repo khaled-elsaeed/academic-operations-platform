@@ -22,7 +22,8 @@ class DatabaseSeeder extends Seeder
             EnrollmentSeeder::class,
             CoursePrerequisiteSeeder::class,
             RolesAndPermissionsSeeder::class,
-            AdminUserSeeder::class,
+            UserSeeder::class,
+            AcademicAdvisorAccessSeeder::class,
         ]);
     }
 }

@@ -13,6 +13,8 @@
 <!-- Vendor JS -->
 <script src="{{ asset('vendor/libs/apex-charts/apexcharts.js') }}?v={{ config('app.version') }}"></script>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+
 <!-- Main JS -->
 <script src="{{ asset('js/main.js') }}?v={{ config('app.version') }}"></script>
 

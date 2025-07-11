@@ -106,7 +106,7 @@ function loadStudents(selectedId = null) {
  */
 function loadCourses(selectedId = null) {
   $.ajax({
-    url: '{{ route('admin.courses.index') }}',
+    url: '{{ route('admin.courses.legacy.index') }}',
     method: 'GET',
     success: function (data) {
       let $courseSelect = $('#course_id');

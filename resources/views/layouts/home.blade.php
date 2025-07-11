@@ -15,9 +15,6 @@
         <!-- Content -->
         @yield('page-content')
         <!-- / Content -->
-        <!-- Footer -->
-        @include('layouts.partials.footer')
-        <!-- / Footer -->
         <div class="content-backdrop fade"></div>
       </div>
       <!-- Content wrapper -->

@@ -12,27 +12,21 @@ use Illuminate\Support\Str;
 class UserFactory extends Factory
 {
     /**
-     * The current password being used by the factory.
-     */
-    protected static ?string $password;
-
-    /**
      * Define the model's default state.
      *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
-        $arabicNames = ['أحمد', 'محمد', 'محمود', 'مصطفى', 'عبدالله', 'سارة', 'فاطمة', 'مريم', 'ياسمين', 'نور'];
-        $arabicSurnames = ['حسن', 'سعيد', 'عبدالعزيز', 'علي', 'إبراهيم', 'يوسف', 'رمضان', 'سليمان', 'فاروق', 'منصور'];
-        $firstName = $this->faker->randomElement(['Ahmed','Mohamed','Mahmoud','Mostafa','Abdallah','Sara','Fatma','Mariam','Yasmin','Nour']);
-        $lastName = $this->faker->randomElement(['Hassan','Saeed','Abdelaziz','Ali','Ibrahim','Youssef','Ramadan','Suleiman','Farouk','Mansour']);
+        $firstName = fake('ar_EG')->firstName();
+        $lastName = fake('ar_EG')->lastName();
+        
         return [
             'first_name' => $firstName,
             'last_name' => $lastName,
-            'email' => strtolower($firstName) . '.' . strtolower($lastName) . $this->faker->unique()->numberBetween(1, 9999) . '@cu.edu.eg',
+            'email' => strtolower($firstName . '.' . $lastName) . '@' . fake()->randomElement(['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com']),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'password' => Hash::make('password'), // password
             'remember_token' => Str::random(10),
         ];
     }
@@ -44,6 +38,29 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Create an admin user
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'first_name' => 'Admin',
+            'last_name' => 'User',
+            'email' => 'admin@acadops.com',
+            'email_verified_at' => now(),
+        ]);
+    }
+
+    /**
+     * Create a regular user
+     */
+    public function regular(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'email_verified_at' => now(),
         ]);
     }
 }

@@ -504,10 +504,10 @@ $(document).ready(function () {
     $.ajax({
       url: '{{ route('admin.terms.index') }}',
       method: 'GET',
-      success: function (data) {
+      success: function (response) {
         let $termSelect = $('#term_id');
         $termSelect.empty().append('<option value="">Select Term</option>');
-        (data || []).forEach(function (term) {
+        response.data.forEach(function (term) {
           $termSelect.append(`<option value="${term.id}">${term.name}</option>`);
         });
       },

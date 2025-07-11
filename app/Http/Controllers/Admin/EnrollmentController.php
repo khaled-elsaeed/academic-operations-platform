@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Yajra\DataTables\DataTables;
 use App\Services\Admin\EnrollmentService;
+use App\Rules\AcademicAdvisorAccessRule;
 
 class EnrollmentController extends Controller
 {
@@ -35,7 +36,7 @@ class EnrollmentController extends Controller
     {
         \Log::info('Request data', $request->all());
         $validated = $request->validate([
-            'student_id' => 'required|exists:students,id',
+            'student_id' => ['required', 'exists:students,id', new AcademicAdvisorAccessRule()],
             'term_id' => 'required|exists:terms,id',
             'available_course_ids' => 'required|array|min:1',
             'available_course_ids.*' => 'exists:available_courses,id',
@@ -63,7 +64,7 @@ class EnrollmentController extends Controller
     public function update(Request $request, Enrollment $enrollment): JsonResponse
     {
         $validated = $request->validate([
-            'student_id' => 'required|exists:students,id',
+            'student_id' => ['required', 'exists:students,id', new AcademicAdvisorAccessRule()],
             'course_id' => 'required|exists:courses,id',
             'term_id' => 'required|exists:terms,id',
         ]);
@@ -119,7 +120,8 @@ class EnrollmentController extends Controller
             'identifier' => 'required|string',
         ]);
 
-        $student = Student::where('national_id', $request->identifier)
+        $student = Student::withoutGlobalScopes()
+            ->where('national_id', $request->identifier)
             ->orWhere('academic_id', $request->identifier)
             ->with('program')
             ->first();
@@ -129,6 +131,26 @@ class EnrollmentController extends Controller
                 'success' => false,
                 'message' => 'Student not found.',
             ], 404);
+        }
+
+        // Validate access using the custom validation rule
+        $validator = \Validator::make(
+            ['student_id' => $student->id],
+            ['student_id' => ['required', 'exists:students,id', new AcademicAdvisorAccessRule()]]
+        );
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first('student_id'),
+            ], 403);
+        }
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first('student_id'),
+            ], 403);
         }
 
         return response()->json([
@@ -143,7 +165,7 @@ class EnrollmentController extends Controller
     public function availableCourses(Request $request): JsonResponse
     {
         $request->validate([
-            'student_id' => 'required|exists:students,id',
+            'student_id' => ['required', 'exists:students,id', new AcademicAdvisorAccessRule()],
             'term_id' => 'required|exists:terms,id',
         ]);
 
@@ -177,7 +199,7 @@ class EnrollmentController extends Controller
     public function studentEnrollments(Request $request): JsonResponse
     {
         $request->validate([
-            'student_id' => 'required|exists:students,id',
+            'student_id' => ['required', 'exists:students,id', new AcademicAdvisorAccessRule()],
         ]);
 
         $enrollments = $this->enrollmentService->getStudentEnrollments($request->student_id);

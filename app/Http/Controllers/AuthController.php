@@ -25,7 +25,12 @@ class AuthController extends Controller
         ]);
         $result = $this->authService->login($validated);
         if ($result) {
-            return redirect()->intended('admin/home');
+            $user = auth()->user();
+            if ($user->hasRole('admin')) {
+                return redirect()->intended('admin/home');
+            } elseif ($user->hasRole('advisor')) {
+                return redirect()->intended(route('admin.student.index'));
+            }
         }
         return back()->withErrors(['email' => 'Invalid credentials.']);
     }

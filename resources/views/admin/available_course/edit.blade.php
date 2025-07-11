@@ -102,9 +102,9 @@
  */
 function fetchAllDropdownData(availableCourseId) {
   return $.when(
-    $.getJSON("{{ route('admin.courses.index') }}"),
+    $.getJSON("{{ route('admin.courses.legacy.index') }}"),
     $.getJSON("{{ route('admin.terms.index') }}"),
-    $.getJSON("{{ route('admin.programs.index') }}"),
+    $.getJSON("{{ route('admin.programs.legacy.index') }}"),
     $.getJSON("{{ route('admin.levels.index') }}"),
     $.getJSON(`/admin/available-courses/${availableCourseId}`)
   );

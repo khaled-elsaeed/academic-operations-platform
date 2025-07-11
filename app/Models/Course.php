@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -82,5 +83,13 @@ class Course extends Model
             'prerequisite_id',
             'course_id'
         )->using(CoursePrerequisite::class)->withPivot('order')->withTimestamps();
+    }
+
+    /**
+     * Get the available courses for this course.
+     */
+    public function availableCourses(): HasMany
+    {
+        return $this->hasMany(AvailableCourse::class);
     }
 }

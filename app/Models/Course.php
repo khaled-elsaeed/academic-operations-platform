@@ -23,7 +23,7 @@ class Course extends Model
         'code',
         'title',
         'credit_hours',
-        'program_id',
+        'faculty_id',
     ];
 
     protected $appends = [
@@ -52,11 +52,11 @@ class Course extends Model
     }
 
     /**
-     * Get the program that owns the course.
+     * Get the faculty that owns the course.
      */
-    public function program(): BelongsTo
+    public function faculty(): BelongsTo
     {
-        return $this->belongsTo(Program::class);
+        return $this->belongsTo(Faculty::class);
     }
 
     /**

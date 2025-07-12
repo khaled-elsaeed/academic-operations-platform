@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Course;
-use App\Models\Program;
+use App\Models\Faculty;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class CourseFactory extends Factory
@@ -16,7 +16,7 @@ class CourseFactory extends Factory
             'code' => strtoupper($this->faker->unique()->bothify('CSE###')),
             'title' => $this->faker->sentence(3),
             'credit_hours' => $this->faker->numberBetween(1, 4),
-            'program_id' => Program::factory(),
+            'faculty_id' => Faculty::factory(),
         ];
     }
 } 

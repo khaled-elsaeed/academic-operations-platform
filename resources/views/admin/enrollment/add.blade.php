@@ -60,20 +60,82 @@
     <div class="card mb-4">
       <div class="card-header d-flex align-items-center">
         <i class="bx bx-calendar me-2"></i>
-        <h5 class="mb-0">Select Academic Term</h5>
+        <h5 class="mb-0">Academic Term</h5>
       </div>
       <div class="card-body">
         <div class="row">
-          <div class="col-md-6">
-            <label for="term_id" class="form-label fw-semibold">Academic Term</label>
-            <div class="input-group">
-              <span class="input-group-text"><i class="bx bx-calendar-alt"></i></span>
-              <select class="form-select" id="term_id" name="term_id" required>
-                <option value="">Select Term</option>
-              </select>
-            </div>
+          <div class="col-md-8">
+            <label for="term_id" class="form-label fw-semibold">
+              <i class="bx bx-calendar-alt me-1"></i> Academic Term <span class="text-danger">*</span>
+            </label>
+            <small class="form-text text-muted mb-2 d-block">Please select the academic term for enrollment.</small>
+            <select class="form-select select2-term" id="term_id" name="term_id" required aria-label="Academic Term">
+              <option value="">Please select an academic term</option>
+            </select>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Credit Hour Info Box -->
+    <div id="chInfoBox" class="alert alert-info mt-3" style="display:none;">
+      <strong>Maximum Allowed Credit Hours (CH):</strong>
+      <table class="table table-bordered table-sm mb-0" style="background:white;">
+        <thead>
+          <tr>
+            <th>Season</th>
+            <th>CGPA</th>
+            <th>Max CH</th>
+            <th>For Graduation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="ch-row" data-season="Fall">
+            <td>Fall</td>
+            <td>&lt;2</td>
+            <td>14</td>
+            <td>+3</td>
+          </tr>
+          <tr class="ch-row" data-season="Fall">
+            <td>Fall</td>
+            <td>&ge;2 and &lt;3</td>
+            <td>18</td>
+            <td>+3</td>
+          </tr>
+          <tr class="ch-row" data-season="Fall">
+            <td>Fall</td>
+            <td>&ge;3</td>
+            <td>21</td>
+            <td>+3</td>
+          </tr>
+          <tr class="ch-row" data-season="Spring">
+            <td>Spring</td>
+            <td>&lt;2</td>
+            <td>14</td>
+            <td>+3</td>
+          </tr>
+          <tr class="ch-row" data-season="Spring">
+            <td>Spring</td>
+            <td>&ge;2 and &lt;3</td>
+            <td>18</td>
+            <td>+3</td>
+          </tr>
+          <tr class="ch-row" data-season="Spring">
+            <td>Spring</td>
+            <td>&ge;3</td>
+            <td>21</td>
+            <td>+3</td>
+          </tr>
+          <tr class="ch-row" data-season="Summer">
+            <td>Summer</td>
+            <td>Any</td>
+            <td>9</td>
+            <td>+3</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="mt-2 small text-muted">
+        <strong>Note:</strong> To exceed the maximum credit hours for graduation, an administrator must grant permission.
       </div>
     </div>
 
@@ -328,7 +390,7 @@ function loadAvailableCourses(studentId, termId) {
   }
   showLoading('#coursesBox', 'Loading available courses...');
   $.ajax({
-    url: '{{ route('admin.enrollments.availableCourses') }}',
+    url: '{{ route('admin.available-courses.legacy.index') }}',
     method: 'POST',
     data: { student_id: studentId, term_id: termId, _token: '{{ csrf_token() }}' },
     success: function(res) {
@@ -412,6 +474,39 @@ function updateEnrollButton() {
   }
 }
 
+// Credit Hour Info Box Logic
+function updateChInfoBox(termName) {
+  if (!termName) {
+    $('#chInfoBox').hide();
+    return;
+  }
+  let season = '';
+  termName = termName.toLowerCase();
+  if (termName.includes('fall')) season = 'Fall';
+  else if (termName.includes('spring')) season = 'Spring';
+  else if (termName.includes('summer')) season = 'Summer';
+
+  if (season) {
+    $('#chInfoBox').show();
+    $('.ch-row').hide();
+    $(`.ch-row[data-season='${season}']`).show();
+  } else {
+    $('#chInfoBox').hide();
+  }
+}
+
+// When the term is changed, update the info box
+$('#term_id').on('change', function() {
+  let selectedText = $('#term_id option:selected').text();
+  updateChInfoBox(selectedText);
+});
+
+// On page load, in case a term is already selected
+$(document).ready(function() {
+  let selectedText = $('#term_id option:selected').text();
+  updateChInfoBox(selectedText);
+});
+
 // Main entry point
 $(document).ready(function () {
   let currentStudentId = null;
@@ -426,7 +521,7 @@ $(document).ready(function () {
       method: 'POST',
       data: { identifier: identifier, _token: '{{ csrf_token() }}' },
       success: function(res) {
-        let s = res.student;
+        let s = res.data;
         $('#student_id').val(s.id);
         
         // Build student info HTML
@@ -460,7 +555,7 @@ $(document).ready(function () {
             </div>
             <div class="student-info-item">
               <small class="text-muted">Level</small>
-              <h6 class="mb-0">Level ${s.level}</h6>
+              <h6 class="mb-0">Level ${s.level.name}</h6>
             </div>
             <div class="student-info-item">
               <small class="text-muted">CGPA</small>
@@ -475,17 +570,6 @@ $(document).ready(function () {
         
         // Load enrollment history
         loadEnrollmentHistory(currentStudentId);
-        
-        // Handle term selection
-        $('#term_id').off('change').on('change', function() {
-          currentTermId = $(this).val();
-          loadAvailableCourses(currentStudentId, currentTermId);
-        });
-        
-        // Trigger change if term is already selected
-        if ($('#term_id').val()) {
-          $('#term_id').trigger('change');
-        }
       },
       error: function(xhr) {
         $('#studentDetails').hide();
@@ -499,14 +583,22 @@ $(document).ready(function () {
     });
   });
 
+  // Initialize Select2 ONCE after DOM is ready
+  $('#term_id').select2({
+    theme: 'bootstrap-5',
+    placeholder: 'Please select an academic term',
+    allowClear: true,
+    width: '100%'
+  });
+
   // Load terms for the dropdown
   function loadTerms() {
     $.ajax({
-      url: '{{ route('admin.terms.index') }}',
+      url: '{{ route('admin.terms.legacy.index') }}',
       method: 'GET',
       success: function (response) {
         let $termSelect = $('#term_id');
-        $termSelect.empty().append('<option value="">Select Term</option>');
+        $termSelect.empty().append('<option value="">Please select an academic term</option>');
         response.data.forEach(function (term) {
           $termSelect.append(`<option value="${term.id}">${term.name}</option>`);
         });
@@ -518,6 +610,15 @@ $(document).ready(function () {
   }
   
   loadTerms();
+
+  // Handle term selection
+  // This code listens for changes on the academic term dropdown (#term_id).
+  // When the user selects a different term, it updates the currentTermId variable
+  // and loads the available courses for the selected student and term.
+  $('#term_id').on('change', function() {
+    currentTermId = $(this).val();
+    loadAvailableCourses(currentStudentId, currentTermId);
+  });
 
   $('#enrollForm').on('submit', function(e) {
     e.preventDefault();
@@ -551,16 +652,18 @@ $(document).ready(function () {
       contentType: false,
       success: function(res) {
         Swal.fire({
+          toast: true,
+          position: 'top-end',
           icon: 'success',
-          title: 'Enrollment Successful!',
-          text: `Student has been enrolled in ${selectedCourses} course(s).`,
-          confirmButtonText: 'Great!'
-        }).then(() => {
-          // Reset form and reload data
-          $('.course-checkbox').prop('checked', false);
-          loadEnrollmentHistory(currentStudentId);
-          loadAvailableCourses(currentStudentId, currentTermId);
+          title: `Student has been enrolled in ${selectedCourses} course(s).`,
+          showConfirmButton: false,
+          timer: 2500,
+          timerProgressBar: true
         });
+        // Reset form and reload data
+        $('.course-checkbox').prop('checked', false);
+        loadEnrollmentHistory(currentStudentId);
+        loadAvailableCourses(currentStudentId, currentTermId);
       },
       error: function(xhr) {
         Swal.fire({

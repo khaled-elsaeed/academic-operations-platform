@@ -7,73 +7,28 @@
   <!-- Statistics Cards -->
   <div class="row g-4 mb-4">
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Total Faculties</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-faculties-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-faculties">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-faculties-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-primary">
-                <i class="icon-base bx bx-building icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="faculties"
+        label="Total Faculties"
+        color="primary"
+        icon="bx bx-building"
+      />
     </div>
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Faculties with Programs</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-with-programs-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-with-programs">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-with-programs-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-success">
-                <i class="icon-base bx bx-check-circle icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="with-programs"
+        label="Faculties with Programs"
+        color="success"
+        icon="bx bx-check-circle"
+      />
     </div>
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Faculties without Programs</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-without-programs-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-without-programs">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-without-programs-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-warning">
-                <i class="icon-base bx bx-x-circle icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="without-programs"
+        label="Faculties without Programs"
+        color="warning"
+        icon="bx bx-x-circle"
+      />
     </div>
   </div>
 
@@ -144,7 +99,15 @@
  * @param {string} message - Success message to display
  */
 function showSuccess(message) {
-  Swal.fire('Success', message, 'success');
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'success',
+    title: message,
+    showConfirmButton: false,
+    timer: 2500,
+    timerProgressBar: true
+  });
 }
 
 /**
@@ -156,23 +119,26 @@ function showError(message) {
 }
 
 /**
- * Shows/hides loading spinners and content
+ * Shows/hides loading spinners and content for stat2 component
  * @param {string} elementId - Base element ID
  * @param {boolean} isLoading - Whether to show loading state
  */
 function toggleLoadingState(elementId, isLoading) {
-  const $element = $(`#${elementId}`);
-  const $spinner = $(`#${elementId}-spinner`);
-  const $updated = $(`#${elementId}-updated`);
-  
+  const $value = $(`#${elementId}-value`);
+  const $loader = $(`#${elementId}-loader`);
+  const $updated = $(`#${elementId}-last-updated`);
+  const $updatedLoader = $(`#${elementId}-last-updated-loader`);
+
   if (isLoading) {
-    $element.hide();
-    $updated.hide();
-    $spinner.show();
+    $value.addClass('d-none');
+    $loader.removeClass('d-none');
+    $updated.addClass('d-none');
+    $updatedLoader.removeClass('d-none');
   } else {
-    $element.show();
-    $updated.show();
-    $spinner.hide();
+    $value.removeClass('d-none');
+    $loader.addClass('d-none');
+    $updated.removeClass('d-none');
+    $updatedLoader.addClass('d-none');
   }
 }
 
@@ -185,38 +151,34 @@ function toggleLoadingState(elementId, isLoading) {
  */
 function loadFacultyStats() {
   // Show loading state for all stats
-  toggleLoadingState('stat-faculties', true);
-  toggleLoadingState('stat-with-programs', true);
-  toggleLoadingState('stat-without-programs', true);
+  toggleLoadingState('faculties', true);
+  toggleLoadingState('with-programs', true);
+  toggleLoadingState('without-programs', true);
   
   $.ajax({
     url: '{{ route('admin.faculties.stats') }}',
     method: 'GET',
     success: function (response) {
       const data = response.data;
-      
       // Update faculty statistics
-      $('#stat-faculties').text(data.total.total ?? '--');
-      $('#stat-faculties-updated').text(data.total.lastUpdateTime ?? '--');
-      $('#stat-with-programs').text(data.withPrograms.total ?? '--');
-      $('#stat-with-programs-updated').text(data.withPrograms.lastUpdateTime ?? '--');
-      $('#stat-without-programs').text(data.withoutPrograms.total ?? '--');
-      $('#stat-without-programs-updated').text(data.withoutPrograms.lastUpdateTime ?? '--');
-      
+      $('#faculties-value').text(data.total.total ?? '--');
+      $('#faculties-last-updated').text(data.total.lastUpdateTime ?? '--');
+      $('#with-programs-value').text(data.withPrograms.total ?? '--');
+      $('#with-programs-last-updated').text(data.withPrograms.lastUpdateTime ?? '--');
+      $('#without-programs-value').text(data.withoutPrograms.total ?? '--');
+      $('#without-programs-last-updated').text(data.withoutPrograms.lastUpdateTime ?? '--');
       // Hide loading state
-      toggleLoadingState('stat-faculties', false);
-      toggleLoadingState('stat-with-programs', false);
-      toggleLoadingState('stat-without-programs', false);
+      toggleLoadingState('faculties', false);
+      toggleLoadingState('with-programs', false);
+      toggleLoadingState('without-programs', false);
     },
     error: function() {
       // Show error state
-      $('#stat-faculties, #stat-with-programs, #stat-without-programs').text('N/A');
-      $('#stat-faculties-updated, #stat-with-programs-updated, #stat-without-programs-updated').text('N/A');
-      
-      toggleLoadingState('stat-faculties', false);
-      toggleLoadingState('stat-with-programs', false);
-      toggleLoadingState('stat-without-programs', false);
-      
+      $('#faculties-value, #with-programs-value, #without-programs-value').text('N/A');
+      $('#faculties-last-updated, #with-programs-last-updated, #without-programs-last-updated').text('N/A');
+      toggleLoadingState('faculties', false);
+      toggleLoadingState('with-programs', false);
+      toggleLoadingState('without-programs', false);
       showError('Failed to load faculty statistics');
     }
   });
@@ -289,10 +251,11 @@ function handleEditFacultyBtn() {
     $.ajax({
       url: '{{ url('admin/faculties') }}/' + facultyId,
       method: 'GET',
-      success: function (faculty) {
-        // Populate form fields
-        $('#faculty_id').val(faculty.id);
-        $('#name').val(faculty.name);
+      success: function (response) {
+
+        fac = response.data ;
+        $('#faculty_id').val(fac.id);
+        $('#name').val(fac.name);
         
         // Update modal
         $('#facultyModal .modal-title').text('Edit Faculty');
@@ -307,7 +270,7 @@ function handleEditFacultyBtn() {
 }
 
 /**
- * Handles the Delete Faculty button click event (delegated)
+ * Handles the Delete Faculty button click event
  */
 function handleDeleteFacultyBtn() {
   $(document).on('click', '.deleteFacultyBtn', function () {

@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+
 
 class AvailableCourse extends Model
 {
@@ -115,122 +117,42 @@ class AvailableCourse extends Model
      */
     public function enrollments(): HasMany
     {
-        return $this->hasMany(Enrollment::class, 'available_course_id');
+        return $this->hasMany(Enrollment::class, 'course_id', 'course_id')
+                    ->where('enrollments.term_id', $this->term_id);
     }
 
-    /**
+
+   /**
      * Scope a query to filter available courses by program, level, and term.
      *
-     * @param Builder $query
-     * @param int|null $programId
-     * @param int|null $levelId
-     * @param int|null $termId
-     * @return Builder
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  int|null  $programId
+     * @param  int|null  $levelId
+     * @param  int|null  $termId
+     * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeAvailable(Builder $query, ?int $programId = null, ?int $levelId = null, ?int $termId = null): Builder
+    #[Scope]
+    protected function available(Builder $query, ?int $programId = null, ?int $levelId = null, ?int $termId = null): Builder
     {
         return $query->when($termId, function ($q) use ($termId) {
             return $q->where('term_id', $termId);
         })->when($programId, function ($q) use ($programId) {
-            return $q->where(function($subQuery) use ($programId) {
+            return $q->where(function ($subQuery) use ($programId) {
                 $subQuery->where('is_universal', true)
-                        ->orWhereHas('eligibilities', function($pairQuery) use ($programId) {
-                            $pairQuery->where('program_id', $programId);
-                        });
+                         ->orWhereHas('eligibilities', function ($pairQuery) use ($programId) {
+                             $pairQuery->where('program_id', $programId);
+                         });
             });
         })->when($levelId, function ($q) use ($levelId) {
-            return $q->where(function($subQuery) use ($levelId) {
+            return $q->where(function ($subQuery) use ($levelId) {
                 $subQuery->where('is_universal', true)
-                        ->orWhereHas('eligibilities', function($pairQuery) use ($levelId) {
-                            $pairQuery->where('level_id', $levelId);
-                        });
+                         ->orWhereHas('eligibilities', function ($pairQuery) use ($levelId) {
+                             $pairQuery->where('level_id', $levelId);
+                         });
             });
         });
     }
-
-    /**
-     * Scope for courses available to specific programs.
-     *
-     * @param Builder $query
-     * @param array $programIds
-     * @return Builder
-     */
-    public function scopeForPrograms(Builder $query, array $programIds): Builder
-    {
-        return $query->where(function($q) use ($programIds) {
-            $q->where('is_universal', true)
-              ->orWhereHas('eligibilities', function($pairQuery) use ($programIds) {
-                  $pairQuery->whereIn('program_id', $programIds);
-              });
-        });
-    }
-
-    /**
-     * Scope for courses available to specific levels.
-     *
-     * @param Builder $query
-     * @param array $levelIds
-     * @return Builder
-     */
-    public function scopeForLevels(Builder $query, array $levelIds): Builder
-    {
-        return $query->where(function($q) use ($levelIds) {
-            $q->where('is_universal', true)
-              ->orWhereHas('eligibilities', function($pairQuery) use ($levelIds) {
-                  $pairQuery->whereIn('level_id', $levelIds);
-              });
-        });
-    }
-
-    /**
-     * Scope to filter courses with available capacity.
-     *
-     * @param Builder $query
-     * @param int $minCapacity
-     * @return Builder
-     */
-    public function scopeWithCapacity(Builder $query, int $minCapacity = 1): Builder
-    {
-        return $query->whereRaw('max_capacity > (
-            SELECT COUNT(*) 
-            FROM enrollments 
-            WHERE enrollments.available_course_id = available_courses.id
-        )')->having('max_capacity', '>=', $minCapacity);
-    }
-
-    /**
-     * Check if this course is available for a specific program and level.
-     *
-     * @param int|null $programId
-     * @param int|null $levelId
-     * @return bool
-     */
-    public function isAvailableFor(?int $programId = null, ?int $levelId = null): bool
-    {
-        if ($this->is_universal) {
-            return true;
-        }
-
-        return $this->eligibilities()
-                    ->when($programId, fn($q) => $q->where('program_id', $programId))
-                    ->when($levelId, fn($q) => $q->where('level_id', $levelId))
-                    ->exists();
-    }
-
-    /**
-     * Get all available program IDs for this course.
-     *
-     * @return array
-     */
-    public function getAvailableProgramIds(): array
-    {
-        if ($this->is_universal) {
-            return Program::pluck('id')->toArray();
-        }
-
-        return $this->eligibilities()->distinct()->pluck('program_id')->toArray();
-    }
-
+ 
     /**
      * Get all available level IDs for this course.
      *

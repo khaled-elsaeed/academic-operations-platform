@@ -4,17 +4,27 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Yajra\DataTables\Facades\DataTables;
+use Illuminate\View\View;
+use App\Services\Admin\RoleService;
+use Exception;
+use App\Exceptions\BusinessValidationException;
 
 class RoleController extends Controller
 {
     /**
+     * RoleController constructor.
+     *
+     * @param RoleService $roleService
+     */
+    public function __construct(protected RoleService $roleService)
+    {}
+
+    /**
      * Display the role management page
      */
-    public function index()
+    public function index(): View
     {
         return view('admin.role');
     }
@@ -24,24 +34,13 @@ class RoleController extends Controller
      */
     public function stats(): JsonResponse
     {
-        $totalRoles = Role::count();
-        $totalPermissions = Permission::count();
-        $rolesWithUsers = Role::withCount('users')->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'total' => [
-                    'total' => $totalRoles,
-                    'lastUpdateTime' => now()->format('Y-m-d H:i:s')
-                ],
-                'permissions' => [
-                    'total' => $totalPermissions,
-                    'lastUpdateTime' => now()->format('Y-m-d H:i:s')
-                ],
-                'rolesWithUsers' => $rolesWithUsers
-            ]
-        ]);
+        try {
+            $stats = $this->roleService->getStats();
+            return successResponse('Stats fetched successfully.', $stats);
+        } catch (Exception $e) {
+            logError('RoleController@stats', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -49,36 +48,12 @@ class RoleController extends Controller
      */
     public function datatable(): JsonResponse
     {
-        $roles = Role::with(['permissions', 'users']);
-
-        return DataTables::of($roles)
-            ->addColumn('permissions', function ($role) {
-                return $role->permissions->pluck('name')->implode(', ');
-            })
-            ->addColumn('users_count', function ($role) {
-                return $role->users_count ?? $role->users->count();
-            })
-            ->addColumn('actions', function ($role) {
-                return '
-                    <div class="dropdown">
-                        <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                            <i class="bx bx-dots-vertical-rounded"></i>
-                        </button>
-                        <div class="dropdown-menu">
-                            <a class="dropdown-item" href="javascript:void(0);" onclick="viewRole(' . $role->id . ')">
-                                <i class="bx bx-show me-1"></i> View
-                            </a>
-                            <a class="dropdown-item" href="javascript:void(0);" onclick="editRole(' . $role->id . ')">
-                                <i class="bx bx-edit-alt me-1"></i> Edit
-                            </a>
-                            <a class="dropdown-item" href="javascript:void(0);" onclick="deleteRole(' . $role->id . ')">
-                                <i class="bx bx-trash me-1"></i> Delete
-                            </a>
-                        </div>
-                    </div>';
-            })
-            ->rawColumns(['actions'])
-            ->make(true);
+        try {
+            return $this->roleService->getDatatable();
+        } catch (Exception $e) {
+            logError('RoleController@datatable', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -91,17 +66,14 @@ class RoleController extends Controller
             'permissions' => 'array|exists:permissions,name'
         ]);
 
-        $role = Role::create(['name' => $request->name]);
-
-        if ($request->has('permissions')) {
-            $role->syncPermissions($request->permissions);
+        try {
+            $validated = $request->all();
+            $role = $this->roleService->createRole($validated);
+            return successResponse('Role created successfully.', $role);
+        } catch (Exception $e) {
+            logError('RoleController@store', $e, ['request' => $request->all()]);
+            return errorResponse('Internal server error.', [], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Role created successfully.',
-            'data' => $role
-        ]);
     }
 
     /**
@@ -109,12 +81,13 @@ class RoleController extends Controller
      */
     public function show(Role $role): JsonResponse
     {
-        $role->load(['permissions', 'users']);
-        
-        return response()->json([
-            'success' => true,
-            'data' => $role
-        ]);
+        try {
+            $role = $this->roleService->getRole($role);
+            return successResponse('Role details fetched successfully.', $role);
+        } catch (Exception $e) {
+            logError('RoleController@show', $e, ['role_id' => $role->id]);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -127,17 +100,14 @@ class RoleController extends Controller
             'permissions' => 'array|exists:permissions,name'
         ]);
 
-        $role->update(['name' => $request->name]);
-
-        if ($request->has('permissions')) {
-            $role->syncPermissions($request->permissions);
+        try {
+            $validated = $request->all();
+            $role = $this->roleService->updateRole($role, $validated);
+            return successResponse('Role updated successfully.', $role);
+        } catch (Exception $e) {
+            logError('RoleController@update', $e, ['role_id' => $role->id, 'request' => $request->all()]);
+            return errorResponse('Internal server error.', [], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Role updated successfully.',
-            'data' => $role
-        ]);
     }
 
     /**
@@ -145,26 +115,15 @@ class RoleController extends Controller
      */
     public function destroy(Role $role): JsonResponse
     {
-        if ($role->name === 'admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot delete admin role.'
-            ], 422);
+        try {
+            $this->roleService->deleteRole($role);
+            return successResponse('Role deleted successfully.');
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('RoleController@destroy', $e, ['role_id' => $role->id]);
+            return errorResponse('Internal server error.', [], 500);
         }
-
-        if ($role->users()->count() > 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot delete role that has assigned users.'
-            ], 422);
-        }
-
-        $role->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Role deleted successfully.'
-        ]);
     }
 
     /**
@@ -172,11 +131,12 @@ class RoleController extends Controller
      */
     public function getPermissions(): JsonResponse
     {
-        $permissions = Permission::all();
-        
-        return response()->json([
-            'success' => true,
-            'data' => $permissions
-        ]);
+        try {
+            $permissions = $this->roleService->getPermissions();
+            return successResponse('Permissions fetched successfully.', $permissions);
+        } catch (Exception $e) {
+            logError('RoleController@getPermissions', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 } 

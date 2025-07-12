@@ -4,17 +4,27 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
-use App\Models\Program;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Yajra\DataTables\Facades\DataTables;
+use Illuminate\View\View;
+use App\Services\Admin\CourseService;
+use Exception;
+use App\Exceptions\BusinessValidationException;
 
 class CourseController extends Controller
 {
     /**
+     * CourseController constructor.
+     *
+     * @param CourseService $courseService
+     */
+    public function __construct(protected CourseService $courseService)
+    {}
+
+    /**
      * Display the course management page
      */
-    public function index()
+    public function index(): View
     {
         return view('admin.course');
     }
@@ -24,27 +34,13 @@ class CourseController extends Controller
      */
     public function stats(): JsonResponse
     {
-        $totalCourses = Course::count();
-        $coursesWithPrerequisites = Course::has('prerequisites')->count();
-        $coursesWithoutPrerequisites = Course::doesntHave('prerequisites')->count();
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'total' => [
-                    'total' => $totalCourses,
-                    'lastUpdateTime' => now()->format('Y-m-d H:i:s')
-                ],
-                'withPrerequisites' => [
-                    'total' => $coursesWithPrerequisites,
-                    'lastUpdateTime' => now()->format('Y-m-d H:i:s')
-                ],
-                'withoutPrerequisites' => [
-                    'total' => $coursesWithoutPrerequisites,
-                    'lastUpdateTime' => now()->format('Y-m-d H:i:s')
-                ]
-            ]
-        ]);
+        try {
+            $stats = $this->courseService->getStats();
+            return successResponse('Stats fetched successfully.', $stats);
+        } catch (Exception $e) {
+            logError('CourseController@stats', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -52,37 +48,12 @@ class CourseController extends Controller
      */
     public function datatable(): JsonResponse
     {
-        $courses = Course::with(['program', 'prerequisites']);
-
-        return DataTables::of($courses)
-            ->addColumn('program_name', function ($course) {
-                return $course->program ? $course->program->name : 'N/A';
-            })
-            ->addColumn('prerequisites_count', function ($course) {
-                return $course->prerequisites->count();
-            })
-            ->addColumn('prerequisites_list', function ($course) {
-                return $course->prerequisites->pluck('title')->join(', ') ?: 'None';
-            })
-            ->addColumn('action', function ($course) {
-                return '
-                    <div class="dropdown">
-                        <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                            <i class="bx bx-dots-vertical-rounded"></i>
-                        </button>
-                        <div class="dropdown-menu">
-                            <a class="dropdown-item editCourseBtn" href="javascript:void(0);" data-id="' . $course->id . '">
-                                <i class="bx bx-edit-alt me-1"></i> Edit
-                            </a>
-                            <a class="dropdown-item deleteCourseBtn" href="javascript:void(0);" data-id="' . $course->id . '">
-                                <i class="bx bx-trash me-1"></i> Delete
-                            </a>
-                        </div>
-                    </div>
-                ';
-            })
-            ->rawColumns(['action'])
-            ->make(true);
+        try {
+            return $this->courseService->getDatatable();
+        } catch (Exception $e) {
+            logError('CourseController@datatable', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -94,20 +65,17 @@ class CourseController extends Controller
             'code' => 'required|string|max:50|unique:courses,code',
             'title' => 'required|string|max:255',
             'credit_hours' => 'required|numeric|min:0|max:99',
-            'program_id' => 'required|exists:programs,id'
+            'faculty_id' => 'required|exists:faculties,id'
         ]);
 
-        Course::create([
-            'code' => $request->code,
-            'title' => $request->title,
-            'credit_hours' => $request->credit_hours,
-            'program_id' => $request->program_id
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Course created successfully.'
-        ]);
+        try {
+            $validated = $request->all();
+            $course = $this->courseService->createCourse($validated);
+            return successResponse('Course created successfully.', $course);
+        } catch (Exception $e) {
+            logError('CourseController@store', $e, ['request' => $request->all()]);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -115,10 +83,13 @@ class CourseController extends Controller
      */
     public function show(Course $course): JsonResponse
     {
-        return response()->json([
-            'success' => true,
-            'data' => $course->load(['program', 'prerequisites'])
-        ]);
+        try {
+            $course = $this->courseService->getCourse($course);
+            return successResponse('Course details fetched successfully.', $course);
+        } catch (Exception $e) {
+            logError('CourseController@show', $e, ['course_id' => $course->id]);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -130,20 +101,17 @@ class CourseController extends Controller
             'code' => 'required|string|max:50|unique:courses,code,' . $course->id,
             'title' => 'required|string|max:255',
             'credit_hours' => 'required|numeric|min:0|max:99',
-            'program_id' => 'required|exists:programs,id'
+            'faculty_id' => 'required|exists:faculties,id'
         ]);
 
-        $course->update([
-            'code' => $request->code,
-            'title' => $request->title,
-            'credit_hours' => $request->credit_hours,
-            'program_id' => $request->program_id
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Course updated successfully.'
-        ]);
+        try {
+            $validated = $request->all();
+            $course = $this->courseService->updateCourse($course, $validated);
+            return successResponse('Course updated successfully.', $course);
+        } catch (Exception $e) {
+            logError('CourseController@update', $e, ['course_id' => $course->id, 'request' => $request->all()]);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -151,40 +119,29 @@ class CourseController extends Controller
      */
     public function destroy(Course $course): JsonResponse
     {
-        // Check if course has dependent courses (is a prerequisite for other courses)
-        if ($course->dependentCourses()->count() > 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot delete course that is a prerequisite for other courses.'
-            ], 422);
+        try {
+            $this->courseService->deleteCourse($course);
+            return successResponse('Course deleted successfully.');
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('CourseController@destroy', $e, ['course_id' => $course->id]);
+            return errorResponse('Internal server error.', [], 500);
         }
-
-        // Check if course has available courses
-        if ($course->availableCourses()->count() > 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot delete course that has available course instances.'
-            ], 422);
-        }
-
-        $course->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Course deleted successfully.'
-        ]);
     }
 
     /**
-     * Get all programs for dropdown
+     * Get all faculties for dropdown
      */
-    public function getPrograms(): JsonResponse
+    public function getFaculties(): JsonResponse
     {
-        $programs = Program::all();
-        return response()->json([
-            'success' => true,
-            'data' => $programs
-        ]);
+        try {
+            $faculties = $this->courseService->getFaculties();
+            return successResponse('Faculties fetched successfully.', $faculties);
+        } catch (Exception $e) {
+            logError('CourseController@getFaculties', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -192,10 +149,12 @@ class CourseController extends Controller
      */
     public function getCourses(): JsonResponse
     {
-        $courses = Course::all();
-        return response()->json([
-            'success' => true,
-            'data' => $courses
-        ]);
+        try {
+            $courses = $this->courseService->getCourses();
+            return successResponse('Courses fetched successfully.', $courses);
+        } catch (Exception $e) {
+            logError('CourseController@getCourses', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 } 

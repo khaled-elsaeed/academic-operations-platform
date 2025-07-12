@@ -2,78 +2,34 @@
 
 @section('title', 'Admin Home | AcadOps')
 
+
 @section('page-content')
 <div class="container-xxl flex-grow-1 container-p-y">
   <!-- Statistics Cards -->
   <div class="row g-4 mb-4">
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Total Students</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-students-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-students">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-students-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-primary">
-                <i class="icon-base bx bx-group icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="students"
+        label="Total Students"
+        color="primary"
+        icon="bx bx-group"
+      />
     </div>
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Total Male Students</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-male-students-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-male-students">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-male-students-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-danger">
-                <i class="icon-base bx bx-user-plus icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="male-students"
+        label="Total Male Students"
+        color="danger"
+        icon="bx bx-user-plus"
+      />
     </div>
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Total Female Students</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-female-students-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-female-students">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-female-students-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-success">
-                <i class="icon-base bx bx-user-check icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="female-students"
+        label="Total Female Students"
+        color="success"
+        icon="bx bx-user-check"
+      />
     </div>
   </div>
 
@@ -259,7 +215,15 @@
  * @param {string} message - Success message to display
  */
 function showSuccess(message) {
-  Swal.fire('Success', message, 'success');
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'success',
+    title: message,
+    showConfirmButton: false,
+    timer: 2500,
+    timerProgressBar: true
+  });
 }
 
 /**
@@ -267,27 +231,34 @@ function showSuccess(message) {
  * @param {string} message - Error message to display
  */
 function showError(message) {
-  Swal.fire('Error', message, 'error');
+  Swal.fire({
+    title: 'Error',
+    html: message,
+    icon: 'error'
+  });
 }
 
 /**
- * Shows/hides loading spinners and content
+ * Shows/hides loading spinners and content for stat2 component
  * @param {string} elementId - Base element ID
  * @param {boolean} isLoading - Whether to show loading state
  */
 function toggleLoadingState(elementId, isLoading) {
-  const $element = $(`#${elementId}`);
-  const $spinner = $(`#${elementId}-spinner`);
-  const $updated = $(`#${elementId}-updated`);
-  
+  const $value = $(`#${elementId}-value`);
+  const $loader = $(`#${elementId}-loader`);
+  const $updated = $(`#${elementId}-last-updated`);
+  const $updatedLoader = $(`#${elementId}-last-updated-loader`);
+
   if (isLoading) {
-    $element.hide();
-    $updated.hide();
-    $spinner.show();
+    $value.addClass('d-none');
+    $loader.removeClass('d-none');
+    $updated.addClass('d-none');
+    $updatedLoader.removeClass('d-none');
   } else {
-    $element.show();
-    $updated.show();
-    $spinner.hide();
+    $value.removeClass('d-none');
+    $loader.addClass('d-none');
+    $updated.removeClass('d-none');
+    $updatedLoader.addClass('d-none');
   }
 }
 
@@ -307,18 +278,16 @@ function loadPrograms(selectedId = null) {
     success: function (response) {
       const data = response.data;
       const $programSelect = $('#program_id');
-      
       $programSelect.empty().append('<option value="">Select Program</option>');
-      
       data.forEach(function (program) {
         $programSelect.append(
           $('<option>', { value: program.id, text: program.name })
         );
       });
-      
       if (selectedId) {
         $programSelect.val(selectedId);
       }
+      $programSelect.trigger('change');
     },
     error: function() {
       showError('Failed to load programs');
@@ -331,7 +300,7 @@ function loadPrograms(selectedId = null) {
  * @returns {Promise} jQuery promise
  */
 function fetchLevels() {
-  return $.getJSON("{{ route('admin.levels.index') }}");
+  return $.getJSON("{{ route('admin.levels.legacy.index') }}");
 }
 
 /**
@@ -343,14 +312,13 @@ function populateLevelDropdown(selectedLevelId = null) {
     .done(function(levels) {
       const $levelSelect = $('#level_id');
       $levelSelect.empty().append('<option value="">Select Level</option>');
-      
       (levels.data || levels).forEach(function(item) {
         $levelSelect.append($('<option>', { value: item.id, text: item.name }));
       });
-      
       if (selectedLevelId) {
         $levelSelect.val(selectedLevelId);
       }
+      $levelSelect.trigger('change');
     })
     .fail(function() {
       showError('Failed to load levels');
@@ -363,7 +331,7 @@ function populateLevelDropdown(selectedLevelId = null) {
  * @returns {Promise} jQuery promise
  */
 function loadTerms(selectedTermId = null) {
-  return $.getJSON("{{ route('admin.terms.index') }}")
+  return $.getJSON("{{ route('admin.terms.legacy.index') }}")
     .done(function(response) {
       const $termSelect = $('#term_id');
       $termSelect.empty().append('<option value="">All Terms</option>');
@@ -390,38 +358,34 @@ function loadTerms(selectedTermId = null) {
  */
 function loadStudentStats() {
   // Show loading state for all stats
-  toggleLoadingState('stat-students', true);
-  toggleLoadingState('stat-male-students', true);
-  toggleLoadingState('stat-female-students', true);
+  toggleLoadingState('students', true);
+  toggleLoadingState('male-students', true);
+  toggleLoadingState('female-students', true);
   
   $.ajax({
     url: '{{ route('admin.students.stats') }}',
     method: 'GET',
     success: function (response) {
       const data = response.data;
-      
       // Update student statistics
-      $('#stat-students').text(data.students.total ?? '--');
-      $('#stat-students-updated').text(data.students.lastUpdateTime ?? '--');
-      $('#stat-male-students').text(data.maleStudents.total ?? '--');
-      $('#stat-male-students-updated').text(data.maleStudents.lastUpdateTime ?? '--');
-      $('#stat-female-students').text(data.femaleStudents.total ?? '--');
-      $('#stat-female-students-updated').text(data.femaleStudents.lastUpdateTime ?? '--');
-      
+      $('#students-value').text(data.students.total ?? '--');
+      $('#students-last-updated').text(data.students.lastUpdateTime ?? '--');
+      $('#male-students-value').text(data.maleStudents.total ?? '--');
+      $('#male-students-last-updated').text(data.maleStudents.lastUpdateTime ?? '--');
+      $('#female-students-value').text(data.femaleStudents.total ?? '--');
+      $('#female-students-last-updated').text(data.femaleStudents.lastUpdateTime ?? '--');
       // Hide loading state
-      toggleLoadingState('stat-students', false);
-      toggleLoadingState('stat-male-students', false);
-      toggleLoadingState('stat-female-students', false);
+      toggleLoadingState('students', false);
+      toggleLoadingState('male-students', false);
+      toggleLoadingState('female-students', false);
     },
     error: function() {
       // Show error state
-      $('#stat-students, #stat-male-students, #stat-female-students').text('N/A');
-      $('#stat-students-updated, #stat-male-students-updated, #stat-female-students-updated').text('N/A');
-      
-      toggleLoadingState('stat-students', false);
-      toggleLoadingState('stat-male-students', false);
-      toggleLoadingState('stat-female-students', false);
-      
+      $('#students-value, #male-students-value, #female-students-value').text('N/A');
+      $('#students-last-updated, #male-students-last-updated, #female-students-last-updated').text('N/A');
+      toggleLoadingState('students', false);
+      toggleLoadingState('male-students', false);
+      toggleLoadingState('female-students', false);
       showError('Failed to load student statistics');
     }
   });
@@ -479,6 +443,7 @@ function handleStudentFormSubmit() {
         loadStudentStats(); // Refresh stats
       },
       error: function (xhr) {
+        $('#studentModal').modal('hide');
         const message = xhr.responseJSON?.message || 'An error occurred. Please check your input.';
         showError(message);
       },
@@ -508,7 +473,7 @@ function handleEditStudentBtn() {
         $('#national_id').val(student.national_id);
         $('#academic_email').val(student.academic_email);
         $('#cgpa').val(student.cgpa);
-        $('#gender').val(student.gender);
+        $('#gender').val(student.gender).trigger('change');
         
         // Load dropdowns with preselected values
         loadPrograms(student.program_id);
@@ -585,17 +550,83 @@ function handleImportStudentsForm() {
       success: function(response) {
         $('#importStudentsModal').modal('hide');
         $('#students-table').DataTable().ajax.reload(null, false);
+        
+        // Show success message
         showSuccess(response.message);
+        
+        // If there are errors, show them in a detailed modal
+        if (response.data && response.data.errors && response.data.errors.length > 0) {
+          showImportErrors(response.data.errors, response.data.imported_count);
+        }
+        
         loadStudentStats(); // Refresh stats
       },
       error: function(xhr) {
-        const message = xhr.responseJSON?.message || 'Import failed. Please check your file.';
-        showError(message);
+        $('#importStudentsModal').modal('hide');
+        const response = xhr.responseJSON;
+        if (response && response.errors && Object.keys(response.errors).length > 0) {
+          // Handle validation errors
+          const errorMessages = [];
+          Object.keys(response.errors).forEach(field => {
+            if (Array.isArray(response.errors[field])) {
+              errorMessages.push(...response.errors[field]);
+            } else {
+              errorMessages.push(response.errors[field]);
+            }
+          });
+          showError(errorMessages.join('<br>'));
+        } else {
+          // Handle general errors
+          const message = response?.message || 'Import failed. Please check your file.';
+          showError(message);
+        }
       },
       complete: function() {
         $submitBtn.prop('disabled', false).text('Import');
       }
     });
+  });
+}
+
+/**
+ * Shows import errors in a detailed modal
+ * @param {Array} errors - Array of error objects
+ * @param {number} importedCount - Number of successfully imported records
+ */
+function showImportErrors(errors, importedCount) {
+  let errorHtml = '<div class="text-start">';
+  errorHtml += `<p class="mb-3"><strong>Successfully imported: ${importedCount} students</strong></p>`;
+  errorHtml += '<p class="mb-3"><strong>Errors found:</strong></p>';
+  
+  errors.forEach(function(error) {
+    errorHtml += `<div class="mb-2 p-2 border-start border-danger border-3 bg-light">`;
+    errorHtml += `<strong>Row ${error.row}:</strong><br>`;
+    
+    Object.keys(error.errors).forEach(function(field) {
+      const fieldErrors = error.errors[field];
+      // Handle both array and string error formats
+      if (Array.isArray(fieldErrors)) {
+        fieldErrors.forEach(function(errorMessage) {
+          errorHtml += `<span class="text-danger">• ${errorMessage}</span><br>`;
+        });
+      } else if (typeof fieldErrors === 'string') {
+        errorHtml += `<span class="text-danger">• ${fieldErrors}</span><br>`;
+      } else {
+        // Fallback for any other format
+        errorHtml += `<span class="text-danger">• ${String(fieldErrors)}</span><br>`;
+      }
+    });
+    errorHtml += '</div>';
+  });
+  
+  errorHtml += '</div>';
+  
+  Swal.fire({
+    title: 'Import Completed with Errors',
+    html: errorHtml,
+    icon: 'warning',
+    confirmButtonText: 'OK',
+    width: '600px'
   });
 }
 
@@ -710,11 +741,13 @@ function handleDownloadProcess() {
           Swal.close();
           $('#downloadEnrollmentModal').modal('hide');
         } else {
+          $('#downloadEnrollmentModal').modal('hide');
           showError('Invalid response from server.');
         }
       },
       error: function(xhr) {
         Swal.close();
+        $('#downloadEnrollmentModal').modal('hide');
         const message = xhr.responseJSON?.message || 'Failed to generate document.';
         showError(message);
       }
@@ -755,6 +788,21 @@ function initializeStudentManagement() {
 
 $(document).ready(function () {
   initializeStudentManagement();
+  // Initialize Select2 for all selects in the student modal and download modal
+  $('#studentModal select, #downloadEnrollmentModal #term_id').select2({
+    theme: 'bootstrap-5',
+    placeholder: function(){
+      var id = $(this).attr('id');
+      if(id === 'level_id') return 'Select Level';
+      if(id === 'gender') return 'Select Gender';
+      if(id === 'program_id') return 'Select Program';
+      if(id === 'term_id') return 'Select Term';
+      return '';
+    },
+    allowClear: true,
+    width: '100%',
+    dropdownParent: $('#studentModal')
+  });
 });
 </script>
 @endpush

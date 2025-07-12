@@ -7,73 +7,28 @@
   <!-- Statistics Cards -->
   <div class="row g-4 mb-4">
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Total Programs</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-programs-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-programs">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-programs-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-primary">
-                <i class="icon-base bx bx-book-open icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="programs"
+        label="Total Programs"
+        color="primary"
+        icon="bx bx-book-open"
+      />
     </div>
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Programs with Students</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-with-students-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-with-students">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-with-students-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-success">
-                <i class="icon-base bx bx-user-check icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="with-students"
+        label="Programs with Students"
+        color="success"
+        icon="bx bx-user-check"
+      />
     </div>
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Programs without Students</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-without-students-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-without-students">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-without-students-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-warning">
-                <i class="icon-base bx bx-user-x icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="without-students"
+        label="Programs without Students"
+        color="warning"
+        icon="bx bx-user-x"
+      />
     </div>
   </div>
 
@@ -159,7 +114,15 @@
  * @param {string} message - Success message to display
  */
 function showSuccess(message) {
-  Swal.fire('Success', message, 'success');
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'success',
+    title: message,
+    showConfirmButton: false,
+    timer: 2500,
+    timerProgressBar: true
+  });
 }
 
 /**
@@ -171,23 +134,26 @@ function showError(message) {
 }
 
 /**
- * Shows/hides loading spinners and content
+ * Shows/hides loading spinners and content for stat2 component
  * @param {string} elementId - Base element ID
  * @param {boolean} isLoading - Whether to show loading state
  */
 function toggleLoadingState(elementId, isLoading) {
-  const $element = $(`#${elementId}`);
-  const $spinner = $(`#${elementId}-spinner`);
-  const $updated = $(`#${elementId}-updated`);
-  
+  const $value = $(`#${elementId}-value`);
+  const $loader = $(`#${elementId}-loader`);
+  const $updated = $(`#${elementId}-last-updated`);
+  const $updatedLoader = $(`#${elementId}-last-updated-loader`);
+
   if (isLoading) {
-    $element.hide();
-    $updated.hide();
-    $spinner.show();
+    $value.addClass('d-none');
+    $loader.removeClass('d-none');
+    $updated.addClass('d-none');
+    $updatedLoader.removeClass('d-none');
   } else {
-    $element.show();
-    $updated.show();
-    $spinner.hide();
+    $value.removeClass('d-none');
+    $loader.addClass('d-none');
+    $updated.removeClass('d-none');
+    $updatedLoader.addClass('d-none');
   }
 }
 
@@ -235,38 +201,34 @@ function loadFaculties(selectedId = null) {
  */
 function loadProgramStats() {
   // Show loading state for all stats
-  toggleLoadingState('stat-programs', true);
-  toggleLoadingState('stat-with-students', true);
-  toggleLoadingState('stat-without-students', true);
+  toggleLoadingState('programs', true);
+  toggleLoadingState('with-students', true);
+  toggleLoadingState('without-students', true);
   
   $.ajax({
     url: '{{ route('admin.programs.stats') }}',
     method: 'GET',
     success: function (response) {
       const data = response.data;
-      
       // Update program statistics
-      $('#stat-programs').text(data.total.total ?? '--');
-      $('#stat-programs-updated').text(data.total.lastUpdateTime ?? '--');
-      $('#stat-with-students').text(data.withStudents.total ?? '--');
-      $('#stat-with-students-updated').text(data.withStudents.lastUpdateTime ?? '--');
-      $('#stat-without-students').text(data.withoutStudents.total ?? '--');
-      $('#stat-without-students-updated').text(data.withoutStudents.lastUpdateTime ?? '--');
-      
+      $('#programs-value').text(data.total.total ?? '--');
+      $('#programs-last-updated').text(data.total.lastUpdateTime ?? '--');
+      $('#with-students-value').text(data.withStudents.total ?? '--');
+      $('#with-students-last-updated').text(data.withStudents.lastUpdateTime ?? '--');
+      $('#without-students-value').text(data.withoutStudents.total ?? '--');
+      $('#without-students-last-updated').text(data.withoutStudents.lastUpdateTime ?? '--');
       // Hide loading state
-      toggleLoadingState('stat-programs', false);
-      toggleLoadingState('stat-with-students', false);
-      toggleLoadingState('stat-without-students', false);
+      toggleLoadingState('programs', false);
+      toggleLoadingState('with-students', false);
+      toggleLoadingState('without-students', false);
     },
     error: function() {
       // Show error state
-      $('#stat-programs, #stat-with-students, #stat-without-students').text('N/A');
-      $('#stat-programs-updated, #stat-with-students-updated, #stat-without-students-updated').text('N/A');
-      
-      toggleLoadingState('stat-programs', false);
-      toggleLoadingState('stat-with-students', false);
-      toggleLoadingState('stat-without-students', false);
-      
+      $('#programs-value, #with-students-value, #without-students-value').text('N/A');
+      $('#programs-last-updated, #with-students-last-updated, #without-students-last-updated').text('N/A');
+      toggleLoadingState('programs', false);
+      toggleLoadingState('with-students', false);
+      toggleLoadingState('without-students', false);
       showError('Failed to load program statistics');
     }
   });
@@ -344,13 +306,15 @@ function handleEditProgramBtn() {
       url: '{{ url('admin/programs') }}/' + programId,
       method: 'GET',
       success: function (program) {
+        // Prefer program.data if exists, fallback to program
+        const prog = program.data ? program.data : program;
         // Populate form fields
-        $('#program_id').val(program.id);
-        $('#name').val(program.name);
-        $('#code').val(program.code);
+        $('#program_id').val(prog.id);
+        $('#name').val(prog.name);
+        $('#code').val(prog.code);
         
         // Load dropdowns with preselected values
-        loadFaculties(program.faculty_id);
+        loadFaculties(prog.faculty_id);
         
         // Update modal
         $('#programModal .modal-title').text('Edit Program');
@@ -415,6 +379,15 @@ function initializeProgramManagement() {
   handleProgramFormSubmit();
   handleEditProgramBtn();
   handleDeleteProgramBtn();
+
+  // Initialize Select2 for faculty select in the program modal
+  $('#faculty_id').select2({
+    theme: 'bootstrap-5',
+    placeholder: 'Select Faculty',
+    allowClear: true,
+    width: '100%',
+    dropdownParent: $('#programModal')
+  });
 }
 
 // ===========================

@@ -1,0 +1,38 @@
+<?php
+
+namespace App\Validators;
+
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
+
+class EnrollmentImportValidator
+{
+    /**
+     * Validate a single row for enrollment import.
+     *
+     * @param array $row
+     * @param int $rowNumber
+     * @throws ValidationException
+     */
+    public static function validateRow(array $row, int $rowNumber): void
+    {
+        $validator = Validator::make($row, [
+            'student_national_id' => 'required|exists:students,national_id',
+            'course_code'         => 'required|exists:courses,code',
+            'term_code'           => 'required|exists:terms,code',
+        ], [
+            'student_national_id.required' => 'Student national ID is required.',
+            'student_national_id.exists'   => 'Student with this national ID does not exist.',
+            'course_code.required'         => 'Course code is required.',
+            'course_code.exists'           => 'Course code does not exist.',
+            'term_code.required'           => 'Term code is required.',
+            'term_code.exists'             => 'Term code does not exist.',
+        ]);
+
+        if ($validator->fails()) {
+            throw ValidationException::withMessages([
+                "Row $rowNumber" => $validator->errors()->all(),
+            ]);
+        }
+    }
+} 

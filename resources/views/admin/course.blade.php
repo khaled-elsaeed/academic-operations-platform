@@ -7,73 +7,28 @@
   <!-- Statistics Cards -->
   <div class="row g-4 mb-4">
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Total Courses</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-courses-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-courses">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-courses-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-primary">
-                <i class="icon-base bx bx-book icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="courses"
+        label="Total Courses"
+        color="primary"
+        icon="bx bx-book"
+      />
     </div>
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Courses with Prerequisites</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-with-prerequisites-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-with-prerequisites">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-with-prerequisites-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-success">
-                <i class="icon-base bx bx-check-circle icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="with-prerequisites"
+        label="Courses with Prerequisites"
+        color="success"
+        icon="bx bx-check-circle"
+      />
     </div>
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Courses without Prerequisites</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-without-prerequisites-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-without-prerequisites">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-without-prerequisites-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-warning">
-                <i class="icon-base bx bx-x-circle icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="without-prerequisites"
+        label="Courses without Prerequisites"
+        color="warning"
+        icon="bx bx-x-circle"
+      />
     </div>
   </div>
 
@@ -90,13 +45,13 @@
 
   <!-- Courses DataTable -->
   <x-ui.datatable
-    :headers="['ID', 'Code', 'Title', 'Credit Hours', 'Program', 'Prerequisites Count', 'Prerequisites', 'Action']"
+    :headers="['ID', 'Code', 'Title', 'Credit Hours', 'Faculty', 'Prerequisites Count', 'Prerequisites', 'Action']"
     :columns="[
         ['data' => 'id', 'name' => 'id'],
         ['data' => 'code', 'name' => 'code'],
         ['data' => 'title', 'name' => 'title'],
         ['data' => 'credit_hours', 'name' => 'credit_hours'],
-        ['data' => 'program_name', 'name' => 'program_name'],
+        ['data' => 'faculty_name', 'name' => 'faculty_name'],
         ['data' => 'prerequisites_count', 'name' => 'prerequisites_count'],
         ['data' => 'prerequisites_list', 'name' => 'prerequisites_list'],
         ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
@@ -130,9 +85,9 @@
             <input type="text" class="form-control" id="title" name="title" required>
           </div>
           <div class="col-md-12 mb-3">
-            <label for="program_id" class="form-label">Program</label>
-            <select class="form-control" id="program_id" name="program_id" required>
-              <option value="">Select Program</option>
+            <label for="faculty_id" class="form-label">Faculty</label>
+            <select class="form-control" id="faculty_id" name="faculty_id" required>
+              <option value="">Select Faculty</option>
               <!-- Options will be loaded via AJAX -->
             </select>
           </div>
@@ -165,7 +120,15 @@
  * @param {string} message - Success message to display
  */
 function showSuccess(message) {
-  Swal.fire('Success', message, 'success');
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'success',
+    title: message,
+    showConfirmButton: false,
+    timer: 2500,
+    timerProgressBar: true
+  });
 }
 
 /**
@@ -177,23 +140,26 @@ function showError(message) {
 }
 
 /**
- * Shows/hides loading spinners and content
+ * Shows/hides loading spinners and content for stat2 component
  * @param {string} elementId - Base element ID
  * @param {boolean} isLoading - Whether to show loading state
  */
 function toggleLoadingState(elementId, isLoading) {
-  const $element = $(`#${elementId}`);
-  const $spinner = $(`#${elementId}-spinner`);
-  const $updated = $(`#${elementId}-updated`);
-  
+  const $value = $(`#${elementId}-value`);
+  const $loader = $(`#${elementId}-loader`);
+  const $updated = $(`#${elementId}-last-updated`);
+  const $updatedLoader = $(`#${elementId}-last-updated-loader`);
+
   if (isLoading) {
-    $element.hide();
-    $updated.hide();
-    $spinner.show();
+    $value.addClass('d-none');
+    $loader.removeClass('d-none');
+    $updated.addClass('d-none');
+    $updatedLoader.removeClass('d-none');
   } else {
-    $element.show();
-    $updated.show();
-    $spinner.hide();
+    $value.removeClass('d-none');
+    $loader.addClass('d-none');
+    $updated.removeClass('d-none');
+    $updatedLoader.addClass('d-none');
   }
 }
 
@@ -202,32 +168,32 @@ function toggleLoadingState(elementId, isLoading) {
 // ===========================
 
 /**
- * Loads all programs into the program select dropdown
- * @param {number|null} selectedId - The program ID to preselect (optional)
+ * Loads all faculties into the faculty select dropdown
+ * @param {number|null} selectedId - The faculty ID to preselect (optional)
  * @returns {Promise} jQuery promise
  */
-function loadPrograms(selectedId = null) {
+function loadFaculties(selectedId = null) {
   return $.ajax({
-    url: '{{ route('admin.courses.programs') }}',
+    url: '{{ route('admin.courses.faculties') }}',
     method: 'GET',
     success: function (response) {
       const data = response.data;
-      const $programSelect = $('#program_id');
+      const $facultySelect = $('#faculty_id');
       
-      $programSelect.empty().append('<option value="">Select Program</option>');
+      $facultySelect.empty().append('<option value="">Select Faculty</option>');
       
-      data.forEach(function (program) {
-        $programSelect.append(
-          $('<option>', { value: program.id, text: program.name })
+      data.forEach(function (faculty) {
+        $facultySelect.append(
+          $('<option>', { value: faculty.id, text: faculty.name })
         );
       });
       
       if (selectedId) {
-        $programSelect.val(selectedId);
+        $facultySelect.val(selectedId);
       }
     },
     error: function() {
-      showError('Failed to load programs');
+      showError('Failed to load faculties');
     }
   });
 }
@@ -241,38 +207,34 @@ function loadPrograms(selectedId = null) {
  */
 function loadCourseStats() {
   // Show loading state for all stats
-  toggleLoadingState('stat-courses', true);
-  toggleLoadingState('stat-with-prerequisites', true);
-  toggleLoadingState('stat-without-prerequisites', true);
+  toggleLoadingState('courses', true);
+  toggleLoadingState('with-prerequisites', true);
+  toggleLoadingState('without-prerequisites', true);
   
   $.ajax({
     url: '{{ route('admin.courses.stats') }}',
     method: 'GET',
     success: function (response) {
       const data = response.data;
-      
       // Update course statistics
-      $('#stat-courses').text(data.total.total ?? '--');
-      $('#stat-courses-updated').text(data.total.lastUpdateTime ?? '--');
-      $('#stat-with-prerequisites').text(data.withPrerequisites.total ?? '--');
-      $('#stat-with-prerequisites-updated').text(data.withPrerequisites.lastUpdateTime ?? '--');
-      $('#stat-without-prerequisites').text(data.withoutPrerequisites.total ?? '--');
-      $('#stat-without-prerequisites-updated').text(data.withoutPrerequisites.lastUpdateTime ?? '--');
-      
+      $('#courses-value').text(data.total.total ?? '--');
+      $('#courses-last-updated').text(data.total.lastUpdateTime ?? '--');
+      $('#with-prerequisites-value').text(data.withPrerequisites.total ?? '--');
+      $('#with-prerequisites-last-updated').text(data.withPrerequisites.lastUpdateTime ?? '--');
+      $('#without-prerequisites-value').text(data.withoutPrerequisites.total ?? '--');
+      $('#without-prerequisites-last-updated').text(data.withoutPrerequisites.lastUpdateTime ?? '--');
       // Hide loading state
-      toggleLoadingState('stat-courses', false);
-      toggleLoadingState('stat-with-prerequisites', false);
-      toggleLoadingState('stat-without-prerequisites', false);
+      toggleLoadingState('courses', false);
+      toggleLoadingState('with-prerequisites', false);
+      toggleLoadingState('without-prerequisites', false);
     },
     error: function() {
       // Show error state
-      $('#stat-courses, #stat-with-prerequisites, #stat-without-prerequisites').text('N/A');
-      $('#stat-courses-updated, #stat-with-prerequisites-updated, #stat-without-prerequisites-updated').text('N/A');
-      
-      toggleLoadingState('stat-courses', false);
-      toggleLoadingState('stat-with-prerequisites', false);
-      toggleLoadingState('stat-without-prerequisites', false);
-      
+      $('#courses-value, #with-prerequisites-value, #without-prerequisites-value').text('N/A');
+      $('#courses-last-updated, #with-prerequisites-last-updated, #without-prerequisites-last-updated').text('N/A');
+      toggleLoadingState('courses', false);
+      toggleLoadingState('with-prerequisites', false);
+      toggleLoadingState('without-prerequisites', false);
       showError('Failed to load course statistics');
     }
   });
@@ -293,7 +255,7 @@ function handleAddCourseBtn() {
     $('#saveCourseBtn').text('Save');
     
     // Load dropdown data
-    loadPrograms();
+    loadFaculties();
     
     $('#courseModal').modal('show');
   });
@@ -350,14 +312,16 @@ function handleEditCourseBtn() {
       url: '{{ url('admin/courses') }}/' + courseId,
       method: 'GET',
       success: function (course) {
+        // Prefer course.data if exists, fallback to course
+        const crs = course.data ? course.data : course;
         // Populate form fields
-        $('#course_id').val(course.id);
-        $('#code').val(course.code);
-        $('#title').val(course.title);
-        $('#credit_hours').val(course.credit_hours);
+        $('#course_id').val(crs.id);
+        $('#code').val(crs.code);
+        $('#title').val(crs.title);
+        $('#credit_hours').val(crs.credit_hours);
         
         // Load dropdowns with preselected values
-        loadPrograms(course.program_id);
+        loadFaculties(crs.faculty_id);
         
         // Update modal
         $('#courseModal .modal-title').text('Edit Course');
@@ -422,6 +386,15 @@ function initializeCourseManagement() {
   handleCourseFormSubmit();
   handleEditCourseBtn();
   handleDeleteCourseBtn();
+
+  // Initialize Select2 for program select in the course modal
+  $('#program_id').select2({
+    theme: 'bootstrap-5',
+    placeholder: 'Select Program',
+    allowClear: true,
+    width: '100%',
+    dropdownParent: $('#courseModal')
+  });
 }
 
 // ===========================

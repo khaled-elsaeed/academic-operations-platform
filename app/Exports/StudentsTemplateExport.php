@@ -19,7 +19,6 @@ class StudentsTemplateExport implements FromArray, WithHeadings
                 'john.doe@univ.edu', // academic_email
                 '1',             // level
                 '3.5',           // cgpa
-                'male',          // gender
                 'Computer Science', // program_name (example)
             ]
         ];
@@ -35,7 +34,6 @@ class StudentsTemplateExport implements FromArray, WithHeadings
             'academic_email',
             'level',
             'cgpa',
-            'gender',
             'program_name',
         ];
     }

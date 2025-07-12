@@ -4,17 +4,25 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Yajra\DataTables\Facades\DataTables;
+use Illuminate\View\View;
+use App\Services\Admin\PermissionService;
+use Exception;
 
 class PermissionController extends Controller
 {
     /**
+     * PermissionController constructor.
+     *
+     * @param PermissionService $permissionService
+     */
+    public function __construct(protected PermissionService $permissionService)
+    {}
+
+    /**
      * Display the permission management page
      */
-    public function index()
+    public function index(): View
     {
         return view('admin.permission');
     }
@@ -24,24 +32,13 @@ class PermissionController extends Controller
      */
     public function stats(): JsonResponse
     {
-        $totalPermissions = Permission::count();
-        $totalRoles = Role::count();
-        $permissionsWithRoles = Permission::withCount('roles')->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'total' => [
-                    'total' => $totalPermissions,
-                    'lastUpdateTime' => now()->format('Y-m-d H:i:s')
-                ],
-                'roles' => [
-                    'total' => $totalRoles,
-                    'lastUpdateTime' => now()->format('Y-m-d H:i:s')
-                ],
-                'permissionsWithRoles' => $permissionsWithRoles
-            ]
-        ]);
+        try {
+            $stats = $this->permissionService->getStats();
+            return successResponse('Stats fetched successfully.', $stats);
+        } catch (Exception $e) {
+            logError('PermissionController@stats', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -49,58 +46,12 @@ class PermissionController extends Controller
      */
     public function datatable(): JsonResponse
     {
-        $permissions = Permission::with('roles');
-
-        return DataTables::of($permissions)
-            ->addColumn('roles', function ($permission) {
-                return $permission->roles->pluck('name')->implode(', ');
-            })
-            ->addColumn('roles_count', function ($permission) {
-                return $permission->roles_count ?? $permission->roles->count();
-            })
-            ->addColumn('actions', function ($permission) {
-                return '
-                    <div class="dropdown">
-                        <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                            <i class="bx bx-dots-vertical-rounded"></i>
-                        </button>
-                        <div class="dropdown-menu">
-                            <a class="dropdown-item" href="javascript:void(0);" onclick="viewPermission(' . $permission->id . ')">
-                                <i class="bx bx-show me-1"></i> View
-                            </a>
-                            <a class="dropdown-item" href="javascript:void(0);" onclick="editPermission(' . $permission->id . ')">
-                                <i class="bx bx-edit-alt me-1"></i> Edit
-                            </a>
-                            <a class="dropdown-item" href="javascript:void(0);" onclick="deletePermission(' . $permission->id . ')">
-                                <i class="bx bx-trash me-1"></i> Delete
-                            </a>
-                        </div>
-                    </div>';
-            })
-            ->rawColumns(['actions'])
-            ->make(true);
-    }
-
-    /**
-     * Store a new permission
-     */
-    public function store(Request $request): JsonResponse
-    {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:permissions',
-            'guard_name' => 'string|max:255'
-        ]);
-
-        $permission = Permission::create([
-            'name' => $request->name,
-            'guard_name' => $request->guard_name ?? 'web'
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Permission created successfully.',
-            'data' => $permission
-        ]);
+        try {
+            return $this->permissionService->getDatatable();
+        } catch (Exception $e) {
+            logError('PermissionController@datatable', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -108,54 +59,13 @@ class PermissionController extends Controller
      */
     public function show(Permission $permission): JsonResponse
     {
-        $permission->load('roles');
-        
-        return response()->json([
-            'success' => true,
-            'data' => $permission
-        ]);
-    }
-
-    /**
-     * Update permission
-     */
-    public function update(Request $request, Permission $permission): JsonResponse
-    {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:permissions,name,' . $permission->id,
-            'guard_name' => 'string|max:255'
-        ]);
-
-        $permission->update([
-            'name' => $request->name,
-            'guard_name' => $request->guard_name ?? 'web'
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Permission updated successfully.',
-            'data' => $permission
-        ]);
-    }
-
-    /**
-     * Delete permission
-     */
-    public function destroy(Permission $permission): JsonResponse
-    {
-        if ($permission->roles()->count() > 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot delete permission that is assigned to roles.'
-            ], 422);
+        try {
+            $permission = $this->permissionService->getPermission($permission);
+            return successResponse('Permission details fetched successfully.', $permission);
+        } catch (Exception $e) {
+            logError('PermissionController@show', $e, ['permission_id' => $permission->id]);
+            return errorResponse('Internal server error.', [], 500);
         }
-
-        $permission->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Permission deleted successfully.'
-        ]);
     }
 
     /**
@@ -163,49 +73,12 @@ class PermissionController extends Controller
      */
     public function getRoles(): JsonResponse
     {
-        $roles = Role::all();
-        
-        return response()->json([
-            'success' => true,
-            'data' => $roles
-        ]);
-    }
-
-    /**
-     * Bulk create permissions
-     */
-    public function bulkCreate(Request $request): JsonResponse
-    {
-        $request->validate([
-            'permissions' => 'required|array',
-            'permissions.*' => 'string|max:255'
-        ]);
-
-        $createdPermissions = [];
-        $existingPermissions = [];
-
-        foreach ($request->permissions as $permissionName) {
-            $permission = Permission::firstOrCreate(['name' => $permissionName]);
-            
-            if ($permission->wasRecentlyCreated) {
-                $createdPermissions[] = $permission;
-            } else {
-                $existingPermissions[] = $permissionName;
-            }
+        try {
+            $roles = $this->permissionService->getRoles();
+            return successResponse('Roles fetched successfully.', $roles);
+        } catch (Exception $e) {
+            logError('PermissionController@getRoles', $e);
+            return errorResponse('Internal server error.', [], 500);
         }
-
-        $message = 'Permissions processed successfully.';
-        if (!empty($existingPermissions)) {
-            $message .= ' Some permissions already existed: ' . implode(', ', $existingPermissions);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => $message,
-            'data' => [
-                'created' => $createdPermissions,
-                'existing' => $existingPermissions
-            ]
-        ]);
     }
 } 

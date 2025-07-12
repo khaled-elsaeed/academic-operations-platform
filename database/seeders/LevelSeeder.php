@@ -9,6 +9,8 @@ class LevelSeeder extends Seeder
 {
     public function run(): void
     {
-        Level::factory(4)->create();
+        foreach (range(1, 5) as $number) {
+            Level::create(['name' => $number]);
+        }
     }
 } 

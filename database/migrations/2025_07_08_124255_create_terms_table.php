@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->enum('season', ['fall', 'spring', 'summer']);
             $table->string('year');
+            $table->string('code')->nullable();
             $table->boolean('is_active')->default(false);
             $table->timestamps();
         });

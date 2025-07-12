@@ -18,6 +18,7 @@ class Term extends Model
     protected $fillable = [
         'season',
         'year',
+        'code',
         'is_active',
     ];
 

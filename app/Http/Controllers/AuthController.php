@@ -27,9 +27,9 @@ class AuthController extends Controller
         if ($result) {
             $user = auth()->user();
             if ($user->hasRole('admin')) {
-                return redirect()->intended('admin/home');
+                return redirect()->intended(route('admin.home'));
             } elseif ($user->hasRole('advisor')) {
-                return redirect()->intended(route('admin.student.index'));
+                return redirect()->intended(route('advisor.home'));
             }
         }
         return back()->withErrors(['email' => 'Invalid credentials.']);

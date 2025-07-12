@@ -20,6 +20,8 @@
 
 <script src="{{ asset('vendor/libs/sweetalert2/sweetalert2.all.min.js') }}?v={{ config('app.version') }}"></script>
 
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.full.min.js"></script>
+
 <script>
   // Attach CSRF token to all AJAX requests globally
   $.ajaxSetup({

@@ -10,17 +10,22 @@
     description="View and manage all student enrollments"
     icon="bx bx-list-check"
   >
-    <button class="btn btn-primary" id="addEnrollmentBtn" type="button" data-bs-toggle="modal" data-bs-target="#enrollmentModal">Add Enrollment</button>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" id="addEnrollmentBtn" type="button" data-bs-toggle="modal" data-bs-target="#enrollmentModal">Add Enrollment</button>
+      <button class="btn btn-success" id="importEnrollmentsBtn" type="button" data-bs-toggle="modal" data-bs-target="#importEnrollmentsModal">
+        <i class="bx bx-import me-1"></i>Import Enrollments
+      </button>
+    </div>
   </x-ui.page-header>
 
   <!-- Enrollments DataTable -->
   <x-ui.datatable
     :headers="['ID', 'Student', 'Course', 'Term', 'Action']"
     :columns="[
-        ['data' => 'id', 'name' => 'id'],
-        ['data' => 'student', 'name' => 'student'],
-        ['data' => 'course', 'name' => 'course'],
-        ['data' => 'term', 'name' => 'term'],
+        ['data' => 'id', 'name' => 'id', 'orderable' => true, 'searchable' => true],
+        ['data' => 'student', 'name' => 'student', 'orderable' => true, 'searchable' => true],
+        ['data' => 'course', 'name' => 'course', 'orderable' => true, 'searchable' => true],
+        ['data' => 'term', 'name' => 'term', 'orderable' => true, 'searchable' => true],
         ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
     ]"
     :ajax-url="route('admin.enrollments.datatable')"
@@ -47,16 +52,16 @@
             </select>
           </div>
           <div class="col-md-4 mb-3">
-            <label for="course_id" class="form-label">Course</label>
-            <select class="form-control" id="course_id" name="course_id" required>
-              <option value="">Select Course</option>
+            <label for="term_id" class="form-label">Term</label>
+            <select class="form-control" id="term_id" name="term_id" required>
+              <option value="">Select Term</option>
               <!-- Options loaded via AJAX -->
             </select>
           </div>
           <div class="col-md-4 mb-3">
-            <label for="term_id" class="form-label">Term</label>
-            <select class="form-control" id="term_id" name="term_id" required>
-              <option value="">Select Term</option>
+            <label for="available_course_id" class="form-label">Available Course <span class="text-muted small">(You can select multiple)</span></label>
+            <select class="form-control" id="available_course_id" name="available_course_ids[]" multiple required>
+              <option value="">Select Available Course</option>
               <!-- Options loaded via AJAX -->
             </select>
           </div>
@@ -68,6 +73,39 @@
         Close
       </button>
       <button type="submit" class="btn btn-primary" id="saveEnrollmentBtn" form="enrollmentForm">Save</button>
+    </x-slot>
+  </x-ui.modal>
+
+  <!-- Import Enrollments Modal -->
+  <x-ui.modal 
+    id="importEnrollmentsModal"
+    title="Import Enrollments"
+    size="md"
+    :scrollable="false"
+    class="import-enrollments-modal"
+  >
+    <x-slot name="slot">
+      <form id="importEnrollmentsForm" enctype="multipart/form-data">
+        <div class="mb-3">
+          <label for="enrollments_file" class="form-label">Upload Excel File</label>
+          <input type="file" class="form-control" id="enrollments_file" name="enrollments_file" accept=".xlsx,.xls" required>
+        </div>
+        <div class="alert alert-info d-flex align-items-center justify-content-between p-3 mb-3">
+          <div>
+            <i class="bx bx-info-circle me-2"></i>
+            <span class="small">Use the template for correct enrollment data formatting.</span>
+          </div>
+          <a href="{{ route('admin.enrollments.template') }}" class="btn btn-sm btn-outline-primary" download>
+            <i class="bx bx-download me-1"></i>Template
+          </a>
+        </div>
+      </form>
+    </x-slot>
+    <x-slot name="footer">
+      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+        Close
+      </button>
+      <button type="submit" class="btn btn-success" id="importEnrollmentsSubmitBtn" form="importEnrollmentsForm">Import</button>
     </x-slot>
   </x-ui.modal>
 </div>
@@ -98,28 +136,6 @@ function loadStudents(selectedId = null) {
   });
 }
 
-/**
- * Loads all courses into the course select dropdown.
- * @function loadCourses
- * @param {number|null} selectedId - The course ID to preselect (optional).
- * @returns {void}
- */
-function loadCourses(selectedId = null) {
-  $.ajax({
-    url: '{{ route('admin.courses.legacy.index') }}',
-    method: 'GET',
-    success: function (data) {
-      let $courseSelect = $('#course_id');
-      $courseSelect.empty().append('<option value="">Select Course</option>');
-      (data || []).forEach(function (course) {
-        $courseSelect.append(
-          $('<option>', { value: course.id, text: course.name })
-        );
-      });
-      if (selectedId) $courseSelect.val(selectedId);
-    }
-  });
-}
 
 /**
  * Loads all terms into the term select dropdown.
@@ -129,17 +145,52 @@ function loadCourses(selectedId = null) {
  */
 function loadTerms(selectedId = null) {
   $.ajax({
-    url: '{{ route('admin.terms.index') }}',
+    url: '{{ route('admin.terms.legacy.index') }}',
     method: 'GET',
-    success: function (data) {
+    success: function (response) {
       let $termSelect = $('#term_id');
       $termSelect.empty().append('<option value="">Select Term</option>');
-      (data || []).forEach(function (term) {
+      response.data.forEach(function (term) {
         $termSelect.append(
           $('<option>', { value: term.id, text: term.name })
         );
       });
       if (selectedId) $termSelect.val(selectedId);
+    }
+  });
+}
+
+
+function loadAvailableCoursesForStudentAndTerm(studentId, termId, selectedId = null) {
+  let $availableCourseSelect = $('#available_course_id');
+  if (!studentId || !termId) {
+    $availableCourseSelect.empty().append('<option value="">Please select Student and Term first</option>');
+    $availableCourseSelect.prop('disabled', true);
+    return;
+  }
+  $.ajax({
+    url: '{{ route('admin.available-courses.legacy.index') }}',
+    method: 'GET',
+    data: { student_id: studentId, term_id: termId },
+    success: function (response) {
+      $availableCourseSelect.empty();
+      if (!response.data || response.data.length === 0) {
+        $availableCourseSelect.append('<option value="">No available courses found</option>');
+        $availableCourseSelect.prop('disabled', true);
+      } else {
+        $availableCourseSelect.append('<option value="">Select Available Course</option>');
+        (response.data || []).forEach(function (availableCourse) {
+          $availableCourseSelect.append(
+            $('<option>', { value: availableCourse.id, text: availableCourse.name })
+          );
+        });
+        if (selectedId) $availableCourseSelect.val(selectedId);
+        $availableCourseSelect.prop('disabled', false);
+      }
+    },
+    error: function () {
+      $availableCourseSelect.empty().append('<option value="">No available courses found</option>');
+      $availableCourseSelect.prop('disabled', true);
     }
   });
 }
@@ -156,8 +207,10 @@ function handleAddEnrollmentBtn() {
     $('#enrollmentModal .modal-title').text('Add Enrollment');
     $('#saveEnrollmentBtn').text('Save');
     loadStudents();
-    loadCourses();
     loadTerms();
+    let $availableCourseSelect = $('#available_course_id');
+    $availableCourseSelect.empty().append('<option value="">Please select Student and Term first</option>');
+    $availableCourseSelect.prop('disabled', true);
     $('#enrollmentModal').modal('show');
   });
 }
@@ -183,7 +236,15 @@ function handleEnrollmentFormSubmit() {
       success: function (response) {
         $('#enrollmentModal').modal('hide');
         $('#enrollments-table').DataTable().ajax.reload(null, false);
-        Swal.fire('Success', 'Enrollment has been saved successfully.', 'success');
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Enrollment has been saved successfully.',
+          showConfirmButton: false,
+          timer: 2500,
+          timerProgressBar: true
+        });
       },
       error: function (xhr) {
         $('#enrollmentModal').modal('hide');
@@ -193,23 +254,7 @@ function handleEnrollmentFormSubmit() {
   });
 }
 
-/**
- * Handles the Edit Enrollment button click event (delegated).
- * @function handleEditEnrollmentBtn
- * @returns {void}
- */
-function handleEditEnrollmentBtn() {
-  $(document).on('click', '.editEnrollmentBtn', function () {
-    let enrollment = $(this).data('enrollment');
-    $('#enrollment_id').val(enrollment.id);
-    loadStudents(enrollment.student_id);
-    loadCourses(enrollment.course_id);
-    loadTerms(enrollment.term_id);
-    $('#enrollmentModal .modal-title').text('Edit Enrollment');
-    $('#saveEnrollmentBtn').text('Update');
-    $('#enrollmentModal').modal('show');
-  });
-}
+
 
 /**
  * Handles the Delete Enrollment button click event (delegated).
@@ -245,12 +290,146 @@ function handleDeleteEnrollmentBtn() {
   });
 }
 
+function handleStudentAndTermChange() {
+  $('#student_id, #term_id').on('change', function () {
+    let studentId = $('#student_id').val();
+    let termId = $('#term_id').val();
+    loadAvailableCoursesForStudentAndTerm(studentId, termId);
+  });
+}
+
+/**
+ * Handles the Import Enrollments form submission.
+ * @function handleImportEnrollmentsForm
+ * @returns {void}
+ */
+function handleImportEnrollmentsForm() {
+  $('#importEnrollmentsForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const $submitBtn = $('#importEnrollmentsSubmitBtn');
+    
+    $submitBtn.prop('disabled', true).text('Importing...');
+    
+    $.ajax({
+      url: '{{ route('admin.enrollments.import') }}',
+      method: 'POST',
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function(response) {
+        $('#importEnrollmentsModal').modal('hide');
+        $('#enrollments-table').DataTable().ajax.reload(null, false);
+        
+        // Show success message
+        Swal.fire({
+          title: 'Import Completed',
+          text: response.message,
+          icon: 'success',
+          confirmButtonText: 'OK'
+        });
+        
+        // If there are errors, show them in a detailed modal
+        if (response.data && response.data.errors && response.data.errors.length > 0) {
+          showImportErrors(response.data.errors, response.data.imported_count);
+        }
+      },
+      error: function(xhr) {
+        $('#importEnrollmentsModal').modal('hide');
+        const response = xhr.responseJSON;
+        if (response && response.errors && Object.keys(response.errors).length > 0) {
+          // Handle validation errors
+          const errorMessages = [];
+          Object.keys(response.errors).forEach(field => {
+            if (Array.isArray(response.errors[field])) {
+              errorMessages.push(...response.errors[field]);
+            } else {
+              errorMessages.push(response.errors[field]);
+            }
+          });
+          Swal.fire({
+            title: 'Import Failed',
+            html: errorMessages.join('<br>'),
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+        } else {
+          // Handle general errors
+          const message = response?.message || 'Import failed. Please check your file.';
+          Swal.fire({
+            title: 'Import Failed',
+            text: message,
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+        }
+      },
+      complete: function() {
+        $submitBtn.prop('disabled', false).text('Import');
+      }
+    });
+  });
+}
+
+/**
+ * Shows import errors in a detailed modal.
+ * @function showImportErrors
+ * @param {Array} errors - Array of error objects
+ * @param {number} importedCount - Number of successfully imported items
+ * @returns {void}
+ */
+function showImportErrors(errors, importedCount) {
+  let errorHtml = `<div class="text-start">`;
+  errorHtml += `<p class="mb-3"><strong>Successfully processed: ${importedCount}</strong></p>`;
+  errorHtml += `<p class="mb-3"><strong>Failed rows: ${errors.length}</strong></p>`;
+  errorHtml += `<div class="table-responsive">`;
+  errorHtml += `<table class="table table-sm table-bordered">`;
+  errorHtml += `<thead><tr><th>Row</th><th>Errors</th><th>Data</th></tr></thead>`;
+  errorHtml += `<tbody>`;
+  
+  errors.forEach(function(error) {
+    const errorMessages = Array.isArray(error.errors) ? error.errors.join(', ') : 
+                         (error.errors.general ? error.errors.general.join(', ') : 
+                         Object.values(error.errors).flat().join(', '));
+    
+    errorHtml += `<tr>`;
+    errorHtml += `<td>${error.row}</td>`;
+    errorHtml += `<td class="text-danger">${errorMessages}</td>`;
+    errorHtml += `<td><small>${JSON.stringify(error.original_data)}</small></td>`;
+    errorHtml += `</tr>`;
+  });
+  
+  errorHtml += `</tbody></table></div></div>`;
+  
+  Swal.fire({
+    title: 'Import Completed with Errors',
+    html: errorHtml,
+    icon: 'warning',
+    width: '800px',
+    confirmButtonText: 'OK'
+  });
+}
+
 // Main entry point
 $(document).ready(function () {
   handleAddEnrollmentBtn();
   handleEnrollmentFormSubmit();
-  handleEditEnrollmentBtn();
   handleDeleteEnrollmentBtn();
+  handleStudentAndTermChange();
+  handleImportEnrollmentsForm();
+  // Initialize Select2 for all selects in the enrollment modal
+  $('#student_id, #term_id, #available_course_id').select2({
+    theme: 'bootstrap-5',
+    placeholder: function(){
+      return $(this).attr('id') === 'available_course_id' ? 'Select Available Course' :
+             $(this).attr('id') === 'student_id' ? 'Select Student' :
+             'Select Term';
+    },
+    allowClear: true,
+    width: '100%',
+    dropdownParent: $('#enrollmentModal')
+  });
 });
 </script>
 @endpush 

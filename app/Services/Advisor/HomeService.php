@@ -1,46 +1,42 @@
 <?php
 
-namespace App\Services\Admin;
+namespace App\Services\Advisor;
 
 use App\Models\Student;
-use App\Models\Faculty;
-use App\Models\Program;
 use App\Models\Course;
 use App\Models\Level;
+use App\Models\Enrollment;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class HomeService
 {
     public function getDashboardStats(): array
     {
+        // All Student::query() is already filtered by AcademicAdvisorScope for the logged-in advisor
+        $advisees = Student::query();
+
         return [
-            'students' => [
-                'total' => Student::count(),
-                'lastUpdatedTime' => formatDate(Student::max('updated_at')),
-            ],
-            'faculty' => [
-                'total' => Faculty::count(),
-                'lastUpdatedTime' => formatDate(Faculty::max('updated_at')),
-            ],
-            'programs' => [
-                'total' => Program::count(),
-                'lastUpdatedTime' => formatDate(Program::max('updated_at')),
+            'advisees' => [
+                'total' => $advisees->count(),
+                'avgCgpa' => number_format($advisees->avg('cgpa'), 2),
+                'lastUpdatedTime' => formatDate($advisees->max('updated_at')),
             ],
             'courses' => [
-                'total' => Course::count(),
-                'lastUpdatedTime' => formatDate(Course::max('updated_at')),
+                'total' => Course::whereIn('id',
+                    Enrollment::query()->pluck('course_id')->unique()
+                )->count(),
+                'lastUpdatedTime' => formatDate(now()), // Or use latest enrollment update
             ],
             'levelDistribution' => $this->getLevelDistribution(),
             'cgpaDistribution' => $this->getCGPADistribution(),
         ];
     }
 
-    /**
-     * Get level-wise student distribution for bar chart
-     */
     private function getLevelDistribution(): array
     {
-        $levelStats = Student::join('levels', 'students.level_id', '=', 'levels.id')
+        $levelStats = Student::query()
+            ->join('levels', 'students.level_id', '=', 'levels.id')
             ->select('levels.name', DB::raw('count(*) as count'))
             ->groupBy('levels.id', 'levels.name')
             ->orderBy('levels.name')
@@ -52,9 +48,6 @@ class HomeService
         ];
     }
 
-    /**
-     * Get CGPA distribution for histogram
-     */
     private function getCGPADistribution(): array
     {
         $cgpaRanges = [
@@ -70,7 +63,9 @@ class HomeService
         $labels = [];
 
         foreach ($cgpaRanges as $range => $bounds) {
-            $count = Student::whereBetween('cgpa', $bounds)->count();
+            $count = Student::query()
+                ->whereBetween('cgpa', $bounds)
+                ->count();
             $labels[] = $range;
             $data[] = $count;
         }

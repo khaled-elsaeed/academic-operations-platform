@@ -57,13 +57,13 @@ class Sidebar extends Component
      */
     private function getAdminMenuItems(): array
     {
+        $dashboardRoutes = ['home.redirect', 'admin.home', 'advisor.home'];
         return [
             [
                 'title' => 'Home',
                 'icon' => 'bx bx-home-circle',
-                'route' => route('admin.home'),
-                'active' => request()->routeIs('admin.home'),
-                'permission' => 'student.view',
+                'route' => route('home.redirect'),
+                'active' => in_array(request()->route()->getName(), $dashboardRoutes),
             ],
             [
                 'title' => 'Students',
@@ -119,23 +119,30 @@ class Sidebar extends Component
                 'title' => 'Available Courses',
                 'icon' => 'bx bx-book',
                 'route' => '#',
-                'active' => request()->routeIs('admin.available_courses.*'),
+                'active' => request()->routeIs('available_courses.*'),
                 'children' => [
                     [
                         'title' => 'View Available Courses',
                         'icon' => 'bx bx-table',
-                        'route' => route('admin.available_courses.index'),
-                        'active' => request()->routeIs('admin.available_courses.index'),
+                        'route' => route('available_courses.index'),
+                        'active' => request()->routeIs('available_courses.index'),
                         'permission' => 'course.view',
                     ],
                     [
                         'title' => 'Add Available Course',
                         'icon' => 'bx bx-plus',
-                        'route' => route('admin.available_courses.add'),
-                        'active' => request()->routeIs('admin.available_courses.add'),
+                        'route' => route('available_courses.create'),
+                        'active' => request()->routeIs('available_courses.create'),
                         'permission' => 'course.create',
                     ],
                 ],
+            ],
+            [
+                'title' => 'Credit Hours Exceptions',
+                'icon' => 'bx bx-time',
+                'route' => route('credit-hours-exceptions.index'),
+                'active' => request()->routeIs('credit-hours-exceptions.*'),
+                'permission' => 'enrollment.view',
             ],
             [
                 'title' => 'Users',

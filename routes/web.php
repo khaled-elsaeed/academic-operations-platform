@@ -1,23 +1,26 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\Admin\HomeController as AdminHomeController;
-use App\Http\Controllers\Admin\StudentController;
-use App\Http\Controllers\ProgramController;
-use App\Http\Controllers\Admin\AvailableCourseController;
-use App\Http\Controllers\Admin\FacultyController;
-use App\Http\Controllers\Admin\ProgramController as AdminProgramController;
-use App\Http\Controllers\Admin\CourseController as AdminCourseController;
-use App\Http\Controllers\CourseController;
-use App\Http\Controllers\TermController;
-use App\Http\Controllers\Admin\LevelController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\RoleController;
-use App\Http\Controllers\Admin\PermissionController;
+// ====================
+// Imports
+// ====================
+
 use App\Http\Controllers\Admin\AcademicAdvisorAccessController;
+use App\Http\Controllers\Admin\AvailableCourseController;
+use App\Http\Controllers\Admin\CourseController as AdminCourseController;
+use App\Http\Controllers\Admin\FacultyController;
+use App\Http\Controllers\Admin\HomeController as AdminHomeController;
+use App\Http\Controllers\Admin\LevelController;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\ProgramController as AdminProgramController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CourseController;
 use App\Http\Controllers\EnrollmentDocumentController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ProgramController;
+use App\Http\Controllers\TermController;
+use Illuminate\Support\Facades\Route;
 
 // ====================
 // Public Routes
@@ -44,6 +47,30 @@ Route::group([], function () {
 });
 
 // ====================
+// Include Available Courses Routes
+// ====================
+
+require __DIR__.'/web/available_course.php';
+
+// ====================
+// Include Admin Home Routes
+// ====================
+
+require __DIR__.'/web/admin_home.php';
+
+// ====================
+// Include Student Routes
+// ====================
+
+require __DIR__.'/web/student.php';
+
+// ====================
+// Include Credit Hours Exceptions Routes
+// ====================
+
+require __DIR__.'/web/credit_hours_exceptions.php';
+
+// ====================
 // Admin Routes
 // ====================
 
@@ -52,31 +79,7 @@ Route::middleware(['auth'])
     ->name('admin.')
     ->group(function () {
 
-        // Admin Home
-        Route::get('/home', [AdminHomeController::class, 'home'])->name('home')->middleware('can:student.view');
-        Route::get('/home/stats', [AdminHomeController::class, 'stats'])->name('home.stats')->middleware('can:student.view');
 
-        // Students Group
-        Route::prefix('students')
-            ->name('students.')
-            ->controller(StudentController::class)
-            ->group(function () {
-                Route::get('datatable', 'datatable')->name('datatable')->middleware('can:student.view');
-                Route::get('stats', 'stats')->name('stats')->middleware('can:student.view');
-                Route::get('template', 'downloadTemplate')->name('template')->middleware('can:student.view');
-                Route::post('import', 'import')->name('import')->middleware('can:student.create');
-                Route::get('/', 'index')->name('index')->middleware('can:student.view');
-                Route::get('create', 'create')->name('create')->middleware('can:student.create');
-                Route::post('/', 'store')->name('store')->middleware('can:student.create');
-                Route::get('{student}', 'show')->name('show')->middleware('can:student.view');
-                Route::get('{student}/edit', 'edit')->name('edit')->middleware('can:student.edit');
-                Route::put('{student}', 'update')->name('update')->middleware('can:student.edit');
-                Route::patch('{student}', 'update')->middleware('can:student.edit');
-                Route::delete('{student}', 'destroy')->name('destroy')->middleware('can:student.delete');
-                Route::get('{student}/download/pdf', 'downloadPdf')->name('download.pdf')->middleware('can:student.view');
-                Route::get('{student}/download/word', 'downloadWord')->name('download.word')->middleware('can:student.view');
-                Route::get('{student}/download-options', 'getDownloadOptions')->name('download.options')->middleware('can:student.view');
-            });
 
         // Faculties Group
         Route::prefix('faculties')
@@ -116,7 +119,7 @@ Route::middleware(['auth'])
             ->group(function () {
                 Route::get('datatable', 'datatable')->name('datatable')->middleware('can:course.view');
                 Route::get('stats', 'stats')->name('stats')->middleware('can:course.view');
-                Route::get('programs', 'getPrograms')->name('programs')->middleware('can:course.view');
+                Route::get('faculties', 'getFaculties')->name('faculties')->middleware('can:course.view');
                 Route::get('/', 'index')->name('index')->middleware('can:course.view');
                 Route::post('/', 'store')->name('store')->middleware('can:course.create');
                 Route::get('{course}', 'show')->name('show')->middleware('can:course.view');
@@ -135,29 +138,26 @@ Route::middleware(['auth'])
             Route::get('/', [CourseController::class, 'index'])->name('courses.legacy.index');
         });
 
-        // Available Courses Group
-        Route::prefix('available-courses')
-            ->name('available_courses.')
-            ->controller(AvailableCourseController::class)
-            ->group(function () {
-                Route::get('/', 'index')->name('index')->middleware('can:course.view');
-                Route::get('add', function() { return view('admin.available_course.add'); })->name('add')->middleware('can:course.create');
-                Route::get('datatable', 'datatable')->name('datatable')->middleware('can:course.view');
-                Route::post('/', 'store')->name('store')->middleware('can:course.create');
-                Route::put('{id}', 'update')->name('update')->middleware('can:course.edit');
-                Route::delete('{id}', 'destroy')->name('destroy')->middleware('can:course.delete');
-                Route::post('import', 'import')->name('import')->middleware('can:course.create');
-                Route::get('template', 'downloadTemplate')->name('template')->middleware('can:course.view');
-                Route::get('{availableCourse}/programs', 'programs')->name('programs')->middleware('can:course.view');
-                Route::get('{availableCourse}/levels', 'levels')->name('levels')->middleware('can:course.view');
-                Route::get('{availableCourse}', [App\Http\Controllers\Admin\AvailableCourseController::class, 'show'])->name('show')->middleware('can:course.view');
-            });
+        // Terms (for AJAX dropdown - legacy)
+        Route::prefix('terms-legacy')->group(function () {
+            Route::get('/', [TermController::class, 'index'])->name('terms.legacy.index');
+        });
 
-        // Terms (for AJAX dropdown)
-        Route::get('terms', [TermController::class, 'index'])->name('terms.index');
+        // Levels (for AJAX dropdown - legacy)
+        Route::prefix('levels-legacy')->group(function () {
+            Route::get('/', [LevelController::class, 'index'])->name('levels.legacy.index');
+        });
 
-        // Levels (for AJAX dropdown)
-        Route::get('levels', [LevelController::class, 'index'])->name('levels.index');
+        // Available Courses (for AJAX dropdown - legacy)
+        Route::prefix('available-courses-legacy')->group(function () {
+            Route::get('/', [App\Http\Controllers\AvailableCourseController::class, 'index'])->name('available-courses.legacy.index');
+        });
+
+         // Advisors (for AJAX dropdown - legacy)
+         Route::prefix('advisors-legacy')->group(function () {
+            Route::get('/', [\App\Http\Controllers\AdvisorStudentAccessController::class, 'index'])->name('advisors.legacy.index');
+        });
+
 
         // Enrollments Group
         Route::prefix('enrollments')
@@ -171,18 +171,11 @@ Route::middleware(['auth'])
                 Route::post('find-student', 'findStudent')->name('findStudent')->middleware('can:enrollment.view');
                 Route::post('available-courses', 'availableCourses')->name('availableCourses')->middleware('can:enrollment.view');
                 Route::post('/', 'store')->name('store')->middleware('can:enrollment.create');
-                Route::put('{enrollment}', 'update')->name('update')->middleware('can:enrollment.edit');
-                Route::patch('{enrollment}', 'update')->middleware('can:enrollment.edit');
                 Route::delete('{enrollment}', 'destroy')->name('destroy')->middleware('can:enrollment.delete');
                 Route::post('student-enrollments', 'studentEnrollments')->name('studentEnrollments')->middleware('can:enrollment.view');
+                Route::post('import', 'import')->name('import')->middleware('can:enrollment.create');
+                Route::get('template', 'downloadTemplate')->name('template')->middleware('can:enrollment.view');
             });
-
-        // Available Courses Edit and Update
-        Route::get('available-courses', [App\Http\Controllers\Admin\AvailableCourseController::class, 'index'])->name('available_courses.index');
-        Route::get('available-courses/create', [App\Http\Controllers\Admin\AvailableCourseController::class, 'create'])->name('available_courses.create');
-        Route::post('available-courses', [App\Http\Controllers\Admin\AvailableCourseController::class, 'store'])->name('available_courses.store');
-        Route::get('available-courses/{available_course}/edit', [App\Http\Controllers\Admin\AvailableCourseController::class, 'edit'])->name('available_courses.edit');
-        Route::put('available-courses/{available_course}', [App\Http\Controllers\Admin\AvailableCourseController::class, 'update'])->name('available_courses.update');
 
         // Users Group
         Route::prefix('users')
@@ -225,12 +218,7 @@ Route::middleware(['auth'])
                 Route::get('stats', 'stats')->name('stats')->middleware('can:permission.view');
                 Route::get('roles', 'getRoles')->name('roles')->middleware('can:permission.view');
                 Route::get('/', 'index')->name('index')->middleware('can:permission.view');
-                Route::post('/', 'store')->name('store')->middleware('can:permission.create');
-                Route::post('bulk-create', 'bulkCreate')->name('bulk-create')->middleware('can:permission.create');
                 Route::get('{permission}', 'show')->name('show')->middleware('can:permission.view');
-                Route::put('{permission}', 'update')->name('update')->middleware('can:permission.edit');
-                Route::patch('{permission}', 'update')->middleware('can:permission.edit');
-                Route::delete('{permission}', 'destroy')->name('destroy')->middleware('can:permission.delete');
             });
 
         // Advisor Access Group
@@ -241,15 +229,31 @@ Route::middleware(['auth'])
                 Route::get('/', 'index')->name('index')->middleware('can:user.view');
                 Route::get('datatable', 'datatable')->name('datatable')->middleware('can:user.view');
                 Route::get('stats', 'stats')->name('stats')->middleware('can:user.view');
-                Route::get('advisors', 'getAdvisors')->name('advisors')->middleware('can:user.view');
                 Route::post('/', 'store')->name('store')->middleware('can:user.create');
                 Route::get('{academicAdvisorAccess}', 'show')->name('show')->middleware('can:user.view');
                 Route::put('{academicAdvisorAccess}', 'update')->name('update')->middleware('can:user.edit');
                 Route::patch('{academicAdvisorAccess}', 'update')->middleware('can:user.edit');
                 Route::delete('{academicAdvisorAccess}', 'destroy')->name('destroy')->middleware('can:user.delete');
             });
+
+
     });
 
+
+
+// ====================
+// Advisor Routes
+// ====================
+
+Route::middleware(['auth'])->prefix('advisor')->name('advisor.')->group(function () {
+    Route::get('/home', [\App\Http\Controllers\Advisor\HomeController::class, 'home'])->name('home');
+    Route::get('/home/stats', [\App\Http\Controllers\Advisor\HomeController::class, 'stats'])->name('home.stats');
+});
+
+// ====================
+// Miscellaneous Routes
+// ====================
+
+Route::middleware(['auth'])->get('/home', [HomeController::class, '__invoke'])->name('home.redirect');
 Route::get('/enrollment/download/{student}', [EnrollmentDocumentController::class, 'downloadEnrollmentDocument'])->name('enrollment.download');
-// Add new routes for PDF invoice and users PDF
-Route::get('/pdf/invoice', [App\Http\Controllers\PdfController::class, 'invoice'])->name('pdf.invoice');
+Route::get('/pdf/invoice', [\App\Http\Controllers\PdfController::class, 'invoice'])->name('pdf.invoice');

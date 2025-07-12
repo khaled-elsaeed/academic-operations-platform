@@ -17,13 +17,8 @@ class DatabaseSeeder extends Seeder
             ProgramSeeder::class,
             CourseSeeder::class,
             TermSeeder::class,
-            StudentSeeder::class,
-            AvailableCourseSeeder::class,
-            EnrollmentSeeder::class,
-            CoursePrerequisiteSeeder::class,
             RolesAndPermissionsSeeder::class,
             UserSeeder::class,
-            AcademicAdvisorAccessSeeder::class,
         ]);
     }
 }

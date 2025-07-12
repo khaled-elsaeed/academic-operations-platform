@@ -7,21 +7,23 @@ use Illuminate\Http\Request;
 use App\Services\Admin\AvailableCourseService;
 use App\Http\Requests\StoreAvailableCourseRequest;
 use App\Http\Requests\UpdateAvailableCourseRequest;
-use AppExceptions\BusinessValidationException;
+use App\Exceptions\BusinessValidationException;
 use App\Models\AvailableCourse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
-use Illuminate\Http\RedirectResponse;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use App\Exports\AvailableCoursesTemplateExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Exception;
 
 class AvailableCourseController extends Controller
 {
     /**
      * AvailableCourseController constructor.
      *
-     * @param AvailableCourseService $service
+     * @param AvailableCourseService $availableCourseService
      */
-    public function __construct(protected AvailableCourseService $service)
+    public function __construct(protected AvailableCourseService $availableCourseService)
     {}
 
     /**
@@ -29,7 +31,7 @@ class AvailableCourseController extends Controller
      */
     public function index(): View
     {
-        return view('admin.available_course.index');
+        return view('available_course.index');
     }
 
     /**
@@ -38,11 +40,19 @@ class AvailableCourseController extends Controller
     public function datatable(): JsonResponse
     {
         try {
-            return $this->service->getDatatable();
+            return $this->availableCourseService->getDatatable();
         } catch (Exception $e) {
             logError('AvailableCourseController@datatable', $e);
-            return errorResponse('Internal server error.', 500);
+            return errorResponse('Internal server error.', [], 500);
         }
+    }
+
+    /**
+     * Show the form for creating a new available course.
+     */
+    public function create(): View
+    {
+        return view('available_course.create');
     }
 
     /**
@@ -51,14 +61,14 @@ class AvailableCourseController extends Controller
     public function store(StoreAvailableCourseRequest $request): JsonResponse
     {
         try {
-            $data = $request->validated();
-            $availableCourse = $this->service->createAvailableCourse($data);
+            $validated = $request->validated();
+            $availableCourse = $this->availableCourseService->createAvailableCourse($validated);
             return successResponse('Available course created successfully.', $availableCourse);
         } catch (BusinessValidationException $e) {
-            return errorResponse($e->getMessage(), 422);
+            return errorResponse($e->getMessage(), [], $e->getCode());
         } catch (Exception $e) {
             logError('AvailableCourseController@store', $e, ['request' => $request->all()]);
-            return errorResponse('Internal server error.', 500);
+            return errorResponse('Internal server error.', [], 500);
         }
     }
 
@@ -68,61 +78,89 @@ class AvailableCourseController extends Controller
     public function edit($id): View
     {
         $availableCourse = AvailableCourse::findOrFail($id);
-        return view('admin.available_course.edit', compact('availableCourse'));
+        return view('available_course.edit', compact('availableCourse'));
     }
 
     /**
      * Update the specified available course in storage.
-     *
-     * @param UpdateAvailableCourseRequest $request
-     * @param int $id
      */
     public function update(UpdateAvailableCourseRequest $request, $id): JsonResponse
     {
         try {
-            $data = $request->validated();
-            $this->service->updateAvailableCourseById($id, $data);
+            $validated = $request->validated();
+            $this->availableCourseService->updateAvailableCourseById($id, $validated);
             return successResponse('Available course updated successfully.');
         } catch (BusinessValidationException $e) {
-            return errorResponse($e->getMessage(), 422);
+            return errorResponse($e->getMessage(), [], $e->getCode());
         } catch (Exception $e) {
             logError('AvailableCourseController@update', $e, ['id' => $id, 'request' => $request->all()]);
-            return errorResponse('Internal server error.', 500);
+            return errorResponse('Internal server error.', [], 500);
         }
     }
 
     /**
      * Delete an available course.
-     *
-     * @param int $id
      */
     public function destroy($id): JsonResponse
     {
         try {
-            $this->service->deleteAvailableCourse($id);
-            return successResponse(null, 'Available course deleted successfully.');
+            $this->availableCourseService->deleteAvailableCourse($id);
+            return successResponse('Available course deleted successfully.');
         } catch (BusinessValidationException $e) {
-            return errorResponse($e->getMessage(), 422);
+            return errorResponse($e->getMessage(), [], $e->getCode());
         } catch (Exception $e) {
             logError('AvailableCourseController@destroy', $e, ['id' => $id]);
-            return errorResponse('Internal server error.', 500);
+            return errorResponse('Internal server error.', [], 500);
         }
     }
 
-
     /**
      * Display the specified available course.
-     *
-     * @param int $id
      */
     public function show($id): JsonResponse
     {
         try {
-            $availableCourse = $this->service->getAvailableCourseWithEligibilities($id);
-            return successResponse(null, $availableCourse);
+            $availableCourse = $this->availableCourseService->getAvailableCourse($id);
+            return successResponse('Available course retrieved successfully.', $availableCourse);
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
         } catch (Exception $e) {
             logError('AvailableCourseController@show', $e, ['id' => $id]);
-            return errorResponse('Internal server error.', 500);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
+     * Import available courses from an Excel file.
+     */
+    public function import(Request $request): JsonResponse
+    {
+        $request->validate([
+            'courses_file' => 'required|file|mimes:xlsx,xls',
+        ]);
+
+        try {
+            $result = $this->availableCourseService->importAvailableCoursesFromFile($request->file('courses_file'));
+            if (!$result['success']) {
+                return errorResponse($result['message'], [], 422);
+            }
+            return successResponse($result['message'], $result['data'] ?? null);
+        } catch (Exception $e) {
+            logError('AvailableCourseController@import', $e, ['request' => $request->all()]);
+            return errorResponse('Import failed. Please check your file.', [], 500);
+        }
+    }
+
+    /**
+     * Download the available courses import template as an Excel file.
+     */
+    public function template(): BinaryFileResponse
+    {
+        try {
+            return Excel::download(new AvailableCoursesTemplateExport, 'available_courses_template.xlsx');
+        } catch (Exception $e) {
+            logError('AvailableCourseController@template', $e);
+            throw $e;
         }
     }
 } 

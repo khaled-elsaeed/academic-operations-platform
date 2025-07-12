@@ -77,41 +77,6 @@
     </div>
   </div>
 </div>
-
-<style>
-.card {
-  border-radius: 12px;
-  transition: all 0.3s ease;
-}
-
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
-}
-
-.chart-container {
-  border-radius: 8px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-  padding: 20px;
-  margin: 10px 0;
-}
-
-.card-header {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border-radius: 12px 12px 0 0;
-}
-
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.card-subtitle {
-  font-size: 0.875rem;
-  color: #6c757d;
-}
-</style>
 @endsection
 
 @push('scripts')

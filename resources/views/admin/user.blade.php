@@ -7,73 +7,28 @@
   <!-- Statistics Cards -->
   <div class="row g-4 mb-4">
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Total Users</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-users-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-users">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-users-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-primary">
-                <i class="icon-base bx bx-user icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="users"
+        label="Total Users"
+        color="primary"
+        icon="bx bx-user"
+      />
     </div>
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Active Users</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-active-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-active">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-active-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-success">
-                <i class="icon-base bx bx-user-check icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="active"
+        label="Active Users"
+        color="success"
+        icon="bx bx-user-check"
+      />
     </div>
     <div class="col-sm-6 col-xl-4">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between">
-            <div class="content-left">
-              <span class="text-heading">Admin Users</span>
-              <div class="d-flex align-items-center my-1">
-                <div id="stat-admin-spinner" class="spinner-border spinner-border-sm me-2" role="status" style="display: none;">
-                  <span class="visually-hidden">Loading...</span>
-                </div>
-                <h4 class="mb-0 me-2" id="stat-admin">--</h4>
-              </div>
-              <small class="mb-0">Last update: <span id="stat-admin-updated">--</span></small>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-warning">
-                <i class="icon-base bx bx-shield icon-lg"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <x-ui.card.stat2 
+        id="admin"
+        label="Admin Users"
+        color="warning"
+        icon="bx bx-shield"
+      />
     </div>
   </div>
 
@@ -90,12 +45,11 @@
 
   <!-- Users DataTable -->
   <x-ui.datatable 
-    :headers="['Name', 'Email', 'Roles', 'Status', 'Created At', 'Actions']"
+    :headers="['Name', 'Email', 'Roles', 'Created At', 'Actions']"
     :columns="[
       ['data' => 'name', 'name' => 'name'],
       ['data' => 'email', 'name' => 'email'],
       ['data' => 'roles', 'name' => 'roles'],
-      ['data' => 'status', 'name' => 'status'],
       ['data' => 'created_at', 'name' => 'created_at'],
       ['data' => 'actions', 'name' => 'actions', 'orderable' => false, 'searchable' => false]
     ]"
@@ -142,6 +96,14 @@
             <!-- Roles will be loaded dynamically -->
           </select>
         </div>
+        <div class="col-md-6 mb-3">
+          <label for="gender" class="form-label">Gender</label>
+          <select id="gender" name="gender" class="form-select" required>
+            <option value="">Select Gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
       </div>
     </form>
   </x-slot>
@@ -176,10 +138,6 @@
         <p id="view-user-roles" class="mb-0"></p>
       </div>
       <div class="col-12 mb-3">
-        <label class="form-label fw-bold">Status:</label>
-        <p id="view-user-status" class="mb-0"></p>
-      </div>
-      <div class="col-12 mb-3">
         <label class="form-label fw-bold">Created At:</label>
         <p id="view-user-created" class="mb-0"></p>
       </div>
@@ -199,24 +157,73 @@ let currentUserId = null;
 $(document).ready(function() {
     loadStats();
     loadRoles();
+    // Initialize Select2 for roles select in the user modal
+    $('#roles').select2({
+      theme: 'bootstrap-5',
+      placeholder: 'Select Roles',
+      allowClear: true,
+      width: '100%',
+      dropdownParent: $('#userModal')
+    });
 });
 
-// Load statistics
+// Utility: Shows/hides loading spinners and content for stat2 component
+function toggleLoadingState(elementId, isLoading) {
+  const $value = $(`#${elementId}-value`);
+  const $loader = $(`#${elementId}-loader`);
+  const $updated = $(`#${elementId}-last-updated`);
+  const $updatedLoader = $(`#${elementId}-last-updated-loader`);
+
+  if (isLoading) {
+    $value.addClass('d-none');
+    $loader.removeClass('d-none');
+    $updated.addClass('d-none');
+    $updatedLoader.removeClass('d-none');
+  } else {
+    $value.removeClass('d-none');
+    $loader.addClass('d-none');
+    $updated.removeClass('d-none');
+    $updatedLoader.addClass('d-none');
+  }
+}
+
+// Load statistics (robust, like student page)
 function loadStats() {
-    $.get('{{ route("admin.users.stats") }}')
-        .done(function(response) {
-            if (response.success) {
-                $('#stat-users').text(response.data.total.total);
-                $('#stat-users-updated').text(response.data.total.lastUpdateTime);
-                $('#stat-active').text(response.data.active.total);
-                $('#stat-active-updated').text(response.data.active.lastUpdateTime);
-                $('#stat-admin').text(response.data.admin.total);
-                $('#stat-admin-updated').text(response.data.admin.lastUpdateTime);
-            }
-        })
-        .fail(function() {
-            console.error('Failed to load stats');
-        });
+  // Show loading state for all stats
+  toggleLoadingState('users', true);
+  toggleLoadingState('active', true);
+  toggleLoadingState('admin', true);
+
+  $.ajax({
+    url: '{{ route("admin.users.stats") }}',
+    method: 'GET',
+    success: function(response) {
+      if (response.success) {
+        $('#users-value').text(response.data.total.total ?? '--');
+        $('#users-last-updated').text(response.data.total.lastUpdateTime ?? '--');
+        $('#active-value').text(response.data.active.total ?? '--');
+        $('#active-last-updated').text(response.data.active.lastUpdateTime ?? '--');
+        $('#admin-value').text(response.data.admin.total ?? '--');
+        $('#admin-last-updated').text(response.data.admin.lastUpdateTime ?? '--');
+      } else {
+        $('#users-value, #active-value, #admin-value').text('N/A');
+        $('#users-last-updated, #active-last-updated, #admin-last-updated').text('N/A');
+      }
+      // Hide loading state
+      toggleLoadingState('users', false);
+      toggleLoadingState('active', false);
+      toggleLoadingState('admin', false);
+    },
+    error: function() {
+      // Show error state
+      $('#users-value, #active-value, #admin-value').text('N/A');
+      $('#users-last-updated, #active-last-updated, #admin-last-updated').text('N/A');
+      toggleLoadingState('users', false);
+      toggleLoadingState('active', false);
+      toggleLoadingState('admin', false);
+      Swal.fire('Error', 'Failed to load user statistics', 'error');
+    }
+  });
 }
 
 // Load roles for dropdown
@@ -243,6 +250,7 @@ function openAddUserModal() {
     $('#userForm')[0].reset();
     $('#password').prop('required', true);
     $('#password_confirmation').prop('required', true);
+    $('#gender').val('');
     $('#userModal').modal('show');
 }
 
@@ -261,6 +269,7 @@ function editUser(userId) {
                 $('#last_name').val(user.last_name);
                 $('#email').val(user.email);
                 $('#roles').val(user.roles.map(role => role.name));
+                $('#gender').val(user.gender);
                 $('#userModal').modal('show');
             }
         })
@@ -278,9 +287,6 @@ function viewUser(userId) {
                 $('#view-user-name').text(user.first_name + ' ' + user.last_name);
                 $('#view-user-email').text(user.email);
                 $('#view-user-roles').text(user.roles.map(role => role.name).join(', ') || 'No roles assigned');
-                $('#view-user-status').html(user.email_verified_at ? 
-                    '<span class="badge bg-success">Active</span>' : 
-                    '<span class="badge bg-warning">Pending</span>');
                 $('#view-user-created').text(new Date(user.created_at).toLocaleString());
                 $('#viewUserModal').modal('show');
             }
@@ -331,8 +337,13 @@ $('#userForm').on('submit', function(e) {
     e.preventDefault();
     
     const formData = new FormData(this);
-    const url = currentUserId ? `/admin/users/${currentUserId}` : '{{ route("admin.users.store") }}';
-    const method = currentUserId ? 'PUT' : 'POST';
+    formData.set('gender', $('#gender').val());
+    const isUpdate = !!currentUserId;
+    const url = isUpdate ? `/admin/users/${currentUserId}` : '{{ route("admin.users.store") }}';
+    const method = 'POST'; // Always POST
+    if (isUpdate) {
+        formData.set('_method', 'PUT');
+    }
     
     $.ajax({
         url: url,
@@ -346,7 +357,15 @@ $('#userForm').on('submit', function(e) {
     })
     .done(function(response) {
         if (response.success) {
-            Swal.fire('Success', response.message, 'success');
+            Swal.fire({
+              toast: true,
+              position: 'top-end',
+              icon: 'success',
+              title: response.message,
+              showConfirmButton: false,
+              timer: 2500,
+              timerProgressBar: true
+            });
             $('#userModal').modal('hide');
             getDataTable().ajax.reload();
             loadStats();

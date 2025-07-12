@@ -1,21 +1,21 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Advisor;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Services\Admin\HomeService;
+use App\Services\Advisor\HomeService;
 
 class HomeController extends Controller
 {
     public function home(HomeService $homeService)
     {
-        return view('admin.home');
+        return view('advisor.home');
     }
 
     public function stats(HomeService $homeService)
     {
         $stats = $homeService->getDashboardStats();
-        return successResponse('Dashboard stats fetched successfully.', $stats);
+        return successResponse('Advisor dashboard stats fetched successfully.', $stats);
     }
 } 

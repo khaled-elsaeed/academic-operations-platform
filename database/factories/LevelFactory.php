@@ -13,7 +13,6 @@ class LevelFactory extends Factory
     {
         return [
             'name' => $this->faker->unique()->word . ' Level',
-            'code' => strtoupper($this->faker->unique()->bothify('L##')),
         ];
     }
 } 

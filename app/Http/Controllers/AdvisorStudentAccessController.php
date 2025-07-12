@@ -2,64 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AdvisorStudentAccess;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AdvisorStudentAccessController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of advisors.
      */
-    public function index()
+    public function index(): JsonResponse
     {
-        //
-    }
+        $advisors = User::whereHas('roles', function ($query) {
+                $query->where('name', 'advisor');
+            })
+            ->select('id', 'first_name', 'last_name')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => "{$user->first_name} {$user->last_name}",
+                ];
+            });
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(AdvisorStudentAccess $advisorStudentAccess)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(AdvisorStudentAccess $advisorStudentAccess)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, AdvisorStudentAccess $advisorStudentAccess)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(AdvisorStudentAccess $advisorStudentAccess)
-    {
-        //
+        return response()->json(['data' => $advisors]);
     }
 }

@@ -6,14 +6,25 @@ use App\Http\Controllers\Controller;
 use App\Models\Faculty;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Yajra\DataTables\Facades\DataTables;
+use Illuminate\View\View;
+use App\Services\Admin\FacultyService;
+use Exception;
+use App\Exceptions\BusinessValidationException;
 
 class FacultyController extends Controller
 {
     /**
+     * FacultyController constructor.
+     *
+     * @param FacultyService $facultyService
+     */
+    public function __construct(protected FacultyService $facultyService)
+    {}
+
+    /**
      * Display the faculty management page
      */
-    public function index()
+    public function index(): View
     {
         return view('admin.faculty');
     }
@@ -23,27 +34,13 @@ class FacultyController extends Controller
      */
     public function stats(): JsonResponse
     {
-        $totalFaculties = Faculty::count();
-        $facultiesWithPrograms = Faculty::has('programs')->count();
-        $facultiesWithoutPrograms = Faculty::doesntHave('programs')->count();
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'total' => [
-                    'total' => $totalFaculties,
-                    'lastUpdateTime' => now()->format('Y-m-d H:i:s')
-                ],
-                'withPrograms' => [
-                    'total' => $facultiesWithPrograms,
-                    'lastUpdateTime' => now()->format('Y-m-d H:i:s')
-                ],
-                'withoutPrograms' => [
-                    'total' => $facultiesWithoutPrograms,
-                    'lastUpdateTime' => now()->format('Y-m-d H:i:s')
-                ]
-            ]
-        ]);
+        try {
+            $stats = $this->facultyService->getStats();
+            return successResponse('Stats fetched successfully.', $stats);
+        } catch (Exception $e) {
+            logError('FacultyController@stats', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -51,31 +48,12 @@ class FacultyController extends Controller
      */
     public function datatable(): JsonResponse
     {
-        $faculties = Faculty::with('programs');
-
-        return DataTables::of($faculties)
-            ->addColumn('programs_count', function ($faculty) {
-                return $faculty->programs->count();
-            })
-            ->addColumn('action', function ($faculty) {
-                return '
-                    <div class="dropdown">
-                        <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                            <i class="bx bx-dots-vertical-rounded"></i>
-                        </button>
-                        <div class="dropdown-menu">
-                            <a class="dropdown-item editFacultyBtn" href="javascript:void(0);" data-id="' . $faculty->id . '">
-                                <i class="bx bx-edit-alt me-1"></i> Edit
-                            </a>
-                            <a class="dropdown-item deleteFacultyBtn" href="javascript:void(0);" data-id="' . $faculty->id . '">
-                                <i class="bx bx-trash me-1"></i> Delete
-                            </a>
-                        </div>
-                    </div>
-                ';
-            })
-            ->rawColumns(['action'])
-            ->make(true);
+        try {
+            return $this->facultyService->getDatatable();
+        } catch (Exception $e) {
+            logError('FacultyController@datatable', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -87,14 +65,14 @@ class FacultyController extends Controller
             'name' => 'required|string|max:255|unique:faculties,name'
         ]);
 
-        Faculty::create([
-            'name' => $request->name
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Faculty created successfully.'
-        ]);
+        try {
+            $validated = $request->all();
+            $faculty = $this->facultyService->createFaculty($validated);
+            return successResponse('Faculty created successfully.', $faculty);
+        } catch (Exception $e) {
+            logError('FacultyController@store', $e, ['request' => $request->all()]);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -102,10 +80,13 @@ class FacultyController extends Controller
      */
     public function show(Faculty $faculty): JsonResponse
     {
-        return response()->json([
-            'success' => true,
-            'data' => $faculty->load('programs')
-        ]);
+        try {
+            $faculty = $this->facultyService->getFaculty($faculty);
+            return successResponse('Faculty details fetched successfully.', $faculty);
+        } catch (Exception $e) {
+            logError('FacultyController@show', $e, ['faculty_id' => $faculty->id]);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -117,14 +98,14 @@ class FacultyController extends Controller
             'name' => 'required|string|max:255|unique:faculties,name,' . $faculty->id
         ]);
 
-        $faculty->update([
-            'name' => $request->name
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Faculty updated successfully.'
-        ]);
+        try {
+            $validated = $request->all();
+            $faculty = $this->facultyService->updateFaculty($faculty, $validated);
+            return successResponse('Faculty updated successfully.', $faculty);
+        } catch (Exception $e) {
+            logError('FacultyController@update', $e, ['faculty_id' => $faculty->id, 'request' => $request->all()]);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**
@@ -132,19 +113,14 @@ class FacultyController extends Controller
      */
     public function destroy(Faculty $faculty): JsonResponse
     {
-        // Check if faculty has programs
-        if ($faculty->programs()->count() > 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot delete faculty that has programs assigned.'
-            ], 422);
+        try {
+            $this->facultyService->deleteFaculty($faculty);
+            return successResponse('Faculty deleted successfully.');
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('FacultyController@destroy', $e, ['faculty_id' => $faculty->id]);
+            return errorResponse('Internal server error.', [], 500);
         }
-
-        $faculty->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Faculty deleted successfully.'
-        ]);
     }
 } 

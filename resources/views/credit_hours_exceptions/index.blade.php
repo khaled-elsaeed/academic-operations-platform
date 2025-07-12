@@ -357,9 +357,7 @@ function handleExceptionFormSubmit() {
           $('#exceptionModal').modal('hide');
           showSuccess(response.message);
           // Reload datatable and stats
-          if (typeof window.exceptionsTable !== 'undefined') {
-            window.exceptionsTable.ajax.reload();
-          }
+          $('#exceptions-table').DataTable().ajax.reload();
           loadExceptionStats();
         } else {
           showError(response.message || 'Operation failed');
@@ -399,9 +397,7 @@ function handleDeactivateExceptionBtn() {
           success: function (response) {
             if (response.success) {
               showSuccess(response.message);
-              if (typeof window.exceptionsTable !== 'undefined') {
-                window.exceptionsTable.ajax.reload();
-              }
+              $('#exceptions-table').DataTable().ajax.reload();
               loadExceptionStats();
             } else {
               showError(response.message || 'Failed to deactivate exception');
@@ -409,6 +405,48 @@ function handleDeactivateExceptionBtn() {
           },
           error: function() {
             showError('Failed to deactivate exception');
+          }
+        });
+      }
+    });
+  });
+}
+
+/**
+ * Handles the Activate Exception button click event
+ */
+function handleActivateExceptionBtn() {
+  $(document).on('click', '.activateExceptionBtn', function () {
+    const exceptionId = $(this).data('id');
+    
+    Swal.fire({
+      title: 'Activate Exception?',
+      text: 'Are you sure you want to activate this exception?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#28a745',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, activate it!'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        $.ajax({
+          url: `{{ route('credit-hours-exceptions.index') }}/${exceptionId}/activate`,
+          method: 'PATCH',
+          headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+          },
+          success: function (response) {
+            if (response.success) {
+              showSuccess(response.message);
+              $('#exceptions-table').DataTable().ajax.reload();
+              loadExceptionStats();
+            } else {
+              showError(response.message || 'Failed to activate exception');
+            }
+          },
+          error: function (xhr) {
+            const message = xhr.responseJSON?.message || 'Failed to activate exception';
+            showError(message);
           }
         });
       }
@@ -442,9 +480,7 @@ function handleDeleteExceptionBtn() {
           success: function (response) {
             if (response.success) {
               showSuccess(response.message);
-              if (typeof window.exceptionsTable !== 'undefined') {
-                window.exceptionsTable.ajax.reload();
-              }
+              $('#exceptions-table').DataTable().ajax.reload();
               loadExceptionStats();
             } else {
               showError(response.message || 'Failed to delete exception');
@@ -474,6 +510,7 @@ $(document).ready(function() {
   handleEditExceptionBtn();
   handleExceptionFormSubmit();
   handleDeactivateExceptionBtn();
+  handleActivateExceptionBtn();
   handleDeleteExceptionBtn();
 });
 </script>

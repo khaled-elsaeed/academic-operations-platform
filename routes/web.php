@@ -52,6 +52,12 @@ Route::group([], function () {
 
 require __DIR__.'/web/available_course.php';
 
+        // Available Courses (for AJAX dropdown - legacy)
+        Route::prefix('available-courses-legacy')->group(function () {
+            Route::get('/', [App\Http\Controllers\AvailableCourseController::class, 'index'])->name('available-courses.legacy.index');
+            Route::post('/', [App\Http\Controllers\AvailableCourseController::class, 'index'])->name('available-courses.legacy.store');
+        });
+
 // ====================
 // Include Admin Home Routes
 // ====================
@@ -148,10 +154,6 @@ Route::middleware(['auth'])
             Route::get('/', [LevelController::class, 'index'])->name('levels.legacy.index');
         });
 
-        // Available Courses (for AJAX dropdown - legacy)
-        Route::prefix('available-courses-legacy')->group(function () {
-            Route::get('/', [App\Http\Controllers\AvailableCourseController::class, 'index'])->name('available-courses.legacy.index');
-        });
 
          // Advisors (for AJAX dropdown - legacy)
          Route::prefix('advisors-legacy')->group(function () {

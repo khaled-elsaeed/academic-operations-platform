@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class CreditHoursException extends Model
 {
@@ -33,6 +34,17 @@ class CreditHoursException extends Model
     protected $casts = [
         'additional_hours' => 'integer',
         'is_active' => 'boolean',
+    ];
+
+    /**
+     * The attributes that should be appended to arrays.
+     *
+     * @var array<string>
+     */
+    protected $appends = [
+        'status_text',
+        'term_display_name',
+        'student_display_name',
     ];
 
     /**
@@ -68,6 +80,38 @@ class CreditHoursException extends Model
     }
 
     /**
+     * Scope to get only inactive exceptions.
+     */
+    public function scopeInactive(Builder $query): Builder
+    {
+        return $query->where('is_active', false);
+    }
+
+    /**
+     * Scope to filter by student.
+     */
+    public function scopeForStudent(Builder $query, int $studentId): Builder
+    {
+        return $query->where('student_id', $studentId);
+    }
+
+    /**
+     * Scope to filter by term.
+     */
+    public function scopeForTerm(Builder $query, int $termId): Builder
+    {
+        return $query->where('term_id', $termId);
+    }
+
+    /**
+     * Scope to filter by granted by user.
+     */
+    public function scopeGrantedBy(Builder $query, int $userId): Builder
+    {
+        return $query->where('granted_by', $userId);
+    }
+
+    /**
      * Check if the exception is currently valid.
      */
     public function isValid(): bool
@@ -81,5 +125,35 @@ class CreditHoursException extends Model
     public function getEffectiveAdditionalHours(): int
     {
         return $this->isValid() ? $this->additional_hours : 0;
+    }
+
+    /**
+     * Get the status text attribute.
+     */
+    protected function statusText(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->is_active ? 'Active' : 'Inactive'
+        );
+    }
+
+    /**
+     * Get the term display name attribute.
+     */
+    protected function termDisplayName(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->term ? "{$this->term->season} {$this->term->year}" : '-'
+        );
+    }
+
+    /**
+     * Get the student display name attribute.
+     */
+    protected function studentDisplayName(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->student ? "{$this->student->name_en} ({$this->student->academic_id})" : '-'
+        );
     }
 } 

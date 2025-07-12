@@ -21,8 +21,8 @@ return new class extends Migration
             $table->boolean('is_active')->default(true); 
             $table->timestamps();
 
-            // Ensure one active exception per student per term
-            $table->unique(['student_id', 'term_id', 'is_active'], 'unique_active_exception');
+            // Ensure one exception per student per term
+            $table->unique(['student_id', 'term_id'], 'unique_student_term_exception');
         });
     }
 

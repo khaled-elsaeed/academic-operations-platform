@@ -92,6 +92,22 @@ class CreditHoursExceptionController extends Controller
     }
 
     /**
+     * Activate a credit hours exception.
+     */
+    public function activate(CreditHoursException $exception): JsonResponse
+    {
+        try {
+            $this->exceptionService->activateException($exception);
+            return successResponse('Credit hours exception activated successfully.');
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('CreditHoursExceptionController@activate', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
      * Delete a credit hours exception.
      */
     public function destroy(CreditHoursException $exception): JsonResponse
@@ -147,7 +163,8 @@ class CreditHoursExceptionController extends Controller
     public function getTerms(): JsonResponse
     {
         try {
-            $terms = Term::select('id', 'season', 'year')
+            $terms = Term::select('id', 'season', 'year', 'is_active')
+                ->where('is_active', true)
                 ->orderBy('year', 'desc')
                 ->orderBy('season')
                 ->get()
@@ -171,7 +188,7 @@ class CreditHoursExceptionController extends Controller
     public function show(CreditHoursException $exception): JsonResponse
     {
         try {
-            $exception->load(['student', 'term', 'grantedBy']);
+            $exception->load(['student:id,name_en,academic_id', 'term:id,season,year', 'grantedBy:id,first_name,last_name']);
             return successResponse('Exception details retrieved successfully.', $exception);
         } catch (Exception $e) {
             logError('CreditHoursExceptionController@show', $e);

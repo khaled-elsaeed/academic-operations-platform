@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Exceptions\BusinessValidationException;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
+use Illuminate\Support\Str;
 
 class CreditHoursExceptionService
 {
@@ -27,15 +28,14 @@ class CreditHoursExceptionService
             $student = Student::findOrFail($data['student_id']);
             $term = Term::findOrFail($data['term_id']);
 
-            // Check if there's already an active exception for this student and term
-            $existingException = CreditHoursException::where('student_id', $student->id)
-                ->where('term_id', $term->id)
-                ->where('is_active', true)
+            // Check if there's already an exception for this student and term
+            $existingException = CreditHoursException::forStudent($student->id)
+                ->forTerm($term->id)
                 ->first();
 
             if ($existingException) {
                 throw new BusinessValidationException(
-                    "An active credit hours exception already exists for this student in the selected term."
+                    "A credit hours exception already exists for this student in the selected term."
                 );
             }
 
@@ -82,6 +82,18 @@ class CreditHoursExceptionService
     }
 
     /**
+     * Activate an exception.
+     *
+     * @param CreditHoursException $exception
+     * @return CreditHoursException
+     */
+    public function activateException(CreditHoursException $exception): CreditHoursException
+    {
+        $exception->update(['is_active' => true]);
+        return $exception->fresh();
+    }
+
+    /**
      * Get active exception for a student and term.
      *
      * @param int $studentId
@@ -90,8 +102,8 @@ class CreditHoursExceptionService
      */
     public function getActiveException(int $studentId, int $termId): ?CreditHoursException
     {
-        return CreditHoursException::where('student_id', $studentId)
-            ->where('term_id', $termId)
+        return CreditHoursException::forStudent($studentId)
+            ->forTerm($termId)
             ->active()
             ->first();
     }
@@ -117,20 +129,28 @@ class CreditHoursExceptionService
     public function getDatatable(): \Illuminate\Http\JsonResponse
     {
         $query = CreditHoursException::query()
-            ->with(['student', 'term', 'grantedBy']);
+            ->with(['student:id,name_en,academic_id', 'term:id,season,year', 'grantedBy:id,first_name,last_name'])
+            ->select([
+                'credit_hours_exceptions.id',
+                'credit_hours_exceptions.student_id',
+                'credit_hours_exceptions.term_id',
+                'credit_hours_exceptions.granted_by',
+                'credit_hours_exceptions.additional_hours',
+                'credit_hours_exceptions.reason',
+                'credit_hours_exceptions.is_active',
+                'credit_hours_exceptions.created_at',
+                'credit_hours_exceptions.updated_at'
+            ]);
 
         return DataTables::of($query)
             ->addColumn('student_name', function($exception) {
-                return optional($exception->student)->name_en ?? '-';
+                return $exception->student_display_name;
             })
             ->addColumn('term_name', function($exception) {
-                if ($exception->term) {
-                    return "{$exception->term->season} {$exception->term->year}";
-                }
-                return '-';
+                return $exception->term_display_name;
             })
             ->addColumn('granted_by_name', function($exception) {
-                return optional($exception->grantedBy)->name ?? '-';
+                return $exception->grantedBy ? $exception->grantedBy->name : '-';
             })
             ->addColumn('status', function($exception) {
                 if (!$exception->is_active) {
@@ -141,6 +161,15 @@ class CreditHoursExceptionService
             ->addColumn('action', function($exception) {
                 return $this->renderActionButtons($exception);
             })
+            ->editColumn('created_at', function($exception) {
+                return $exception->created_at ? $exception->created_at->format('Y-m-d H:i') : '-';
+            })
+            ->editColumn('additional_hours', function($exception) {
+                return $exception->additional_hours . ' hours';
+            })
+            ->editColumn('reason', function($exception) {
+                return $exception->reason ? Str::limit($exception->reason, 50) : '-';
+            })
             ->orderColumn('student_name', function($query, $order) {
                 $query->join('students', 'credit_hours_exceptions.student_id', '=', 'students.id')
                       ->orderBy('students.name_en', $order);
@@ -148,6 +177,10 @@ class CreditHoursExceptionService
             ->orderColumn('term_name', function($query, $order) {
                 $query->join('terms', 'credit_hours_exceptions.term_id', '=', 'terms.id')
                       ->orderBy('terms.season', $order)->orderBy('terms.year', $order);
+            })
+            ->orderColumn('granted_by_name', function($query, $order) {
+                $query->join('users', 'credit_hours_exceptions.granted_by', '=', 'users.id')
+                      ->orderBy('users.first_name', $order)->orderBy('users.last_name', $order);
             })
             ->rawColumns(['status', 'action'])
             ->make(true);
@@ -161,8 +194,8 @@ class CreditHoursExceptionService
     public function getStats(): array
     {
         $total = CreditHoursException::count();
-        $active = CreditHoursException::where('is_active', true)->count();
-        $inactive = CreditHoursException::where('is_active', false)->count();
+        $active = CreditHoursException::active()->count();
+        $inactive = CreditHoursException::inactive()->count();
         $latest = CreditHoursException::latest('created_at')->value('created_at');
 
         return [

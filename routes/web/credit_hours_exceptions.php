@@ -16,6 +16,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
             Route::get('/', [CreditHoursExceptionController::class, 'show'])->name('show');
             Route::put('/', [CreditHoursExceptionController::class, 'update'])->name('update');
             Route::patch('/deactivate', [CreditHoursExceptionController::class, 'deactivate'])->name('deactivate');
+            Route::patch('/activate', [CreditHoursExceptionController::class, 'activate'])->name('activate');
             Route::delete('/', [CreditHoursExceptionController::class, 'destroy'])->name('destroy');
         });
     });

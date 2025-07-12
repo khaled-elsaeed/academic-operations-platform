@@ -317,7 +317,7 @@ function loadEnrollmentHistory(studentId) {
     method: 'POST',
     data: { student_id: studentId, _token: '{{ csrf_token() }}' },
     success: function(res) {
-      let history = (res.enrollments || []);
+      let history = (res.data || []);
       $('#historyCount').text(history.length);
       if (history.length === 0) {
         $('#enrollmentHistoryBox').html(`
@@ -390,7 +390,7 @@ function loadAvailableCourses(studentId, termId) {
   }
   showLoading('#coursesBox', 'Loading available courses...');
   $.ajax({
-    url: '{{ route('admin.available-courses.legacy.index') }}',
+    url: '{{ route('available-courses.legacy.index') }}',
     method: 'POST',
     data: { student_id: studentId, term_id: termId, _token: '{{ csrf_token() }}' },
     success: function(res) {

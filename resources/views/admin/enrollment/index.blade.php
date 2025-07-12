@@ -169,7 +169,7 @@ function loadAvailableCoursesForStudentAndTerm(studentId, termId, selectedId = n
     return;
   }
   $.ajax({
-    url: '{{ route('admin.available-courses.legacy.index') }}',
+    url: '{{ route('available-courses.legacy.index') }}',
     method: 'GET',
     data: { student_id: studentId, term_id: termId },
     success: function (response) {

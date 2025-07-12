@@ -87,6 +87,13 @@ class Sidebar extends Component
                 'permission' => 'program.view',
             ],
             [
+                'title' => 'Terms',
+                'icon' => 'bx bx-calendar',
+                'route' => route('admin.terms.index'),
+                'active' => request()->routeIs('admin.terms.*'),
+                'permission' => 'term.view',
+            ],
+            [
                 'title' => 'Courses',
                 'icon' => 'bx bx-book',
                 'route' => route('admin.courses.index'),
@@ -142,7 +149,7 @@ class Sidebar extends Component
                 'icon' => 'bx bx-time',
                 'route' => route('credit-hours-exceptions.index'),
                 'active' => request()->routeIs('credit-hours-exceptions.*'),
-                'permission' => 'enrollment.view',
+                'permission' => 'credit_hours_exception.view',
             ],
             [
                 'title' => 'Users',

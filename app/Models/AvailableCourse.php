@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Support\Facades\DB;
 
 
 class AvailableCourse extends Model
@@ -150,6 +151,46 @@ class AvailableCourse extends Model
                              $pairQuery->where('level_id', $levelId);
                          });
             });
+        });
+    }
+
+    /**
+     * Scope a query to filter available courses that a student is enrolled in.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  int  $studentId
+     * @param  int  $termId
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    #[Scope]
+    protected function enrolled(Builder $query, int $studentId, int $termId): Builder
+    {
+        return $query->whereExists(function ($subQuery) use ($studentId, $termId) {
+            $subQuery->select(\DB::raw(1))
+                     ->from('enrollments')
+                     ->whereColumn('enrollments.course_id', 'available_courses.course_id')
+                     ->where('enrollments.student_id', $studentId)
+                     ->where('enrollments.term_id', $termId);
+        });
+    }
+
+    /**
+     * Scope a query to filter available courses that a student is NOT enrolled in.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  int  $studentId
+     * @param  int  $termId
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    #[Scope]
+    protected function notEnrolled(Builder $query, int $studentId, int $termId): Builder
+    {
+        return $query->whereNotExists(function ($subQuery) use ($studentId, $termId) {
+            $subQuery->select(\DB::raw(1))
+                     ->from('enrollments')
+                     ->whereColumn('enrollments.course_id', 'available_courses.course_id')
+                     ->where('enrollments.student_id', $studentId)
+                     ->where('enrollments.term_id', $termId);
         });
     }
  

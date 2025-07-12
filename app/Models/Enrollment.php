@@ -22,7 +22,20 @@ class Enrollment extends Model
         'student_id',
         'course_id',
         'term_id',
+        'score',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'score' => 'decimal:2',
+        ];
+    }
 
     /**
      * Get the student that owns the enrollment.

@@ -16,7 +16,7 @@ class EnrollmentDocumentService
      * Constants
      */
     private const MAX_COURSES_WORD = 16;
-    private const MAX_COURSES_PDF = 10;
+    private const MAX_COURSES_PDF = 4;
     private const MEMORY_LIMIT = '512M';
     private const EXECUTION_TIME = 300;
     private const TEMPLATE_FILENAME = 'enrollment_template.docx';
@@ -246,8 +246,8 @@ class EnrollmentDocumentService
     private function prepareStudentData(Student $student): array
     {
         $levelName = $student->level->name ?? null;
-        
-        return [
+
+        $data = [
             'academic_number' => $student->academic_id,
             'student_name' => $student->name_ar ?? $student->name_en,
             'national_id' => $student->national_id,
@@ -257,6 +257,18 @@ class EnrollmentDocumentService
             'academic_year' => self::DEFAULT_ACADEMIC_YEAR,
             'semester' => self::DEFAULT_SEMESTER
         ];
+
+        Log::info('Prepared student data for document', [
+            'student_id' => $student->id,
+            'academic_number' => $data['academic_number'],
+            'student_name' => $data['student_name'],
+            'level' => $data['level'],
+            'program_name' => $data['program_name'],
+            'academic_year' => $data['academic_year'],
+            'semester' => $data['semester'],
+        ]);
+
+        return $data;
     }
 
     /**
@@ -285,6 +297,7 @@ class EnrollmentDocumentService
      */
     private function prepareDataForPdf(Student $student, $enrollments): array
     {
+        $enrollments = $enrollments->values(); // Reset keys to be sequential
         $studentData = $this->prepareStudentData($student);
         $enrollmentData = [];
         $totalHours = 0;

@@ -141,10 +141,10 @@ class AvailableCourseController extends Controller
 
         try {
             $result = $this->availableCourseService->importAvailableCoursesFromFile($request->file('courses_file'));
-            if (!$result['success']) {
-                return errorResponse($result['message'], [], 422);
-            }
-            return successResponse($result['message'], $result['data'] ?? null);
+            return successResponse($result['message'], [
+                'imported_count' => $result['imported_count'] ?? 0,
+                'errors' => $result['errors'] ?? [],
+            ]);
         } catch (Exception $e) {
             logError('AvailableCourseController@import', $e, ['request' => $request->all()]);
             return errorResponse('Import failed. Please check your file.', [], 500);

@@ -17,11 +17,13 @@ class EnrollmentsTemplateExport implements FromArray, WithHeadings, WithStyles
                 '20230001', // academic_id (example Academic ID)
                 'CS101',          // course_code
                 '2252',       // term_code
+                '85.5',       // score (optional)
             ],
             [
                 '20230002', // academic_id
                 'MATH201',        // course_code
                 '2252',       // term_code
+                '',          // score (empty for no score)
             ],
         ];
     }
@@ -32,6 +34,7 @@ class EnrollmentsTemplateExport implements FromArray, WithHeadings, WithStyles
             'academic_id',
             'course_code',
             'term_code',
+            'score',
         ];
     }
 

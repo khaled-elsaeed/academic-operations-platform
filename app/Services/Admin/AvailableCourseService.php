@@ -253,21 +253,38 @@ class AvailableCourseService
     {
         $errors = [];
         $created = 0;
+        $skipped = 0;
+
         
         foreach ($rows as $index => $row) {
-            $rowNum = $index + 2; // Account for header row and 0-based index
-            
+            $rowNum = $index + 2;
             try {
                 DB::transaction(function () use ($row, $rowNum, &$created) {
-                    $this->processImportRow($row->toArray(), $rowNum);
-                    $created++;
+                    $result = $this->processImportRow($row->toArray(), $rowNum);
+                    if ($result === 'created') {
+                        $created++;
+                    } else {
+                        $skipped++;
+                    }
                 });
             } catch (ValidationException $e) {
-                $errors[] = "Row {$rowNum}: " . implode(', ', $e->errors()["Row {$rowNum}"] ?? []);
+                $errors[] = [
+                    'row' => $rowNum,
+                    'errors' => $e->errors()["Row {$rowNum}"] ?? [],
+                    'original_data' => $row->toArray(),
+                ];
             } catch (BusinessValidationException $e) {
-                $errors[] = "Row {$rowNum}: " . $e->getMessage();
+                $errors[] = [
+                    'row' => $rowNum,
+                    'errors' => ['general' => [$e->getMessage()]],
+                    'original_data' => $row->toArray(),
+                ];
             } catch (\Exception $e) {
-                $errors[] = "Row {$rowNum}: Unexpected error - " . $e->getMessage();
+                $errors[] = [
+                    'row' => $rowNum,
+                    'errors' => ['general' => ['Unexpected error - ' . $e->getMessage()]],
+                    'original_data' => $row->toArray(),
+                ];
                 Log::error('Import row processing failed', [
                     'row' => $rowNum,
                     'error' => $e->getMessage(),
@@ -275,14 +292,22 @@ class AvailableCourseService
                 ]);
             }
         }
+
+        $totalProcessed = $created + $skipped;
+        $message = empty($errors) 
+            ? "Successfully processed {$totalProcessed} available courses. ({$created} created, {$skipped} skipped)." 
+            : "Import completed with {$totalProcessed} successful ({$created} created, {$skipped} skipped) and " . count($errors) . " failed rows.";
+        
+        // Set success to false if there are any errors
+        $success = empty($errors) ? true : false;
         
         return [
-            'success' => empty($errors),
-            'message' => empty($errors) 
-                ? "Successfully imported {$created} available courses." 
-                : "Import completed with {$created} successful and " . count($errors) . " failed rows.",
+            'success' => $success,
+            'message' => $message,
             'errors' => $errors,
-            'created' => $created,
+            'imported_count' => $totalProcessed,
+            'created_count' => $created,
+            'skipped_count' => $skipped,
         ];
     }
 
@@ -291,9 +316,10 @@ class AvailableCourseService
      *
      * @param array $row
      * @param int $rowNum
+     * @return string 'created' or 'skipped'
      * @throws ValidationException|BusinessValidationException
      */
-    private function processImportRow(array $row, int $rowNum): void
+    private function processImportRow(array $row, int $rowNum): string
     {
         // Validate row structure
         AvailableCourseImportValidator::validateRow($row, $rowNum);
@@ -303,10 +329,14 @@ class AvailableCourseService
         $term = $this->findTermByCode($row['term_code'] ?? '');
         $programName = $row['program_name'] ?? null;
         $levelName = $row['level_name'] ?? null;
-        $isUniversal = isset($row['is_universal']) && ($row['is_universal'] === true || $row['is_universal'] === 1 || $row['is_universal'] === '1' || $row['is_universal'] === 'true');
-        // If both program and level are missing/empty, treat as universal
-        if ($isUniversal || (empty($programName) && empty($levelName))) {
-            $this->checkForDuplicateImportCourse($course, $term, null, null, true);
+
+        if ((empty($programName) && empty($levelName))) {
+            $exists = $this->checkForDuplicateImportCourse($course, $term, null, null, true);
+
+            if ($exists) {
+                return 'skipped'; 
+            }
+
             AvailableCourse::create([
                 'course_id' => $course->id,
                 'term_id' => $term->id,
@@ -314,10 +344,19 @@ class AvailableCourseService
                 'max_capacity' => $row['max_capacity'] ?? 30,
                 'is_universal' => true,
             ]);
+
+            return 'created';
+
         } else {
             $program = $this->findProgramByName($programName);
             $level = $this->findLevelByName($levelName);
-            $this->checkForDuplicateImportCourse($course, $term, $program, $level);
+
+            $exists = $this->checkForDuplicateImportCourse($course, $term, $program, $level,fasle);
+
+            if ($exists) {
+                return 'skipped'; 
+            }
+
             $availableCourse = AvailableCourse::create([
                 'course_id' => $course->id,
                 'term_id' => $term->id,
@@ -325,11 +364,15 @@ class AvailableCourseService
                 'max_capacity' => $row['max_capacity'] ?? 30,
                 'is_universal' => false,
             ]);
+
             CourseEligibility::create([
                 'available_course_id' => $availableCourse->id,
                 'program_id' => $program->id,
                 'level_id' => $level->id,
             ]);
+
+            return 'created';
+
         }
     }
 
@@ -538,6 +581,44 @@ class AvailableCourseService
             ->toArray();
             
         $availableCourse->setProgramLevelPairs($pairs);
+    }
+
+    /**
+     * Check for duplicate available course during import.
+     *
+     * @param Course $course
+     * @param Term $term
+     * @param Program|null $program
+     * @param Level|null $level
+     * @param bool $isUniversal
+     * @throws BusinessValidationException
+     */
+    private function checkForDuplicateImportCourse(Course $course, Term $term, ?Program $program = null, ?Level $level = null, bool $isUniversal = false): void
+    {
+        if ($isUniversal) {
+            $exists = AvailableCourse::where('course_id', $course->id)
+                ->where('term_id', $term->id)
+                ->where('is_universal', true)
+                ->exists();
+            if ($exists) {
+                throw new BusinessValidationException('A universal available course for this Course and Term already exists.');
+            }
+        } else {
+            if (!$program || !$level) {
+                throw new BusinessValidationException('Program and Level are required for non-universal available courses.');
+            }
+            $exists = AvailableCourse::where('course_id', $course->id)
+                ->where('term_id', $term->id)
+                ->where('is_universal', false)
+                ->whereHas('eligibilities', function ($q) use ($program, $level) {
+                    $q->where('program_id', $program->id)
+                      ->where('level_id', $level->id);
+                })
+                ->exists();
+            if ($exists) {
+                throw new BusinessValidationException('An available course with the same Course, Term, Program, and Level already exists.');
+            }
+        }
     }
 
 

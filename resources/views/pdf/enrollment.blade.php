@@ -192,7 +192,8 @@
                 </tr>
                 <tr>
                     <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">اسم البرنامج:</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{{ $program_name ?? '________' }}</td>
+                    <td style="padding: 6px; border: 1px solid #ddd; font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 13px;">{{ $program_name ?? '________' }}</td>
+
                 </tr>
             </table>
             <!-- ===== NOTICE SECTION ===== -->
@@ -202,36 +203,51 @@
                 </p>
             </div>
             <!-- ===== COURSES TABLE SECTION ===== -->
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px;">
                 <thead>
-                    <tr style="background-color: #f5f5f5;">
-                        <th style="padding: 12px; border: 1px solid #ddd; text-align: center; font-weight: bold; width: 10%;">م</th>
-                        <th style="padding: 12px; border: 1px solid #ddd; text-align: center; font-weight: bold; width: 20%;">كود المقرر</th>
-                        <th style="padding: 12px; border: 1px solid #ddd; text-align: center; font-weight: bold; width: 50%;">اسم المقرر</th>
-                        <th style="padding: 12px; border: 1px solid #ddd; text-align: center; font-weight: bold; width: 20%;">عدد ساعات المقرر</th>
+                    <tr style="background-color: #f5f5f5; border: 1px solid #000;">
+                        <th style="padding: 6px; border: 1px solid #000; text-align: center; font-weight: bold; width: 10%;">م</th>
+                        <th style="padding: 6px; border: 1px solid #000; text-align: center; font-weight: bold; width: 20%;">كود المقرر</th>
+                        <th style="padding: 6px; border: 1px solid #000; text-align: center; font-weight: bold; width: 50%;">اسم المقرر</th>
+                        <th style="padding: 6px; border: 1px solid #000; text-align: center; font-weight: bold; width: 20%;">عدد ساعات المقرر</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @for ($i = 1; $i <= 10; $i++)
+                    @php $maxRows = 4; @endphp
+                    @for ($i = 1; $i <= $maxRows; $i++)
                         <tr>
-                            <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{{ $i }}</td>
-                            <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">{{ ${"course_code_$i"} ?? '________' }}</td>
-                            <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">{{ ${"course_title_$i"} ?? '________' }}</td>
-                            <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{{ ${"course_hours_$i"} ?? '________' }}</td>
+                            <td style="padding: 6px; border: 1px solid #000; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">{{ $i }}</td>
+                            <td style="padding: 6px; border: 1px solid #000; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">
+                                {{ ${'course_code_' . $i} ?? '________' }}
+                            </td>
+                            <td style="padding: 6px; border: 1px solid #000; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">
+                                {{ ${'course_title_' . $i} ?? '________' }}
+                            </td>
+                            <td style="padding: 6px; border: 1px solid #000; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">
+                                {{ ${'course_hours_' . $i} ?? '________' }}
+                            </td>
                         </tr>
                     @endfor
-                    <tr>
-                        <td colspan="3" style="padding: 12px; border: 1px solid #ddd; font-weight: bold; text-align: right; background-color: #f5f5f5;">
+                    <tr style="border-top: 2px solid #000; border-bottom: 1px solid #000;">
+                        <td colspan="3" style="padding: 6px; border: 1px solid #000; border-top: 2px solid #000; border-bottom: 2px solid #000; font-weight: bold; text-align: right; background-color: #f5f5f5;">
                             إجمالي عدد الساعات المسجلة
                         </td>
-                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; text-align: center; background-color: #f5f5f5;">
+                        <td style="padding: 6px; border: 1px solid #000; border-top: 2px solid #000; border-bottom: 2px solid #000; font-weight: bold; text-align: center; background-color: #f5f5f5; font-family: 'DejaVu Sans', Arial, sans-serif;">
                             {{ $total_hours ?? '________' }}
                         </td>
                     </tr>
                 </tbody>
             </table>
+            <!-- ===== NOTES SECTION ===== -->
+            <div style="margin: 20px 0 20px 0;">
+                <strong>ملاحظات:</strong>
+                <ul style="font-size: 14px; margin-top: 8px; margin-bottom: 0; padding-right: 20px;">
+                    <li>يتعهد الطالب بتسجيل المقررات علي نظام معلومات الطالب SIS مطابق تماما للتسجيل الورقي الذي قام بالتوقيع عليه.</li>
+                    <li>في حالة رغبة الطالب في اجراء أي تعديل في تسجيل المقررات خلال فترة التسجيل الممكنة أن يتم ذلك بموافقة وتوقيع المرشد الأكاديمي أولاً.</li>
+                    <li>أيضا إتاحة المقرر في الفصل الصيفي يعتمد علي اكتمال الحد الأدنى لفتح المقرر طبقا للأعداد المقررة بلائحة الجامعة.</li>
+                </ul>
+            </div>
             <!-- ===== SIGNATURES SECTION ON NEW PAGE ===== -->
-            <pagebreak />
             <div style="margin-top: 60px;">
                 <table class="text-right sm-padding small strong">
                     <thead>

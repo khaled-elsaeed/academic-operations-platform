@@ -39,7 +39,7 @@ class CoursePrerequisite extends Pivot
     /**
      * Get the prerequisite course for this entry.
      */
-    public function prerequisite(): BelongsTo
+    public function prerequisiteCourse(): BelongsTo
     {
         return $this->belongsTo(Course::class, 'prerequisite_id');
     }

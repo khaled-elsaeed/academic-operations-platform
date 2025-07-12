@@ -116,6 +116,45 @@ function showError(message) {
   showSwal({ title: 'Error', text: message, icon: 'error' });
 }
 
+/**
+ * Shows import errors in a detailed modal (like enrollment import)
+ * @param {Array} errors - Array of error objects
+ * @param {number} importedCount - Number of successfully imported items
+ * @returns {void}
+ */
+function showImportErrors(errors, importedCount) {
+  let errorHtml = `<div class="text-start">`;
+  errorHtml += `<p class="mb-3"><strong>Successfully processed: ${importedCount}</strong></p>`;
+  errorHtml += `<p class="mb-3"><strong>Failed rows: ${errors.length}</strong></p>`;
+  errorHtml += `<div class="table-responsive">`;
+  errorHtml += `<table class="table table-sm table-bordered">`;
+  errorHtml += `<thead><tr><th>Row</th><th>Errors</th><th>Data</th></tr></thead>`;
+  errorHtml += `<tbody>`;
+
+  errors.forEach(function(error) {
+    // Compose error messages
+    const errorMessages = Array.isArray(error.errors) ? error.errors.join(', ') :
+      (error.errors.general ? error.errors.general.join(', ') :
+      Object.values(error.errors).flat().join(', '));
+
+    errorHtml += `<tr>`;
+    errorHtml += `<td>${error.row}</td>`;
+    errorHtml += `<td class="text-danger">${errorMessages}</td>`;
+    errorHtml += `<td><small>${JSON.stringify(error.original_data)}</small></td>`;
+    errorHtml += `</tr>`;
+  });
+
+  errorHtml += `</tbody></table></div></div>`;
+
+  Swal.fire({
+    title: 'Import Completed with Errors',
+    html: errorHtml,
+    icon: 'warning',
+    width: '800px',
+    confirmButtonText: 'OK'
+  });
+}
+
 // --- Delete Available Course ---
 function handleDeleteAvailableCourseBtn() {
   $(document).on('click', '.deleteAvailableCourseBtn', function () {
@@ -160,70 +199,57 @@ function handleImportAvailableCoursesForm() {
 }
 
 function importAvailableCourses(formData) {
-  $('#importAvailableCoursesSubmitBtn').prop('disabled', true).text('Importing...');
+  const $submitBtn = $('#importAvailableCoursesSubmitBtn');
+  $submitBtn.prop('disabled', true).text('Importing...');
   $.ajax({
     url: "{{ route('available_courses.import') }}",
     method: 'POST',
     data: formData,
     processData: false,
     contentType: false,
-    success: response => {
+    success: function(response) {
       $('#importAvailableCoursesModal').modal('hide');
-      reloadAvailableCoursesTable();
-      let msg = response.message;
-      if (response.errors && response.errors.length > 0) {
-        const maxErrorsToShow = 4;
-        let errorsToShow = response.errors.slice(0, maxErrorsToShow);
-        msg += '<br><ul style="text-align:left">';
-        errorsToShow.forEach(function(err) {
-          msg += `<li>${err}</li>`;
-        });
-        msg += '</ul>';
-        if (response.errors.length > maxErrorsToShow) {
-          // Create a downloadable error file
-          const allErrors = response.errors.join('\n');
-          const blob = new Blob([allErrors], { type: 'text/plain' });
-          const url = URL.createObjectURL(blob);
-          msg += `<div class='mt-2'><a href='${url}' download='import_errors.txt' class='btn btn-sm btn-outline-secondary'>Download all errors (${response.errors.length})</a></div>`;
-        }
-        Swal.fire({
-          icon: 'warning',
-          title: 'Import Completed with Errors',
-          html: msg
-        });
-      } else {
-        showSuccess(msg);
+      $('#available-courses-table').DataTable().ajax.reload(null, false);
+      Swal.fire({
+        title: 'Import Completed',
+        text: response.message,
+        icon: 'success',
+        confirmButtonText: 'OK'
+      });
+      if (response.data && response.data.errors && response.data.errors.length > 0) {
+        showImportErrors(response.data.errors, response.data.imported_count);
       }
     },
-    error: xhr => {
+    error: function(xhr) {
       $('#importAvailableCoursesModal').modal('hide');
-      let msg = xhr.responseJSON?.message || 'Import failed. Please check your file.';
-      if (xhr.responseJSON?.errors && xhr.responseJSON.errors.length > 0) {
-        const maxErrorsToShow = 4;
-        let errorsToShow = xhr.responseJSON.errors.slice(0, maxErrorsToShow);
-        msg += '<br><ul style="text-align:left">';
-        errorsToShow.forEach(function(err) {
-          msg += `<li>${err}</li>`;
+      const response = xhr.responseJSON;
+      if (response && response.errors && Object.keys(response.errors).length > 0) {
+        const errorMessages = [];
+        Object.keys(response.errors).forEach(field => {
+          if (Array.isArray(response.errors[field])) {
+            errorMessages.push(...response.errors[field]);
+          } else {
+            errorMessages.push(response.errors[field]);
+          }
         });
-        msg += '</ul>';
-        if (xhr.responseJSON.errors.length > maxErrorsToShow) {
-          // Create a downloadable error file
-          const allErrors = xhr.responseJSON.errors.join('\n');
-          const blob = new Blob([allErrors], { type: 'text/plain' });
-          const url = URL.createObjectURL(blob);
-          msg += `<div class='mt-2'><a href='${url}' download='import_errors.txt' class='btn btn-sm btn-outline-secondary'>Download all errors (${xhr.responseJSON.errors.length})</a></div>`;
-        }
         Swal.fire({
-          icon: 'error',
           title: 'Import Failed',
-          html: msg
+          html: errorMessages.join('<br>'),
+          icon: 'error',
+          confirmButtonText: 'OK'
         });
       } else {
-        showError(msg);
+        const message = response?.message || 'Import failed. Please check your file.';
+        Swal.fire({
+          title: 'Import Failed',
+          text: message,
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
       }
     },
-    complete: () => {
-      $('#importAvailableCoursesSubmitBtn').prop('disabled', false).text('Import');
+    complete: function() {
+      $submitBtn.prop('disabled', false).text('Import');
     }
   });
 }

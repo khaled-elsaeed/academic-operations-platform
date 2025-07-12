@@ -119,12 +119,16 @@ class EnrollmentService
             ->addColumn('term', function($enrollment) {
                 return $enrollment->term_season && $enrollment->term_year ? "{$enrollment->term_season} {$enrollment->term_year}" : '-';
             })
+            ->addColumn('score', function($enrollment) {
+                return $enrollment->score ? number_format($enrollment->score, 2) : '-';
+            })
             ->addColumn('action', function($enrollment) {
                 return $this->renderActionButtons($enrollment);
             })
             ->orderColumn('student', 'students.name_en $1')
             ->orderColumn('course', 'courses.title $1')
             ->orderColumn('term', 'terms.season $1, terms.year $1')
+            ->orderColumn('score', 'enrollments.score $1')
             ->rawColumns(['action'])
             ->make(true);
     }
@@ -179,6 +183,10 @@ class EnrollmentService
         if ($validator->fails()) {
             throw new BusinessValidationException($validator->errors()->first('student_id'), 403);
         }
+
+        // Load the taken hours attribute
+        $student->load('enrollments.course');
+        $student->taken_hours = $student->taken_hours;
 
         return $student;
     }
@@ -304,12 +312,20 @@ class EnrollmentService
             return 'skipped'; // Skip duplicate enrollments
         }
 
-        // Create enrollment
-        Enrollment::create([
+        // Prepare enrollment data
+        $enrollmentData = [
             'student_id' => $student->id,
             'course_id' => $course->id,
             'term_id' => $term->id,
-        ]);
+        ];
+
+        // Add score if provided and not empty
+        if (!empty($row['score']) && is_numeric($row['score'])) {
+            $enrollmentData['score'] = (float) $row['score'];
+        }
+
+        // Create enrollment
+        Enrollment::create($enrollmentData);
 
         return 'created';
     }

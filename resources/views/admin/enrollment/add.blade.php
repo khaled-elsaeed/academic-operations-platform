@@ -90,43 +90,43 @@
           </tr>
         </thead>
         <tbody>
-          <tr class="ch-row" data-season="Fall">
+          <tr class="ch-row" data-season="Fall" data-cgpa="lt2">
             <td>Fall</td>
             <td>&lt;2</td>
             <td>14</td>
             <td>+3</td>
           </tr>
-          <tr class="ch-row" data-season="Fall">
+          <tr class="ch-row" data-season="Fall" data-cgpa="2to3">
             <td>Fall</td>
             <td>&ge;2 and &lt;3</td>
             <td>18</td>
             <td>+3</td>
           </tr>
-          <tr class="ch-row" data-season="Fall">
+          <tr class="ch-row" data-season="Fall" data-cgpa="gte3">
             <td>Fall</td>
             <td>&ge;3</td>
             <td>21</td>
             <td>+3</td>
           </tr>
-          <tr class="ch-row" data-season="Spring">
+          <tr class="ch-row" data-season="Spring" data-cgpa="lt2">
             <td>Spring</td>
             <td>&lt;2</td>
             <td>14</td>
             <td>+3</td>
           </tr>
-          <tr class="ch-row" data-season="Spring">
+          <tr class="ch-row" data-season="Spring" data-cgpa="2to3">
             <td>Spring</td>
             <td>&ge;2 and &lt;3</td>
             <td>18</td>
             <td>+3</td>
           </tr>
-          <tr class="ch-row" data-season="Spring">
+          <tr class="ch-row" data-season="Spring" data-cgpa="gte3">
             <td>Spring</td>
             <td>&ge;3</td>
             <td>21</td>
             <td>+3</td>
           </tr>
-          <tr class="ch-row" data-season="Summer">
+          <tr class="ch-row" data-season="Summer" data-cgpa="any">
             <td>Summer</td>
             <td>Any</td>
             <td>9</td>
@@ -143,7 +143,7 @@
     <div class="row">
       
       <!-- Enrollment History -->
-      <div class="col-lg-6 mb-4">
+      <div class="col-lg-4 mb-4">
         <div class="card h-100">
           <div class="card-header d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center">
@@ -166,7 +166,7 @@
       </div>
 
       <!-- Available Courses -->
-      <div class="col-lg-6 mb-4">
+      <div class="col-lg-4 mb-4">
         <div class="card h-100">
           <div class="card-header d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center">
@@ -197,6 +197,80 @@
         </div>
       </div>
 
+      <!-- Course Prerequisites -->
+      <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+          <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <i class="bx bx-link me-2"></i>
+              <h5 class="mb-0">Course Prerequisites</h5>
+            </div>
+            <span class="badge bg-label-info" id="prerequisitesCount">0</span>
+          </div>
+          <div class="card-body">
+            <div id="prerequisitesBox" class="prerequisites-container">
+              <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+                <div class="text-center text-muted">
+                  <i class="bx bx-link-alt display-4 mb-3"></i>
+                  <p>Select courses to view prerequisites</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Credit Hours Summary (Outside the main row) -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div id="creditHoursSummary" style="display:none;">
+          <div class="alert alert-info mb-0 p-3">
+            <div class="row text-center">
+              <div class="col-md-3">
+                <div class="credit-hours-item">
+                  <i class="bx bx-book-open text-primary mb-1"></i>
+                  <div class="credit-hours-label">Current Enrollment</div>
+                  <div class="credit-hours-value" id="currentEnrollmentHours">0</div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="credit-hours-item">
+                  <i class="bx bx-plus-circle text-success mb-1"></i>
+                  <div class="credit-hours-label">Selected Additional</div>
+                  <div class="credit-hours-value" id="selectedCH">0</div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="credit-hours-item">
+                  <i class="bx bx-target-lock text-warning mb-1"></i>
+                  <div class="credit-hours-label">Max Allowed</div>
+                  <div class="credit-hours-value" id="maxCH">0</div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="credit-hours-item">
+                  <i class="bx bx-time text-info mb-1"></i>
+                  <div class="credit-hours-label">Remaining</div>
+                  <div class="credit-hours-value" id="remainingCH">0</div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-3">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <small class="text-muted">Credit Hours Usage</small>
+                <small class="text-muted" id="usagePercentage">0%</small>
+              </div>
+              <div class="progress" style="height: 8px;">
+                <div class="progress-bar bg-success" id="usageProgressBar" role="progressbar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Exception alert container -->
+          <div id="exceptionAlert" style="display:none;"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -218,6 +292,14 @@
   padding: 1rem;
 }
 
+.prerequisites-container {
+  max-height: 350px;
+  overflow-y: auto;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.375rem;
+  padding: 1rem;
+}
+
 .course-item {
   border: 1px solid var(--bs-border-color);
   border-radius: 0.375rem;
@@ -232,6 +314,23 @@
 }
 
 .course-item:last-child {
+  margin-bottom: 0;
+}
+
+.prerequisite-item {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.375rem;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.prerequisite-item:hover {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  border-color: var(--bs-info);
+}
+
+.prerequisite-item:last-child {
   margin-bottom: 0;
 }
 
@@ -266,6 +365,43 @@
 .loading-spinner {
   width: 1.5rem;
   height: 1.5rem;
+}
+
+.credit-hours-item {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  background: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s ease;
+}
+
+.credit-hours-item:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+}
+
+.credit-hours-item i {
+  font-size: 1.5rem;
+  display: block;
+}
+
+.credit-hours-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--bs-gray-600);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.credit-hours-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--bs-dark);
+  line-height: 1;
+}
+
+.credit-hours-item .bx {
+  font-size: 1.75rem;
 }
 </style>
 @endsection
@@ -340,10 +476,7 @@ function loadEnrollmentHistory(studentId) {
                     <i class="bx bx-calendar me-1"></i>
                     ${enr.term ? enr.term.name : 'Term #' + enr.term_id}
                   </p>
-                  <small class="text-muted">
-                    <i class="bx bx-time me-1"></i>
-                    Enrolled: ${enr.created_at ? new Date(enr.created_at).toLocaleDateString() : 'N/A'}
-                  </small>
+                  ${enr.score ? `<small class="text-muted"><i class="bx bx-star me-1"></i>Score: <strong>${enr.score}</strong></small>` : ''}
                 </div>
                 <span class="badge bg-label-success">Enrolled</span>
               </div>
@@ -386,6 +519,17 @@ function loadAvailableCourses(studentId, termId) {
     `);
     $('#coursesCount').text('0');
     $('#enrollBtn').hide();
+    $('#creditHoursSummary').hide();
+    $('#exceptionAlert').hide();
+    $('#prerequisitesBox').html(`
+      <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+        <div class="text-center text-muted">
+          <i class="bx bx-link-alt display-4 mb-3"></i>
+          <p>Select courses to view prerequisites</p>
+        </div>
+      </div>
+    `);
+    $('#prerequisitesCount').text('0');
     return;
   }
   showLoading('#coursesBox', 'Loading available courses...');
@@ -406,6 +550,17 @@ function loadAvailableCourses(studentId, termId) {
           </div>
         `);
         $('#enrollBtn').hide();
+        $('#creditHoursSummary').hide();
+        $('#exceptionAlert').hide();
+        $('#prerequisitesBox').html(`
+          <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+            <div class="text-center text-muted">
+              <i class="bx bx-link-alt display-4 mb-3"></i>
+              <p>Select courses to view prerequisites</p>
+            </div>
+          </div>
+        `);
+        $('#prerequisitesCount').text('0');
       } else {
         let html = '';
         courses.forEach(function(course) {
@@ -416,6 +571,7 @@ function loadAvailableCourses(studentId, termId) {
               <div class="form-check">
                 <input class="form-check-input course-checkbox" type="checkbox" 
                        name="available_course_ids[]" value="${course.available_course_id}" 
+                       data-credit-hours="${course.credit_hours}" 
                        id="course_${course.available_course_id}">
                 <label class="form-check-label w-100" for="course_${course.available_course_id}">
                   <div class="d-flex justify-content-between align-items-start">
@@ -424,6 +580,7 @@ function loadAvailableCourses(studentId, termId) {
                       <p class="text-muted mb-0 small">
                         <i class="bx bx-book me-1"></i>
                         Course Code: ${course.code || 'N/A'}
+                        <span class="ms-2"><i class="bx bx-timer me-1"></i>Credit Hours: <strong>${course.credit_hours}</strong></span>
                       </p>
                     </div>
                     <span class="badge bg-label-${capacityClass} capacity-badge">
@@ -439,7 +596,21 @@ function loadAvailableCourses(studentId, termId) {
         $('#coursesBox').html(html);
         $('#enrollBtn').show();
         updateEnrollButton();
-        $('.course-checkbox').on('change', updateEnrollButton);
+        updateCreditHoursSummary();
+        $('.course-checkbox').on('change', function() {
+          updateEnrollButton();
+          updateCreditHoursSummary();
+          
+          // Load prerequisites for selected courses
+          const selectedCourseIds = [];
+          $('.course-checkbox:checked').each(function() {
+            selectedCourseIds.push($(this).val());
+          });
+          loadPrerequisites(currentStudentId, selectedCourseIds);
+        });
+        
+        // Load remaining credit hours for the student in this term
+        loadRemainingCreditHours(studentId, termId);
       }
     },
     error: function() {
@@ -453,8 +624,215 @@ function loadAvailableCourses(studentId, termId) {
       `);
       $('#coursesCount').text('0');
       $('#enrollBtn').hide();
+      $('#creditHoursSummary').hide();
+      $('#exceptionAlert').hide();
+      $('#prerequisitesBox').html(`
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+          <div class="text-center text-muted">
+            <i class="bx bx-link-alt display-4 mb-3"></i>
+            <p>Select courses to view prerequisites</p>
+          </div>
+        </div>
+      `);
+      $('#prerequisitesCount').text('0');
     }
   });
+}
+
+/**
+ * Loads prerequisites for selected courses and checks enrollment status.
+ * @function loadPrerequisites
+ * @param {number} studentId
+ * @param {Array} selectedCourseIds
+ * @returns {void}
+ */
+function loadPrerequisites(studentId, selectedCourseIds) {
+  if (!studentId || !selectedCourseIds || selectedCourseIds.length === 0) {
+    $('#prerequisitesBox').html(`
+      <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+        <div class="text-center text-muted">
+          <i class="bx bx-link-alt display-4 mb-3"></i>
+          <p>Select courses to view prerequisites</p>
+        </div>
+      </div>
+    `);
+    $('#prerequisitesCount').text('0');
+    return;
+  }
+
+  showLoading('#prerequisitesBox', 'Loading prerequisites...');
+  
+  $.ajax({
+    url: '{{ route('admin.courses.prerequisites') }}',
+    method: 'POST',
+    data: { 
+      student_id: studentId, 
+      course_ids: selectedCourseIds,
+      _token: '{{ csrf_token() }}' 
+    },
+    success: function(res) {
+      let prerequisites = (res.data || []);
+      $('#prerequisitesCount').text(prerequisites.length);
+      
+      if (prerequisites.length === 0) {
+        $('#prerequisitesBox').html(`
+          <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+            <div class="text-center text-muted">
+              <i class="bx bx-check-circle display-4 mb-3"></i>
+              <p>No prerequisites found for selected courses</p>
+            </div>
+          </div>
+        `);
+      } else {
+        let html = '';
+        prerequisites.forEach(function(prereq) {
+          const statusClass = prereq.is_enrolled ? 'success' : 'danger';
+          const statusIcon = prereq.is_enrolled ? 'bx-check-circle' : 'bx-x-circle';
+          const statusText = prereq.is_enrolled ? 'Enrolled' : 'Not Enrolled';
+          
+          html += `
+            <div class="prerequisite-item">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <h6 class="mb-1">${prereq.course_name}</h6>
+                  <p class="text-muted mb-0 small">
+                    <i class="bx bx-book me-1"></i>
+                    Course Code: ${prereq.course_code || 'N/A'}
+                    <span class="ms-2"><i class="bx bx-timer me-1"></i>Credit Hours: <strong>${prereq.credit_hours}</strong></span>
+                  </p>
+                  <small class="text-muted">
+                    <i class="bx bx-link me-1"></i>
+                    Prerequisite for: ${prereq.required_for}
+                  </small>
+                </div>
+                <span class="badge bg-label-${statusClass}">
+                  <i class="bx ${statusIcon} me-1"></i>
+                  ${statusText}
+                </span>
+              </div>
+            </div>
+          `;
+        });
+        $('#prerequisitesBox').html(html);
+      }
+    },
+    error: function(xhr) {
+      console.error('Failed to load prerequisites:', xhr);
+      $('#prerequisitesBox').html(`
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+          <div class="text-center text-muted">
+            <i class="bx bx-error-circle display-4 mb-3"></i>
+            <p>Could not load prerequisites</p>
+          </div>
+        </div>
+      `);
+      $('#prerequisitesCount').text('0');
+    }
+  });
+}
+
+/**
+ * Loads remaining credit hours for a student in a specific term.
+ * @function loadRemainingCreditHours
+ * @param {number} studentId
+ * @param {number} termId
+ * @returns {void}
+ */
+function loadRemainingCreditHours(studentId, termId) {
+  if (!studentId || !termId) {
+    return;
+  }
+  
+  $.ajax({
+    url: '{{ route('available-courses.legacy.remaining-credit-hours') }}',
+    method: 'POST',
+    data: { 
+      student_id: studentId, 
+      term_id: termId, 
+      _token: '{{ csrf_token() }}' 
+    },
+    success: function(res) {
+      if (res.success && res.data) {
+        const data = res.data;
+        
+        // Update the credit hours summary with real data
+        $('#currentEnrollmentHours').text(data.current_enrollment_hours);
+        $('#selectedCH').text('0'); // Reset selected courses
+        $('#maxCH').text(data.max_allowed_hours);
+        $('#remainingCH').text(data.remaining_hours);
+        
+        // Update progress bar
+        updateCreditHoursProgress(data.current_enrollment_hours, data.max_allowed_hours);
+        
+        // Show additional information if there's an exception
+        const exceptionAlert = $('#exceptionAlert');
+        if (data.exception_hours > 0) {
+          exceptionAlert.html(`
+            <div class="alert alert-warning alert-sm mt-2 mb-0">
+              <div class="d-flex align-items-center">
+                <i class="bx bx-shield-check me-2 text-warning"></i>
+                <div>
+                  <strong>Admin Exception:</strong> +${data.exception_hours} additional credit hours granted
+                </div>
+              </div>
+            </div>
+          `).show();
+        } else {
+          exceptionAlert.hide();
+        }
+        
+        // Show the credit hours summary
+        $('#creditHoursSummary').show();
+        
+        // Update the credit hours info box with student's actual CGPA
+        updateChInfoBoxWithStudentData(data.student_cgpa, data.term_season);
+      }
+    },
+    error: function(xhr) {
+      console.error('Failed to load remaining credit hours:', xhr);
+      // Fall back to the default credit hours calculation
+      updateCreditHoursSummary();
+    }
+  });
+}
+
+/**
+ * Updates the credit hours info box with student's actual data.
+ * @function updateChInfoBoxWithStudentData
+ * @param {number} cgpa
+ * @param {string} season
+ * @returns {void}
+ */
+function updateChInfoBoxWithStudentData(cgpa, season) {
+  if (!season) return;
+  
+  const seasonCapitalized = season.charAt(0).toUpperCase() + season.slice(1);
+  
+  // Show the info box
+  $('#chInfoBox').show();
+  
+  // Hide all rows first
+  $('.ch-row').hide();
+  
+  // Show the appropriate row based on season and CGPA
+  if (season.toLowerCase() === 'summer') {
+    // Summer has fixed 9 hours regardless of CGPA
+    $(`.ch-row[data-season='${seasonCapitalized}']`).show();
+  } else {
+    // For Fall and Spring, show the appropriate CGPA-based row
+    let cgpaRange = '';
+    if (cgpa < 2.0) {
+      cgpaRange = 'lt2';
+    } else if (cgpa >= 2.0 && cgpa < 3.0) {
+      cgpaRange = '2to3';
+    } else if (cgpa >= 3.0) {
+      cgpaRange = 'gte3';
+    }
+    
+    // Highlight the current student's CGPA range
+    $(`.ch-row[data-season='${seasonCapitalized}'][data-cgpa='${cgpaRange}']`).addClass('table-primary');
+    $(`.ch-row[data-season='${seasonCapitalized}']`).show();
+  }
 }
 
 /**
@@ -507,14 +885,110 @@ $(document).ready(function() {
   updateChInfoBox(selectedText);
 });
 
+function updateCreditHoursSummary() {
+  let selectedTotal = 0;
+  $('.course-checkbox:checked').each(function() {
+    selectedTotal += parseInt($(this).data('credit-hours')) || 0;
+  });
+  
+  // Get current enrollment hours from the display (set by AJAX)
+  let currentEnrollmentHours = parseInt($('#currentEnrollmentHours').text()) || 0;
+  
+  // Calculate new total if courses are selected
+  let newTotal = currentEnrollmentHours + selectedTotal;
+  
+  // Get max allowed from the info box (visible row)
+  let maxCH = parseInt($('#maxCH').text()) || 0;
+  let remaining = maxCH - newTotal;
+  
+  // Update the display to show what would be the new total
+  $('#selectedCH').text(newTotal);
+  $('#remainingCH').text(Math.max(0, remaining));
+  
+  if ($('.course-checkbox').length > 0) {
+    $('#creditHoursSummary').show();
+  } else {
+    $('#creditHoursSummary').hide();
+  }
+  
+  // Update progress bar with new total
+  updateCreditHoursProgress(newTotal, maxCH);
+}
+
+/**
+ * Updates the credit hours progress bar.
+ * @function updateCreditHoursProgress
+ * @param {number} current - Current total credit hours
+ * @param {number} max - Maximum allowed credit hours
+ * @returns {void}
+ */
+function updateCreditHoursProgress(current, max) {
+  if (max <= 0) return;
+  
+  const percentage = Math.min((current / max) * 100, 100);
+  const progressBar = $('#usageProgressBar');
+  const percentageText = $('#usagePercentage');
+  
+  // Update progress bar
+  progressBar.css('width', percentage + '%');
+  
+  // Update percentage text
+  percentageText.text(Math.round(percentage) + '%');
+  
+  // Update progress bar color based on usage
+  progressBar.removeClass('bg-success bg-warning bg-danger');
+  if (percentage < 70) {
+    progressBar.addClass('bg-success');
+  } else if (percentage < 90) {
+    progressBar.addClass('bg-warning');
+  } else {
+    progressBar.addClass('bg-danger');
+  }
+}
+
+// Global variables
+let currentStudentId = null;
+let currentTermId = null;
+
 // Main entry point
 $(document).ready(function () {
-  let currentStudentId = null;
-  let currentTermId = null;
 
   $('#findStudentForm').on('submit', function(e) {
     e.preventDefault();
     let identifier = $('#identifier').val();
+    
+    // Reset term selection, history, and available courses before searching
+    $('#term_id').val('').trigger('change');
+    $('#enrollmentHistoryBox').html(`
+      <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+        <div class="text-center text-muted">
+          <i class="bx bx-search-alt-2 display-4 mb-3"></i>
+          <p>Find a student to view enrollment history</p>
+        </div>
+      </div>
+    `);
+    $('#historyCount').text('0');
+    $('#coursesBox').html(`
+      <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+        <div class="text-center text-muted">
+          <i class="bx bx-book-bookmark display-4 mb-3"></i>
+          <p>Select a term to view available courses</p>
+        </div>
+      </div>
+    `);
+    $('#coursesCount').text('0');
+    $('#enrollBtn').hide();
+    $('#creditHoursSummary').hide();
+    $('#exceptionAlert').hide();
+    $('#prerequisitesBox').html(`
+      <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+        <div class="text-center text-muted">
+          <i class="bx bx-link-alt display-4 mb-3"></i>
+          <p>Select courses to view prerequisites</p>
+        </div>
+      </div>
+    `);
+    $('#prerequisitesCount').text('0');
     
     $.ajax({
       url: '{{ route('admin.enrollments.findStudent') }}',
@@ -526,7 +1000,7 @@ $(document).ready(function () {
         
         // Build student info HTML
         let studentInfoHtml = `
-          <div class="col-md-6">
+          <div class="col-md-4">
             <div class="student-info-item">
               <small class="text-muted">Full Name (English)</small>
               <h6 class="mb-0">${s.name_en}</h6>
@@ -544,7 +1018,7 @@ $(document).ready(function () {
               <h6 class="mb-0">${s.program ? s.program.name : 'Not Assigned'}</h6>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
             <div class="student-info-item">
               <small class="text-muted">Academic ID</small>
               <h6 class="mb-0">${s.academic_id}</h6>
@@ -562,11 +1036,23 @@ $(document).ready(function () {
               <h6 class="mb-0">${s.cgpa || 'N/A'}</h6>
             </div>
           </div>
+          <div class="col-md-4">
+            <div class="student-info-item">
+              <small class="text-muted">Total Units Taken</small>
+              <h6 class="mb-0">${s.taken_hours || 0} Units</h6>
+            </div>
+           
+            <div class="student-info-item">
+              <small class="text-muted">Remaining Hours</small>
+              <h6 class="mb-0">Unknown</h6>
+            </div>
+          </div>
         `;
         
         $('#studentInfo').html(studentInfoHtml);
         $('#studentDetails').show();
         currentStudentId = s.id;
+        currentTermId = null; // Reset current term ID
         
         // Load enrollment history
         loadEnrollmentHistory(currentStudentId);
@@ -611,10 +1097,6 @@ $(document).ready(function () {
   
   loadTerms();
 
-  // Handle term selection
-  // This code listens for changes on the academic term dropdown (#term_id).
-  // When the user selects a different term, it updates the currentTermId variable
-  // and loads the available courses for the selected student and term.
   $('#term_id').on('change', function() {
     currentTermId = $(this).val();
     loadAvailableCourses(currentStudentId, currentTermId);
@@ -651,14 +1133,38 @@ $(document).ready(function () {
       processData: false,
       contentType: false,
       success: function(res) {
+        // Show loading modal and send AJAX for pdf only
         Swal.fire({
-          toast: true,
-          position: 'top-end',
-          icon: 'success',
-          title: `Student has been enrolled in ${selectedCourses} course(s).`,
-          showConfirmButton: false,
-          timer: 2500,
-          timerProgressBar: true
+          title: 'Generating pdf Document...',
+          html: '<div class="text-center">Please wait while your pdf document is being generated.</div>',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          didOpen: () => {
+            Swal.showLoading();
+            let url = `/admin/students/${currentStudentId}/download/pdf?term_id=${currentTermId}`;
+            $.ajax({
+              url: url,
+              method: 'GET',
+              success: function(response) {
+                let fileUrl = response.url || (response.data && response.data.url);
+                if (fileUrl) {
+                  window.open(fileUrl, '_blank');
+                  Swal.fire({
+                    icon: 'success',
+                    title: 'Word Ready',
+                    html: `<div>Your pdf document is ready for download.</div>`,
+                    showConfirmButton: false,
+                    timer: 5000
+                  });
+                } else {
+                  Swal.fire('Error', 'No file URL returned from server.', 'error');
+                }
+              },
+              error: function() {
+                Swal.fire('Error', 'Failed to generate pdf document.', 'error');
+              }
+            });
+          }
         });
         // Reset form and reload data
         $('.course-checkbox').prop('checked', false);

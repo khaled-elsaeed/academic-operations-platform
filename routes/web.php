@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\LevelController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\ProgramController as AdminProgramController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\TermController as AdminTermController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CourseController;
@@ -52,11 +53,11 @@ Route::group([], function () {
 
 require __DIR__.'/web/available_course.php';
 
-        // Available Courses (for AJAX dropdown - legacy)
-        Route::prefix('available-courses-legacy')->group(function () {
-            Route::get('/', [App\Http\Controllers\AvailableCourseController::class, 'index'])->name('available-courses.legacy.index');
-            Route::post('/', [App\Http\Controllers\AvailableCourseController::class, 'index'])->name('available-courses.legacy.store');
-        });
+// Available Courses (for AJAX dropdown - legacy)
+Route::prefix('available-courses-legacy')->group(function () {
+    Route::post('/', [App\Http\Controllers\AvailableCourseController::class, 'index'])->name('available-courses.legacy.index');
+    Route::post('remaining-credit-hours', [App\Http\Controllers\AvailableCourseController::class, 'getRemainingCreditHours'])->name('available-courses.legacy.remaining-credit-hours');
+});
 
 // ====================
 // Include Admin Home Routes
@@ -143,6 +144,26 @@ Route::middleware(['auth'])
         Route::prefix('courses-legacy')->group(function () {
             Route::get('/', [CourseController::class, 'index'])->name('courses.legacy.index');
         });
+
+        // Course Prerequisites
+        Route::prefix('courses')->group(function () {
+            Route::post('prerequisites', [CourseController::class, 'getPrerequisites'])->name('courses.prerequisites');
+        });
+
+        // Terms Group
+        Route::prefix('terms')
+            ->name('terms.')
+            ->controller(AdminTermController::class)
+            ->group(function () {
+                Route::get('datatable', 'datatable')->name('datatable')->middleware('can:term.view');
+                Route::get('stats', 'stats')->name('stats')->middleware('can:term.view');
+                Route::get('/', 'index')->name('index')->middleware('can:term.view');
+                Route::post('/', 'store')->name('store')->middleware('can:term.create');
+                Route::get('{term}', 'show')->name('show')->middleware('can:term.view');
+                Route::put('{term}', 'update')->name('update')->middleware('can:term.edit');
+                Route::patch('{term}', 'update')->middleware('can:term.edit');
+                Route::delete('{term}', 'destroy')->name('destroy')->middleware('can:term.delete');
+            });
 
         // Terms (for AJAX dropdown - legacy)
         Route::prefix('terms-legacy')->group(function () {

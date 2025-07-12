@@ -788,20 +788,27 @@ function initializeStudentManagement() {
 
 $(document).ready(function () {
   initializeStudentManagement();
-  // Initialize Select2 for all selects in the student modal and download modal
-  $('#studentModal select, #downloadEnrollmentModal #term_id').select2({
+  // Initialize Select2 for all selects in the student modal
+  $('#studentModal select').select2({
     theme: 'bootstrap-5',
     placeholder: function(){
       var id = $(this).attr('id');
       if(id === 'level_id') return 'Select Level';
       if(id === 'gender') return 'Select Gender';
       if(id === 'program_id') return 'Select Program';
-      if(id === 'term_id') return 'Select Term';
       return '';
     },
     allowClear: true,
     width: '100%',
     dropdownParent: $('#studentModal')
+  });
+  // Initialize Select2 for the term select in the download enrollment modal
+  $('#downloadEnrollmentModal #term_id').select2({
+    theme: 'bootstrap-5',
+    placeholder: 'Select Term',
+    allowClear: true,
+    width: '100%',
+    dropdownParent: $('#downloadEnrollmentModal')
   });
 });
 </script>

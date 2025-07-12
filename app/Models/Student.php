@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Scopes\AcademicAdvisorScope;
 use Illuminate\Database\Eloquent\Attributes\ScopedBy;
- 
+use Illuminate\Database\Eloquent\Casts\Attribute;
+
 #[ScopedBy([AcademicAdvisorScope::class])]
 class Student extends Model
 {
@@ -30,6 +31,18 @@ class Student extends Model
         'gender',
         'program_id',
     ];
+
+    /**
+     * Get the taken hours attribute for the student.
+     */
+    protected function takenHours(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->enrollments()
+                ->join('courses', 'enrollments.course_id', '=', 'courses.id')
+                ->sum('courses.credit_hours')
+        );
+    }
 
     /**
      * Get the program of the student.

@@ -34,9 +34,7 @@ class StudentImportValidator
                 'max:50',
                 function ($attribute, $value, $fail) {
                     $value = (string)$value;
-                    // Egyptian national ID: 14 digits
                     $isNationalId = preg_match('/^\d{14}$/', $value);
-                    // Passport: 6-20 alphanumeric characters (at least one letter)
                     $isPassport = preg_match('/^(?=.*[A-Za-z])[A-Za-z0-9]{6,20}$/', $value);
                     if (!$isNationalId && !$isPassport) {
                         $fail('The :attribute must be a valid Egyptian national ID (14 digits) or a passport number (6-20 alphanumeric characters, at least one letter).');

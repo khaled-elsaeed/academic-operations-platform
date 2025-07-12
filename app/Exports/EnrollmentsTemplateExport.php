@@ -14,14 +14,14 @@ class EnrollmentsTemplateExport implements FromArray, WithHeadings, WithStyles
         // Sample data for template
         return [
             [
-                '12345678901234', // student_national_id (Egyptian national ID)
+                '20230001', // academic_id (example Academic ID)
                 'CS101',          // course_code
-                'FALL2024',       // term_code
+                '2252',       // term_code
             ],
             [
-                '98765432109876', // student_national_id
+                '20230002', // academic_id
                 'MATH201',        // course_code
-                'FALL2024',       // term_code
+                '2252',       // term_code
             ],
         ];
     }
@@ -29,7 +29,7 @@ class EnrollmentsTemplateExport implements FromArray, WithHeadings, WithStyles
     public function headings(): array
     {
         return [
-            'student_national_id',
+            'academic_id',
             'course_code',
             'term_code',
         ];

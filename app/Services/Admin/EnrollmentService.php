@@ -290,7 +290,7 @@ class EnrollmentService
         EnrollmentImportValidator::validateRow($row, $rowNum);
 
         // Find related models
-        $student = $this->findStudentByNationalId($row['student_national_id'] ?? '');
+        $student = $this->findStudentByAcademicId($row['academic_id'] ?? '');
         $course = $this->findCourseByCode($row['course_code'] ?? '');
         $term = $this->findTermByCode($row['term_code'] ?? '');
 
@@ -315,20 +315,18 @@ class EnrollmentService
     }
 
     /**
-     * Find student by national ID.
+     * Find student by academic ID.
      *
-     * @param string $nationalId
+     * @param string $academicId
      * @return Student
      * @throws BusinessValidationException
      */
-    private function findStudentByNationalId(string $nationalId): Student
+    private function findStudentByAcademicId(string $academicId): Student
     {
-        $student = Student::where('national_id', $nationalId)->first();
-        
+        $student = Student::where('academic_id', $academicId)->first();
         if (!$student) {
-            throw new BusinessValidationException("Student with national ID '{$nationalId}' not found.");
+            throw new BusinessValidationException("Student with academic ID '{$academicId}' not found.");
         }
-        
         return $student;
     }
 

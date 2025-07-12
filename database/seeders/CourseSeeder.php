@@ -12,7 +12,7 @@ class CourseSeeder extends Seeder
     public function run(): void
     {
         // Read the CSV file
-        $csvPath = storage_path('app/private/seeders/courses.csv');
+        $csvPath = storage_path('app/private/seeders/nmu_courses.csv');
         
         if (!file_exists($csvPath)) {
             $this->command->error("CSV file not found at: {$csvPath}");
@@ -21,10 +21,20 @@ class CourseSeeder extends Seeder
 
         $csvContent = file_get_contents($csvPath);
         $lines = explode("\n", trim($csvContent));
-        
-        // Skip header if exists and process each line
+
+        if (count($lines) <= 1) {
+            $this->command->warn("CSV file appears to be empty or only contains a header.");
+            return;
+        }
+
+        // Assume the first line is the header, so skip it
+        $headerSkipped = false;
         foreach ($lines as $line) {
             $line = trim($line);
+            if (!$headerSkipped) {
+                $headerSkipped = true;
+                continue;
+            }
             if (empty($line)) continue;
             
             $data = str_getcsv($line);
@@ -38,14 +48,15 @@ class CourseSeeder extends Seeder
             $title = trim($data[1]);
             $creditHours = (int) trim($data[2]);
             $prerequisites = trim($data[3]);
-            $facultyName = trim($data[4]);
+            $facultyName = trim($data[5]);
             
             // Find the faculty
             $faculty = Faculty::where('name', $facultyName)->first();
             
             if (!$faculty) {
-                $this->command->warn("Faculty not found: {$facultyName} for course {$code}");
-                continue;
+                // Create the faculty if not found
+                $faculty = Faculty::create(['name' => $facultyName]);
+                $this->command->info("Faculty created: {$facultyName} for course {$code}");
             }
             
             // Create or update the course

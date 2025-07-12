@@ -301,27 +301,36 @@ class AvailableCourseService
         // Find related models
         $course = $this->findCourseByCode($row['course_code'] ?? '');
         $term = $this->findTermByCode($row['term_code'] ?? '');
-        $program = $this->findProgramByName($row['program_name'] ?? '');
-        $level = $this->findLevelByName($row['level_name'] ?? '');
-        
-        // Check for existing course with same eligibility
-        $this->checkForDuplicateImportCourse($course, $term, $program, $level);
-        
-        // Create available course
-        $availableCourse = AvailableCourse::create([
-            'course_id' => $course->id,
-            'term_id' => $term->id,
-            'min_capacity' => $row['min_capacity'] ?? 1,
-            'max_capacity' => $row['max_capacity'] ?? 30,
-            'is_universal' => false,
-        ]);
-        
-        // Create eligibility
-        CourseEligibility::create([
-            'available_course_id' => $availableCourse->id,
-            'program_id' => $program->id,
-            'level_id' => $level->id,
-        ]);
+        $programName = $row['program_name'] ?? null;
+        $levelName = $row['level_name'] ?? null;
+        $isUniversal = isset($row['is_universal']) && ($row['is_universal'] === true || $row['is_universal'] === 1 || $row['is_universal'] === '1' || $row['is_universal'] === 'true');
+        // If both program and level are missing/empty, treat as universal
+        if ($isUniversal || (empty($programName) && empty($levelName))) {
+            $this->checkForDuplicateImportCourse($course, $term, null, null, true);
+            AvailableCourse::create([
+                'course_id' => $course->id,
+                'term_id' => $term->id,
+                'min_capacity' => $row['min_capacity'] ?? 1,
+                'max_capacity' => $row['max_capacity'] ?? 30,
+                'is_universal' => true,
+            ]);
+        } else {
+            $program = $this->findProgramByName($programName);
+            $level = $this->findLevelByName($levelName);
+            $this->checkForDuplicateImportCourse($course, $term, $program, $level);
+            $availableCourse = AvailableCourse::create([
+                'course_id' => $course->id,
+                'term_id' => $term->id,
+                'min_capacity' => $row['min_capacity'] ?? 1,
+                'max_capacity' => $row['max_capacity'] ?? 30,
+                'is_universal' => false,
+            ]);
+            CourseEligibility::create([
+                'available_course_id' => $availableCourse->id,
+                'program_id' => $program->id,
+                'level_id' => $level->id,
+            ]);
+        }
     }
 
      /**
@@ -351,10 +360,7 @@ class AvailableCourseService
      */
     private function findTermByCode(string $code): Term
     {
-        $term = Term::whereRaw(
-            "CONCAT(LOWER(season), year) = ? OR CONCAT(year, LOWER(season)) = ?",
-            [strtolower($code), strtolower($code)]
-        )->first();
+        $term = Term::where('code', $code)->first();
         
         if (!$term) {
             throw new BusinessValidationException("Term with code '{$code}' not found.");

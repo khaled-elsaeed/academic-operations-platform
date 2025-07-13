@@ -1,3 +1,4 @@
+<!-- resources/views/components/navigation/sidebar.blade.php -->
 <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
     <div class="app-brand demo">
         <a href="{{ route('home') }}" class="app-brand-link">
@@ -21,12 +22,33 @@
                     </a>
                     <ul class="menu-sub">
                         @foreach($item['children'] as $child)
-                            <li class="menu-item {{ $child['active'] ? 'active' : '' }}">
-                                <a href="{{ $child['route'] }}" class="menu-link">
-                                    <i class="menu-icon tf-icons {{ $child['icon'] }}"></i>
-                                    <div>{{ $child['title'] }}</div>
-                                </a>
-                            </li>
+                            @if(isset($child['children']))
+                                <!-- Nested submenu -->
+                                <li class="menu-item {{ $child['active'] ? 'active open' : '' }}">
+                                    <a href="javascript:void(0);" class="menu-link menu-toggle">
+                                        <i class="menu-icon tf-icons {{ $child['icon'] }}"></i>
+                                        <div>{{ $child['title'] }}</div>
+                                    </a>
+                                    <ul class="menu-sub">
+                                        @foreach($child['children'] as $nestedChild)
+                                            <li class="menu-item {{ $nestedChild['active'] ? 'active' : '' }}">
+                                                <a href="{{ $nestedChild['route'] }}" class="menu-link">
+                                                    <i class="menu-icon tf-icons {{ $nestedChild['icon'] }}"></i>
+                                                    <div>{{ $nestedChild['title'] }}</div>
+                                                </a>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </li>
+                            @else
+                                <!-- Direct child item -->
+                                <li class="menu-item {{ $child['active'] ? 'active' : '' }}">
+                                    <a href="{{ $child['route'] }}" class="menu-link">
+                                        <i class="menu-icon tf-icons {{ $child['icon'] }}"></i>
+                                        <div>{{ $child['title'] }}</div>
+                                    </a>
+                                </li>
+                            @endif
                         @endforeach
                     </ul>
                 </li>

@@ -177,8 +177,8 @@ class EnrollmentDocumentService
     public function getDownloadOptions(Student $student): array
     {
         return [
-            'pdf' => route('admin.students.download.pdf', $student->id),
-            'word' => route('admin.students.download.word', $student->id),
+                            'pdf' => route('students.download.pdf', $student->id),
+                'word' => route('students.download.word', $student->id),
         ];
     }
 

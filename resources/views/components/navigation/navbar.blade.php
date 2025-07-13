@@ -32,6 +32,12 @@
                         <div class="dropdown-divider"></div>
                     </li>
                     <li>
+                        <a class="dropdown-item" href="{{ route('account-settings.index') }}">
+                            <i class="bx bx-user me-2"></i>
+                            <span class="align-middle">Account Settings</span>
+                        </a>
+                    </li>
+                    <li>
                         <div class="dropdown-divider"></div>
                     </li>
                     <li>

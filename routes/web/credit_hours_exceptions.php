@@ -3,21 +3,34 @@
 use App\Http\Controllers\CreditHoursExceptionController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth'])->group(function () {
-    Route::prefix('credit-hours-exceptions')->name('credit-hours-exceptions.')->group(function () {
-        Route::get('/', [CreditHoursExceptionController::class, 'index'])->name('index')->middleware('can:credit_hours_exception.view');
-        Route::get('/datatable', [CreditHoursExceptionController::class, 'datatable'])->name('datatable')->middleware('can:credit_hours_exception.view');
-        Route::get('/stats', [CreditHoursExceptionController::class, 'stats'])->name('stats')->middleware('can:credit_hours_exception.view');
-        Route::get('/students', [CreditHoursExceptionController::class, 'getStudents'])->name('students')->middleware('can:credit_hours_exception.view');
-        Route::get('/terms', [CreditHoursExceptionController::class, 'getTerms'])->name('terms')->middleware('can:credit_hours_exception.view');
-        Route::post('/', [CreditHoursExceptionController::class, 'store'])->name('store')->middleware('can:credit_hours_exception.create');
+// ====================
+// Credit Hours Exceptions Routes
+// ====================
+
+Route::middleware(['auth'])
+    ->prefix('credit-hours-exceptions')
+    ->name('credit-hours-exceptions.')
+    ->controller(CreditHoursExceptionController::class)
+    ->group(function () {
+        // ===== Specific Routes First =====
+        Route::get('datatable', 'datatable')->name('datatable')->middleware('can:credit_hours_exception.view');
+        Route::get('stats', 'stats')->name('stats')->middleware('can:credit_hours_exception.view');
+        Route::get('students', 'getStudents')->name('students')->middleware('can:credit_hours_exception.view');
+        Route::get('terms', 'getTerms')->name('terms')->middleware('can:credit_hours_exception.view');
+
+        // ===== CRUD Operations =====
+        // List & View
+        Route::get('/', 'index')->name('index')->middleware('can:credit_hours_exception.view');
+        Route::get('{exception}', 'show')->name('show')->middleware('can:credit_hours_exception.view');
         
-        Route::prefix('{exception}')->group(function () {
-            Route::get('/', [CreditHoursExceptionController::class, 'show'])->name('show')->middleware('can:credit_hours_exception.view');
-            Route::put('/', [CreditHoursExceptionController::class, 'update'])->name('update')->middleware('can:credit_hours_exception.edit');
-            Route::patch('/deactivate', [CreditHoursExceptionController::class, 'deactivate'])->name('deactivate')->middleware('can:credit_hours_exception.edit');
-            Route::patch('/activate', [CreditHoursExceptionController::class, 'activate'])->name('activate')->middleware('can:credit_hours_exception.edit');
-            Route::delete('/', [CreditHoursExceptionController::class, 'destroy'])->name('destroy')->middleware('can:credit_hours_exception.delete');
-        });
-    });
-}); 
+        // Create
+        Route::post('/', 'store')->name('store')->middleware('can:credit_hours_exception.create');
+        
+        // Update
+        Route::put('{exception}', 'update')->name('update')->middleware('can:credit_hours_exception.edit');
+        Route::patch('{exception}/deactivate', 'deactivate')->name('deactivate')->middleware('can:credit_hours_exception.edit');
+        Route::patch('{exception}/activate', 'activate')->name('activate')->middleware('can:credit_hours_exception.edit');
+        
+        // Delete
+        Route::delete('{exception}', 'destroy')->name('destroy')->middleware('can:credit_hours_exception.delete');
+    }); 

@@ -50,6 +50,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'credit_hours_exception.create',
             'credit_hours_exception.edit',
             'credit_hours_exception.delete',
+            // Home Dashboard Permissions
+            'home.view',
+            'home.admin',
+            'home.advisor',
         ];
 
         foreach ($permissions as $permission) {
@@ -75,6 +79,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'student.view',
             'enrollment.view',
             'enrollment.create',
+            'home.view',
+            'home.advisor',
         ];
         $advisorCurrentPermissions = $advisorRole->permissions->pluck('name')->toArray();
         $advisorNewPermissions = array_diff($advisorPermissions, $advisorCurrentPermissions);

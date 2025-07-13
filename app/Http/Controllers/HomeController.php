@@ -2,36 +2,78 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
+use Illuminate\View\View;
+use App\Services\HomeService;
+use Exception;
 
 class HomeController extends Controller
 {
-    public function __invoke()
+    /**
+     * HomeController constructor.
+     *
+     * @param HomeService $homeService
+     */
+    public function __construct(protected HomeService $homeService)
+    {}
+
+    /**
+     * Display the main home page (redirects based on user role).
+     */
+    public function __invoke(): View
     {
-        // Check if user is authenticated
-        if (!Auth::check()) {
-            Log::info('User not authenticated, redirecting to login');
-            return redirect()->route('login');
+        if (auth()->user()->hasRole('admin')) {
+            return $this->adminHome();
+        } elseif (auth()->user()->hasRole('advisor')) {
+            return $this->advisorHome();
         }
         
-        $user = Auth::user();
-        
-        // Double-check that user exists and has roles
-        if (!$user || !method_exists($user, 'hasRole')) {
-            // Log the user out and redirect to login
-            Auth::logout();
-            return redirect()->route('login')->with('error', 'Authentication error. Please log in again.');
+        // Default fallback
+        return $this->adminHome();
+    }
+
+    /**
+     * Display the admin home page.
+     */
+    public function adminHome(): View
+    {
+        return view('home.admin');
+    }
+
+    /**
+     * Display the advisor home page.
+     */
+    public function advisorHome(): View
+    {
+        return view('home.advisor');
+    }
+
+    /**
+     * Get admin dashboard statistics.
+     */
+    public function adminStats(): JsonResponse
+    {
+        try {
+            $stats = $this->homeService->getAdminDashboardStats();
+            return successResponse('Admin dashboard stats fetched successfully.', $stats);
+        } catch (Exception $e) {
+            logError('HomeController@adminStats', $e);
+            return errorResponse('Internal server error.', [], 500);
         }
-        
-        if ($user->hasRole('admin')) {
-            return redirect()->route('admin.home');
-        } elseif ($user->hasRole('advisor')) {
-            return redirect()->route('advisor.home');
+    }
+
+    /**
+     * Get advisor dashboard statistics.
+     */
+    public function advisorStats(): JsonResponse
+    {
+        try {
+            $stats = $this->homeService->getAdvisorDashboardStats();
+            return successResponse('Advisor dashboard stats fetched successfully.', $stats);
+        } catch (Exception $e) {
+            logError('HomeController@advisorStats', $e);
+            return errorResponse('Internal server error.', [], 500);
         }
-        
-        Auth::logout();
-        return redirect()->route('login')->with('error', 'No valid role assigned. Please contact administrator.');
     }
 } 

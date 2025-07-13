@@ -74,13 +74,13 @@
         <div class="row">
           <div class="col-md-6 mb-3">
             <label for="student_id" class="form-label">Student</label>
-            <select class="form-select" id="student_id" name="student_id" required>
+            <select class="form-select select2" id="student_id" name="student_id" required>
               <option value="">Select Student</option>
             </select>
           </div>
           <div class="col-md-6 mb-3">
             <label for="term_id" class="form-label">Term</label>
-            <select class="form-select" id="term_id" name="term_id" required>
+            <select class="form-select select2" id="term_id" name="term_id" required>
               <option value="">Select Term</option>
             </select>
           </div>
@@ -230,16 +230,30 @@ function loadStudents(selectedId = null) {
       const data = response.data;
       const $studentSelect = $('#student_id');
       
+      // Clear existing options
       $studentSelect.empty().append('<option value="">Select Student</option>');
       
+      // Add student options
       data.forEach(function (student) {
         $studentSelect.append(
           $('<option>', { value: student.id, text: student.text })
         );
       });
       
+      // Set selected value if provided
       if (selectedId) {
-        $studentSelect.val(selectedId);
+        $studentSelect.val(selectedId).trigger('change');
+      }
+      
+      // Initialize Select2 if not already initialized
+      if (!$studentSelect.hasClass('select2-hidden-accessible')) {
+        $studentSelect.select2({
+          theme: 'bootstrap-5',
+          placeholder: 'Select Student',
+          allowClear: true,
+          width: '100%',
+          dropdownParent: $('#exceptionModal')
+        });
       }
     },
     error: function() {
@@ -261,16 +275,30 @@ function loadTerms(selectedId = null) {
       const data = response.data;
       const $termSelect = $('#term_id');
       
+      // Clear existing options
       $termSelect.empty().append('<option value="">Select Term</option>');
       
+      // Add term options
       data.forEach(function (term) {
         $termSelect.append(
           $('<option>', { value: term.id, text: term.text })
         );
       });
       
+      // Set selected value if provided
       if (selectedId) {
-        $termSelect.val(selectedId);
+        $termSelect.val(selectedId).trigger('change');
+      }
+      
+      // Initialize Select2 if not already initialized
+      if (!$termSelect.hasClass('select2-hidden-accessible')) {
+        $termSelect.select2({
+          theme: 'bootstrap-5',
+          placeholder: 'Select Term',
+          allowClear: true,
+          width: '100%',
+          dropdownParent: $('#exceptionModal')
+        });
       }
     },
     error: function() {
@@ -293,6 +321,19 @@ function handleAddExceptionBtn() {
     $('#exceptionModal .modal-title').text('Add Credit Hours Exception');
     $('#saveExceptionBtn').text('Save');
     $('#is_active').prop('checked', true);
+    
+    // Destroy existing Select2 if initialized
+    if ($('#student_id').hasClass('select2-hidden-accessible')) {
+      $('#student_id').select2('destroy');
+    }
+    if ($('#term_id').hasClass('select2-hidden-accessible')) {
+      $('#term_id').select2('destroy');
+    }
+    
+    // Load dropdown data
+    loadStudents();
+    loadTerms();
+    
     $('#exceptionModal').modal('show');
   });
 }
@@ -310,12 +351,24 @@ function handleEditExceptionBtn() {
       success: function (response) {
         if (response.success) {
           const exception = response.data;
+          
+          // Populate form fields
           $('#exception_id').val(exception.id);
-          $('#student_id').val(exception.student_id);
-          $('#term_id').val(exception.term_id);
           $('#additional_hours').val(exception.additional_hours);
           $('#reason').val(exception.reason);
           $('#is_active').prop('checked', exception.is_active);
+          
+          // Destroy existing Select2 if initialized
+          if ($('#student_id').hasClass('select2-hidden-accessible')) {
+            $('#student_id').select2('destroy');
+          }
+          if ($('#term_id').hasClass('select2-hidden-accessible')) {
+            $('#term_id').select2('destroy');
+          }
+          
+          // Load dropdowns with preselected values
+          loadStudents(exception.student_id);
+          loadTerms(exception.term_id);
           
           $('#exceptionModal .modal-title').text('Edit Credit Hours Exception');
           $('#saveExceptionBtn').text('Update');
@@ -502,8 +555,6 @@ function handleDeleteExceptionBtn() {
 $(document).ready(function() {
   // Load initial data
   loadExceptionStats();
-  loadStudents();
-  loadTerms();
   
   // Initialize event handlers
   handleAddExceptionBtn();
@@ -512,6 +563,17 @@ $(document).ready(function() {
   handleDeactivateExceptionBtn();
   handleActivateExceptionBtn();
   handleDeleteExceptionBtn();
+  
+  // Handle modal cleanup when closed
+  $('#exceptionModal').on('hidden.bs.modal', function () {
+    // Destroy Select2 when modal is closed to prevent conflicts
+    if ($('#student_id').hasClass('select2-hidden-accessible')) {
+      $('#student_id').select2('destroy');
+    }
+    if ($('#term_id').hasClass('select2-hidden-accessible')) {
+      $('#term_id').select2('destroy');
+    }
+  });
 });
 </script>
 @endpush 

@@ -98,10 +98,10 @@
 // ===================== Dropdown Data Fetch =====================
 function fetchAllDropdownData(availableCourseId) {
   return $.when(
-    $.getJSON("{{ route('admin.courses.legacy.index') }}"),
-    $.getJSON("{{ route('admin.terms.legacy.index') }}"),
-    $.getJSON("{{ route('admin.programs.legacy.index') }}"),
-    $.getJSON("{{ route('admin.levels.legacy.index') }}"),
+            $.getJSON("{{ route('courses.all') }}"),
+          $.getJSON("{{ route('terms.all') }}"),
+      $.getJSON("{{ route('programs.all') }}"),
+      $.getJSON("{{ route('levels.all') }}"),
     $.getJSON("{{ route('available_courses.show', ['available_course_id']) }}".replace('available_course_id', availableCourseId))
   );
 }

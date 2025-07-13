@@ -28,8 +28,6 @@
 
     </div>
 
-    @include('layouts.partials.footer')
-
     <!-- / Layout wrapper -->
     @include('layouts.partials.scripts')
     @stack('scripts')

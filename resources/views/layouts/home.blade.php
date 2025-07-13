@@ -5,19 +5,22 @@
     <!-- Sidebar -->
     <x-navigation.sidebar />
     <!-- / Sidebar -->
-    <!-- Layout container -->
+
     <div class="layout-page">
       <!-- Navbar -->
       <x-navigation.navbar />
       <!-- / Navbar -->
-      <!-- Content wrapper -->
+
       <div class="content-wrapper">
         <!-- Content -->
         @yield('page-content')
         <!-- / Content -->
+
         <div class="content-backdrop fade"></div>
       </div>
-      <!-- Content wrapper -->
+      <!-- / Content wrapper -->
+
+      @include('layouts.partials.footer')
     </div>
     <!-- / Layout page -->
   </div>

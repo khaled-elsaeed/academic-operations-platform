@@ -17,176 +17,239 @@ class Sidebar extends Component
     {
         $user = auth()->user();
         $this->menuItems = [];
+
         if ($user) {
-            $items = $this->getAdminMenuItems();
-            foreach ($items as $item) {
-                // Check permission for parent or children
-                if (isset($item['permission'])) {
-                    if ($user->can($item['permission'])) {
-                        $this->menuItems[] = $item;
+            $groups = $this->getGroupedMenu();
+
+            foreach ($groups as $group) {
+                // Check if it's a single item (like Dashboard)
+                if (isset($group['permission'])) {
+                    if ($user->can($group['permission'])) {
+                        $this->menuItems[] = $group;
                     }
-                } elseif (isset($item['children'])) {
+                } elseif (isset($group['children'])) {
                     $children = [];
-                    foreach ($item['children'] as $child) {
-                        if (!isset($child['permission']) || $user->can($child['permission'])) {
-                            $children[] = $child;
+                    
+                    // Filter children based on permissions
+                    foreach ($group['children'] as $child) {
+                        if (isset($child['children'])) {
+                            // Handle nested children (like existing enrollments submenu)
+                            $nestedChildren = [];
+                            foreach ($child['children'] as $nestedChild) {
+                                if (!isset($nestedChild['permission']) || $user->can($nestedChild['permission'])) {
+                                    $nestedChildren[] = $nestedChild;
+                                }
+                            }
+                            if (count($nestedChildren)) {
+                                $child['children'] = $nestedChildren;
+                                $children[] = $child;
+                            }
+                        } else {
+                            // Handle direct children
+                            if (!isset($child['permission']) || $user->can($child['permission'])) {
+                                $children[] = $child;
+                            }
                         }
                     }
+                    
+                    // Only add the group if it has accessible children
                     if (count($children)) {
-                        $item['children'] = $children;
-                        $this->menuItems[] = $item;
+                        $group['children'] = $children;
+                        $this->menuItems[] = $group;
                     }
                 } else {
-                    // No permission specified, show by default
-                    $this->menuItems[] = $item;
+                    // Items without permissions or children (like Dashboard)
+                    $this->menuItems[] = $group;
                 }
             }
         }
     }
 
-    /**
-     * Get the view / contents that represent the component.
-     */
     public function render(): View|Closure|string
     {
         return view('components.navigation.sidebar');
     }
 
-    /**
-     * Get Admin menu items
-     */
-    private function getAdminMenuItems(): array
+    private function getGroupedMenu(): array
     {
-        $dashboardRoutes = ['home.redirect', 'admin.home', 'advisor.home'];
-        return [
+        return array_merge(
+            $this->getDashboardMenu(),
             [
-                'title' => 'Home',
-                'icon' => 'bx bx-home-circle',
-                'route' => route('home.redirect'),
-                'active' => in_array(request()->route()->getName(), $dashboardRoutes),
-            ],
-            [
-                'title' => 'Students',
-                'icon' => 'bx bx-user',
-                'route' => route('admin.students.index'),
-                'active' => request()->routeIs('admin.students.*'),
-                'permission' => 'student.view',
-            ],
-            [
-                'title' => 'Faculties',
-                'icon' => 'bx bx-building',
-                'route' => route('admin.faculties.index'),
-                'active' => request()->routeIs('admin.faculties.*'),
-                'permission' => 'faculty.view',
-            ],
-            [
-                'title' => 'Programs',
-                'icon' => 'bx bx-book-open',
-                'route' => route('admin.programs.index'),
-                'active' => request()->routeIs('admin.programs.*'),
-                'permission' => 'program.view',
-            ],
-            [
-                'title' => 'Terms',
-                'icon' => 'bx bx-calendar',
-                'route' => route('admin.terms.index'),
-                'active' => request()->routeIs('admin.terms.*'),
-                'permission' => 'term.view',
-            ],
-            [
-                'title' => 'Courses',
-                'icon' => 'bx bx-book',
-                'route' => route('admin.courses.index'),
-                'active' => request()->routeIs('admin.courses.*'),
-                'permission' => 'course.view',
-            ],
-            [
-                'title' => 'Enrollments',
-                'icon' => 'bx bx-list-check',
-                'route' => '#',
-                'active' => request()->routeIs('admin.enrollments.*'),
-                'children' => [
-                    [
-                        'title' => 'View Enrollments',
-                        'icon' => 'bx bx-table',
-                        'route' => route('admin.enrollments.index'),
-                        'active' => request()->routeIs('admin.enrollments.index'),
-                        'permission' => 'enrollment.view',
-                    ],
-                    [
-                        'title' => 'Add Enrollment',
-                        'icon' => 'bx bx-plus',
-                        'route' => route('admin.enrollments.add'),
-                        'active' => request()->routeIs('admin.enrollments.add'),
-                        'permission' => 'enrollment.create',
-                    ],
+                [
+                    'title' => 'User Management',
+                    'icon' => 'bx bx-group',
+                    'route' => '#',
+                    'type' => 'group',
+                    'active' => request()->routeIs('students.*') || request()->routeIs('users.*'),
+                    'children' => [
+                        [
+                            'title' => 'Students',
+                            'icon' => 'bx bx-user',
+                            'route' => route('students.index'),
+                            'active' => request()->routeIs('students.*'),
+                            'permission' => 'student.view',
+                        ],
+                        [
+                            'title' => 'Users',
+                            'icon' => 'bx bx-user-circle',
+                            'route' => route('users.index'),
+                            'active' => request()->routeIs('users.*'),
+                            'permission' => 'user.view',
+                        ],
+                    ]
                 ],
-            ],
-            [
-                'title' => 'Available Courses',
-                'icon' => 'bx bx-book',
-                'route' => '#',
-                'active' => request()->routeIs('available_courses.*'),
-                'children' => [
-                    [
-                        'title' => 'View Available Courses',
-                        'icon' => 'bx bx-table',
-                        'route' => route('available_courses.index'),
-                        'active' => request()->routeIs('available_courses.index'),
-                        'permission' => 'course.view',
-                    ],
-                    [
-                        'title' => 'Add Available Course',
-                        'icon' => 'bx bx-plus',
-                        'route' => route('available_courses.create'),
-                        'active' => request()->routeIs('available_courses.create'),
-                        'permission' => 'course.create',
-                    ],
+                [
+                    'title' => 'Academic Structure',
+                    'icon' => 'bx bx-building-house',
+                    'route' => '#',
+                    'type' => 'group',
+                    'active' => request()->routeIs('faculties.*') || request()->routeIs('programs.*') || request()->routeIs('terms.*') || request()->routeIs('courses.*'),
+                    'children' => [
+                        [
+                            'title' => 'Faculties',
+                            'icon' => 'bx bx-building',
+                            'route' => route('faculties.index'),
+                            'active' => request()->routeIs('faculties.*'),
+                            'permission' => 'faculty.view',
+                        ],
+                        [
+                            'title' => 'Programs',
+                            'icon' => 'bx bx-book-open',
+                            'route' => route('programs.index'),
+                            'active' => request()->routeIs('programs.*'),
+                            'permission' => 'program.view',
+                        ],
+                        [
+                            'title' => 'Terms',
+                            'icon' => 'bx bx-calendar',
+                            'route' => route('terms.index'),
+                            'active' => request()->routeIs('terms.*'),
+                            'permission' => 'term.view',
+                        ],
+                        [
+                            'title' => 'Courses',
+                            'icon' => 'bx bx-book',
+                            'route' => route('courses.index'),
+                            'active' => request()->routeIs('courses.*'),
+                            'permission' => 'course.view',
+                        ],
+                    ]
                 ],
-            ],
-            [
-                'title' => 'Credit Hours Exceptions',
-                'icon' => 'bx bx-time',
-                'route' => route('credit-hours-exceptions.index'),
-                'active' => request()->routeIs('credit-hours-exceptions.*'),
-                'permission' => 'credit_hours_exception.view',
-            ],
-            [
-                'title' => 'Users',
-                'icon' => 'bx bx-user-circle',
-                'route' => route('admin.users.index'),
-                'active' => request()->routeIs('admin.users.*'),
-                'permission' => 'user.view',
-            ],
-            [
-                'title' => 'Roles & Permissions',
-                'icon' => 'bx bx-shield',
-                'route' => '#',
-                'active' => request()->routeIs('admin.roles.*') || request()->routeIs('admin.permissions.*') || request()->routeIs('admin.academic_advisor_access.*'),
-                'children' => [
-                    [
-                        'title' => 'Roles',
-                        'icon' => 'bx bx-shield-quarter',
-                        'route' => route('admin.roles.index'),
-                        'active' => request()->routeIs('admin.roles.*'),
-                        'permission' => 'role.view',
-                    ],
-                    [
-                        'title' => 'Permissions',
-                        'icon' => 'bx bx-key',
-                        'route' => route('admin.permissions.index'),
-                        'active' => request()->routeIs('admin.permissions.*'),
-                        'permission' => 'permission.view',
-                    ],
-                    [
-                        'title' => 'Advisor Access',
-                        'icon' => 'bx bx-user-check',
-                        'route' => route('admin.academic_advisor_access.index'),
-                        'active' => request()->routeIs('admin.academic_advisor_access.*'),
-                        'permission' => 'user.view',
-                    ],
+                [
+                    'title' => 'Course Management',
+                    'icon' => 'bx bx-library',
+                    'route' => '#',
+                    'type' => 'group',
+                    'active' => request()->routeIs('enrollments.*') || request()->routeIs('available_courses.*') || request()->routeIs('credit-hours-exceptions.*'),
+                    'children' => [
+                        [
+                            'title' => 'Enrollments',
+                            'icon' => 'bx bx-list-check',
+                            'route' => '#',
+                            'active' => request()->routeIs('enrollments.*'),
+                            'children' => [
+                                [
+                                    'title' => 'View Enrollments',
+                                    'icon' => 'bx bx-table',
+                                    'route' => route('enrollments.index'),
+                                    'active' => request()->routeIs('enrollments.index'),
+                                    'permission' => 'enrollment.view',
+                                ],
+                                [
+                                    'title' => 'Add Enrollment',
+                                    'icon' => 'bx bx-plus',
+                                    'route' => route('enrollments.add'),
+                                    'active' => request()->routeIs('enrollments.add'),
+                                    'permission' => 'enrollment.create',
+                                ],
+                            ],
+                        ],
+                        [
+                            'title' => 'Available Courses',
+                            'icon' => 'bx bx-book',
+                            'route' => '#',
+                            'active' => request()->routeIs('available_courses.*'),
+                            'children' => [
+                                [
+                                    'title' => 'View Available Courses',
+                                    'icon' => 'bx bx-table',
+                                    'route' => route('available_courses.index'),
+                                    'active' => request()->routeIs('available_courses.index'),
+                                    'permission' => 'course.view',
+                                ],
+                                [
+                                    'title' => 'Add Available Course',
+                                    'icon' => 'bx bx-plus',
+                                    'route' => route('available_courses.create'),
+                                    'active' => request()->routeIs('available_courses.create'),
+                                    'permission' => 'course.create',
+                                ],
+                            ],
+                        ],
+                        [
+                            'title' => 'Credit Hours Exceptions',
+                            'icon' => 'bx bx-time',
+                            'route' => route('credit-hours-exceptions.index'),
+                            'active' => request()->routeIs('credit-hours-exceptions.*'),
+                            'permission' => 'credit_hours_exception.view',
+                        ],
+                    ]
                 ],
-            ],
-        ];
+                [
+                    'title' => 'System Administration',
+                    'icon' => 'bx bx-cog',
+                    'route' => '#',
+                    'type' => 'group',
+                    'active' => request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('academic_advisor_access.*'),
+                    'children' => [
+                        [
+                            'title' => 'Roles & Permissions',
+                            'icon' => 'bx bx-shield',
+                            'route' => '#',
+                            'active' => request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('academic_advisor_access.*'),
+                            'children' => [
+                                [
+                                    'title' => 'Roles',
+                                    'icon' => 'bx bx-shield-quarter',
+                                    'route' => route('roles.index'),
+                                    'active' => request()->routeIs('roles.*'),
+                                    'permission' => 'role.view',
+                                ],
+                                [
+                                    'title' => 'Permissions',
+                                    'icon' => 'bx bx-key',
+                                    'route' => route('permissions.index'),
+                                    'active' => request()->routeIs('permissions.*'),
+                                    'permission' => 'permission.view',
+                                ],
+                                [
+                                    'title' => 'Advisor Access',
+                                    'icon' => 'bx bx-user-check',
+                                    'route' => route('academic_advisor_access.index'),
+                                    'active' => request()->routeIs('academic_advisor_access.*'),
+                                    'permission' => 'user.view',
+                                ],
+                            ],
+                        ],
+                    ]
+                ],
+                [
+                    'title' => 'Account Settings',
+                    'icon' => 'bx bx-user-circle',
+                    'route' => route('account-settings.index'),
+                    'active' => request()->routeIs('account-settings.*'),
+                ],
+            ]
+        );
+    }
+
+    private function getDashboardMenu(): array
+    {
+        return [[
+            'title' => 'Dashboard',
+            'icon' => 'bx bx-home-circle',
+            'route' => route('home'),
+            'active' => in_array(request()->route()->getName(), ['home', 'admin.home', 'advisor.home']),
+        ]];
     }
 }

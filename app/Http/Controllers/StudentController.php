@@ -32,7 +32,7 @@ class StudentController extends Controller
      */
     public function index(): View
     {
-        return view('admin.student');
+        return view('student.index');
     }
 
     /**

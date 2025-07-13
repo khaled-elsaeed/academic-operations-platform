@@ -177,7 +177,7 @@ function handleDeleteAvailableCourseBtn() {
 
 function deleteAvailableCourse(id) {
   $.ajax({
-    url: "{{ url('/available-courses') }}/" + id,
+    url: "{{ route('available_courses.destroy', ':id') }}".replace(':id', id),
     method: 'DELETE',
     success: () => {
       reloadAvailableCoursesTable();

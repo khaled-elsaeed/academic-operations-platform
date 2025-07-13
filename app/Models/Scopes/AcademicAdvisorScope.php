@@ -20,6 +20,15 @@ class AcademicAdvisorScope implements Scope
     {
         $user = Auth::user();
 
+        // Pass for admin users
+        if ($user && method_exists($user, 'isAdmin') && $user->isAdmin()) {
+            Log::info('AcademicAdvisorScope not applied: user is admin.', [
+                'user_id' => $user->id,
+                'model' => get_class($model)
+            ]);
+            return;
+        }
+
         if ($user && $user->isAcademicAdvisor()) {
             Log::info('Applying AcademicAdvisorScope for user', [
                 'user_id' => $user->id,

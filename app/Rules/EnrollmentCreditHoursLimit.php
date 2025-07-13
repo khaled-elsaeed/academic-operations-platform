@@ -34,7 +34,13 @@ class EnrollmentCreditHoursLimit implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        $requestedCreditHours = (int) $value;
+        \Log::debug('EnrollmentCreditHoursLimit validate called', [
+            'attribute' => $attribute,
+            'value_received' => $value,
+            'studentId' => $this->studentId,
+            'termId' => $this->termId,
+        ]);
+        $totalCreditHours = (int) $value;
         
         // Get student and term data
         $student = Student::find($this->studentId);
@@ -51,14 +57,16 @@ class EnrollmentCreditHoursLimit implements ValidationRule
         // Get current enrollment credit hours for this term
         $currentEnrollmentHours = $this->getCurrentEnrollmentHours();
         
-        // Total credit hours (current + requested)
-        $totalCreditHours = $currentEnrollmentHours + $requestedCreditHours;
-        
         $maxAllowedHours = $this->getMaxCreditHours($semester, $cgpa);
+        $remainingHours = $maxAllowedHours - $currentEnrollmentHours;
 
+        // Fix: Use correct totalCreditHours in error message
         if ($totalCreditHours > $maxAllowedHours) {
-            $remainingHours = $maxAllowedHours - $currentEnrollmentHours;
-            $fail("The total credit hours ({$totalCreditHours}) cannot exceed {$maxAllowedHours} based on your CGPA ({$cgpa}) and semester ({$semester}). You can only add {$remainingHours} more credit hours.");
+            if ($remainingHours <= 0) {
+                $fail("You cannot add any more credit hours for this term. The maximum allowed is {$maxAllowedHours} based on your CGPA ({$cgpa}) and semester ({$semester}).");
+            } else {
+                $fail("The total credit hours ({$totalCreditHours}) cannot exceed {$maxAllowedHours} based on your CGPA ({$cgpa}) and semester ({$semester}). You can only add {$remainingHours} more credit hours.");
+            }
         }
     }
 

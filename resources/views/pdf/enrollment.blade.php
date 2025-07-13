@@ -307,6 +307,12 @@
                 مع تمنياتنا بالتوفيق والنجاح
             </span>
         </div>
+        <!-- ===== PAGE FOOTER ===== -->
+        <htmlpagefooter name="page-footer">
+            <div style="width: 100%; text-align: center; font-size: 12px; color: #888; font-family: 'DejaVu Sans', Arial, sans-serif;">
+                تاريخ استخراج النموذج: {{ $enrollment_date ?? '---' }}
+            </div>
+        </htmlpagefooter>
     </div>
 </body>
 </html>

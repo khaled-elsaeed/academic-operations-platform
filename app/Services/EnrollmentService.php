@@ -47,6 +47,11 @@ class EnrollmentService
      */
     public function createEnrollments(array $data): array
     {
+        \Log::debug('createEnrollments called', [
+            'student_id' => $data['student_id'],
+            'term_id' => $data['term_id'],
+            'available_course_ids' => $data['available_course_ids'] ?? [],
+        ]);
         return DB::transaction(function () use ($data) {
             // Get student and term information for credit hours validation
             $student = Student::findOrFail($data['student_id']);
@@ -63,10 +68,12 @@ class EnrollmentService
                 $availableCourses[] = $availableCourse;
                 $courseIds[] = $availableCourse->course_id;
             }
-            
+            \Log::debug('Requested credit hours calculated', [
+                'requestedCreditHours' => $requestedCreditHours,
+                'courseIds' => $courseIds,
+            ]);
             // Validate credit hours limit BEFORE creating enrollments
             $this->validateCreditHoursLimit($student, $term, $requestedCreditHours);
-            
             // Create enrollments only after validation passes
             $enrollments = [];
             foreach ($availableCourses as $availableCourse) {
@@ -385,17 +392,25 @@ class EnrollmentService
             ->where('term_id', $term->id)
             ->with('course')
             ->get();
-        
         $currentCreditHours = $currentEnrollments->sum('course.credit_hours');
         $totalCreditHours = $currentCreditHours + $requestedCreditHours;
-        
+        \Log::debug('validateCreditHoursLimit', [
+            'student_id' => $student->id,
+            'term_id' => $term->id,
+            'currentCreditHours' => $currentCreditHours,
+            'requestedCreditHours' => $requestedCreditHours,
+            'totalCreditHours' => $totalCreditHours,
+            'validator_value_passed' => $totalCreditHours,
+        ]);
         // Check against the credit hours limit rule
         $validator = \Validator::make(
             ['credit_hours' => $totalCreditHours],
-            ['credit_hours' => [new EnrollmentCreditHoursLimit($student, $term)]]
+            ['credit_hours' => [new EnrollmentCreditHoursLimit($student->id, $term->id)]]
         );
-        
         if ($validator->fails()) {
+            \Log::debug('Credit hour validation failed', [
+                'errors' => $validator->errors()->all(),
+            ]);
             throw new BusinessValidationException($validator->errors()->first('credit_hours'));
         }
     }

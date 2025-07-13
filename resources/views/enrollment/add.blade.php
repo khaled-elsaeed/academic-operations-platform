@@ -1141,7 +1141,7 @@ $(document).ready(function () {
           allowEscapeKey: false,
           didOpen: () => {
             Swal.showLoading();
-            let url = `/admin/students/${currentStudentId}/download/pdf?term_id=${currentTermId}`;
+            let url = `{{ route('students.download.pdf', ':id') }}?term_id=${currentTermId}`.replace(':id', currentStudentId); // or use academic_id/national_id
             $.ajax({
               url: url,
               method: 'GET',

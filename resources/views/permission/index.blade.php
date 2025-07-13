@@ -147,7 +147,7 @@ function loadStats() {
 
 // View permission details
 function viewPermission(permissionId) {
-    $.get(`/admin/permissions/${permissionId}`)
+    $.get(`{{ route('permissions.show', ':id') }}`.replace(':id', permissionId))
         .done(function(response) {
             if (response.success) {
                 const permission = response.data;

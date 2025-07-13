@@ -20,46 +20,58 @@ class EnrollmentDocumentController extends Controller
      */
     public function downloadEnrollmentDocument($studentId)
     {
-        $termId = request()->query('term_id');
-        // Get student with enrollments
-        $student = Student::with(['enrollments.course', 'program', 'level'])->findOrFail($studentId);
-        
-        // Prepare student data
-        $levelName = $student->level->name ?? null;
-        $validLevels = ['1', '2', '3', '4', '5', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس'];
-        $studentData = [
-            'academic_number' => $student->academic_id, // fixed field
-            'student_name' => $student->name_ar ?? $student->name_en, // prefer Arabic name
-            'national_id' => $student->national_id,
-            'program_name' => $student->program->name ?? '',
-            'student_phone' => $student->phone ?? '',
-            'level' => (in_array($levelName, $validLevels) ? $levelName : 'الأول'),
-            'academic_year' => '2024-2025',
-            'semester' => 'الصيف'
-        ];
-
-        // Prepare enrollment data
-        $enrollments = $student->enrollments;
-
-        $enrollments = $enrollments->map(function($enrollment) {
-            return [
-                'course_code' => $enrollment->course->code,
-                'course_name' => $enrollment->course->title,
-                'course_hours' => $enrollment->course->credit_hours
+        try {
+            $termId = request()->query('term_id');
+            // Get student with enrollments
+            $student = Student::with(['enrollments.course', 'program', 'level'])->findOrFail($studentId);
+            
+            // Prepare student data
+            $levelName = $student->level->name ?? null;
+            $validLevels = ['1', '2', '3', '4', '5', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس'];
+            $studentData = [
+                'academic_number' => $student->academic_id, // fixed field
+                'student_name' => $student->name_ar ?? $student->name_en, // prefer Arabic name
+                'national_id' => $student->national_id,
+                'program_name' => $student->program->name ?? '',
+                'student_phone' => $student->phone ?? '',
+                'level' => (in_array($levelName, $validLevels) ? $levelName : 'الأول'),
+                'academic_year' => '2024-2025',
+                'semester' => 'الصيف'
             ];
-        })->toArray();
 
-        // Log the data used for debugging
-        \Log::info('EnrollmentDocumentController@downloadEnrollmentDocument', [
-            'studentData' => $studentData,
-            'enrollments' => $enrollments
-        ]);
+            // Prepare enrollment data
+            $enrollments = $student->enrollments;
 
-        return $this->enrollmentTemplateService->streamEnrollmentDocument(
-            $studentData,
-            $enrollments,
-            "enrollment_{$student->academic_id}.docx"
-        );
+            $enrollments = $enrollments->map(function($enrollment) {
+                return [
+                    'course_code' => $enrollment->course->code,
+                    'course_name' => $enrollment->course->title,
+                    'course_hours' => $enrollment->course->credit_hours
+                ];
+            })->toArray();
+
+            // Log the data used for debugging
+            \Log::info('EnrollmentDocumentController@downloadEnrollmentDocument', [
+                'studentData' => $studentData,
+                'enrollments' => $enrollments
+            ]);
+
+            return $this->enrollmentTemplateService->streamEnrollmentDocument(
+                $studentData,
+                $enrollments,
+                "enrollment_{$student->academic_id}.docx"
+            );
+        } catch (\Exception $e) {
+            \Log::error('Error in EnrollmentDocumentController@downloadEnrollmentDocument', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'studentId' => $studentId,
+                'termId' => request()->query('term_id')
+            ]);
+            return response()->json([
+                'message' => 'حدث خطأ أثناء توليد مستند القيد. برجاء المحاولة لاحقاً.'
+            ], 500);
+        }
     }
 
 

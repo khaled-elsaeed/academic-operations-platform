@@ -75,6 +75,8 @@ class EnrollmentDocumentService
             $this->validateEnrollments($enrollments, $student->id, $termId);
             
             $pdfData = $this->prepareDataForPdf($studentWithEnrollments, $enrollments);
+            // Add latest enrollment date as 'enrollment_date'
+            $pdfData['enrollment_date'] = now()->format('Y-m-d');
             $html = view('pdf.enrollment', $pdfData)->render();
             
             $filename = $this->generateFilename($student, 'pdf');
@@ -177,8 +179,8 @@ class EnrollmentDocumentService
     public function getDownloadOptions(Student $student): array
     {
         return [
-                            'pdf' => route('students.download.pdf', $student->id),
-                'word' => route('students.download.word', $student->id),
+            'pdf' => route('students.download.pdf', $student->id),
+            'word' => route('students.download.word', $student->id),
         ];
     }
 
@@ -366,8 +368,36 @@ class EnrollmentDocumentService
             'default_font' => self::FONT_NAME,
         ]);
         
+        // Add watermark to the PDF
+        $this->addWatermark($mpdf);
+        
         $mpdf->WriteHTML($html);
         return $mpdf->Output($filename, 'S');
+    }
+
+    /**
+     * Add watermark to PDF using proper mPDF functionality
+     *
+     * @param \Mpdf\Mpdf $mpdf
+     */
+    private function addWatermark(\Mpdf\Mpdf $mpdf): void
+    {
+        // Watermark text: only "ACADOPS", font: "endlight"
+        $watermarkText = 'ACADOPS';
+
+        // Set watermark text with custom alpha (transparency) - 0.1 = very transparent
+        $mpdf->SetWatermarkText($watermarkText, 0.1);
+
+        // Set watermark font to "DejaVuSansCondensed"
+        $mpdf->watermark_font = 'DejaVuSansCondensed';
+
+        // Enable watermark display
+        $mpdf->showWatermarkText = true;
+        $mpdf->showWatermarkImage = false;
+
+        // Set additional watermark properties
+        $mpdf->watermarkTextAlpha = 0.1;
+        $mpdf->watermarkImgAlpha = 0.1;
     }
 
     /**

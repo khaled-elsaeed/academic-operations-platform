@@ -165,15 +165,19 @@ class TermService
      */
     public function getAll(): array
     {
-        return Term::orderBy('year', 'desc')->orderBy('season')->get()->map(function ($term) {
-            return [
-                'id' => $term->id,
-                'name' => $term->name,
-                'season' => $term->season,
-                'year' => $term->year,
-                'code' => $term->code,
-                'is_active' => (bool) $term->is_active,
-            ];
-        })->toArray();
+        return Term::where('is_active', true)
+            ->orderBy('year', 'desc')
+            ->orderBy('season')
+            ->get()
+            ->map(function ($term) {
+                return [
+                    'id' => $term->id,
+                    'name' => $term->name,
+                    'season' => $term->season,
+                    'year' => $term->year,
+                    'code' => $term->code,
+                    'is_active' => (bool) $term->is_active,
+                ];
+            })->toArray();
     }
 } 

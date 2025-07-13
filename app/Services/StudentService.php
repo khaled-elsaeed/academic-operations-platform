@@ -169,34 +169,43 @@ class StudentService
      */
     protected function renderActionButtons($student): string
     {
-        return '
-        <div class="d-flex gap-2">
-          <button type="button"
-            class="btn btn-sm btn-icon btn-primary rounded-circle editStudentBtn"
-            data-id="' . e($student->id) . '"
-            title="Edit">
-            <i class="bx bx-edit"></i>
-          </button>
-          <button type="button"
-            class="btn btn-sm btn-icon btn-danger rounded-circle deleteStudentBtn"
-            data-id="' . e($student->id) . '"
-            title="Delete">
-            <i class="bx bx-trash"></i>
-          </button>
-          <div class="dropdown">
-            <button type="button"
-              class="btn btn-sm btn-info dropdown-toggle"
-              data-bs-toggle="dropdown"
-              title="Download Enrollment Document">
-              <i class="bx bx-download"></i>
-            </button>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item downloadPdfBtn" href="#" data-id="' . e($student->id) . '">Download as PDF</a></li>
-              <li><a class="dropdown-item downloadWordBtn" href="#" data-id="' . e($student->id) . '">Download as Word</a></li>
-            </ul>
-          </div>
-        </div>
-        ';
+        $user = auth()->user();
+        $buttons = '<div class="d-flex gap-2">';
+        // Edit button
+        if ($user && $user->can('student.edit')) {
+            $buttons .= '<button type="button"
+                class="btn btn-sm btn-icon btn-primary rounded-circle editStudentBtn"
+                data-id="' . e($student->id) . '"
+                title="Edit">
+                <i class="bx bx-edit"></i>
+              </button>';
+        }
+        // Delete button
+        if ($user && $user->can('student.delete')) {
+            $buttons .= '<button type="button"
+                class="btn btn-sm btn-icon btn-danger rounded-circle deleteStudentBtn"
+                data-id="' . e($student->id) . '"
+                title="Delete">
+                <i class="bx bx-trash"></i>
+              </button>';
+        }
+        // Download dropdown
+        if ($user && $user->can('student.view')) {
+            $buttons .= '<div class="dropdown">
+                <button type="button"
+                  class="btn btn-sm btn-info dropdown-toggle"
+                  data-bs-toggle="dropdown"
+                  title="Download Enrollment Document">
+                  <i class="bx bx-download"></i>
+                </button>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item downloadPdfBtn" href="#" data-id="' . e($student->id) . '">Download as PDF</a></li>
+                </ul>
+              </div>';
+        }
+        $buttons .= '</div>';
+        // If no buttons, return empty string to avoid empty action column
+        return trim($buttons) === '<div class="d-flex gap-2"></div>' ? '' : $buttons;
     }
 
     /**

@@ -11,9 +11,11 @@
     icon="bx bx-list-check"
   >
     <div class="d-flex gap-2">
+      @can('enrollment.import')
       <button class="btn btn-success" id="importEnrollmentsBtn" type="button" data-bs-toggle="modal" data-bs-target="#importEnrollmentsModal">
         <i class="bx bx-import me-1"></i>Import Enrollments
       </button>
+      @endcan
     </div>
   </x-ui.page-header>
 
@@ -33,6 +35,7 @@
   />
 
   <!-- Import Enrollments Modal -->
+  @can('enrollment.import')
   <x-ui.modal 
     id="importEnrollmentsModal"
     title="Import Enrollments"
@@ -64,6 +67,7 @@
       <button type="submit" class="btn btn-success" id="importEnrollmentsSubmitBtn" form="importEnrollmentsForm">Import</button>
     </x-slot>
   </x-ui.modal>
+  @endcan
 </div>
 @endsection
 

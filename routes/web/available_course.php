@@ -17,11 +17,11 @@ Route::middleware(['auth'])
         Route::get('stats', 'stats')->name('stats')->middleware('can:course.view');
         Route::get('template', 'template')->name('template')->middleware('can:course.view');
         Route::get('create', 'create')->name('create')->middleware('can:course.create');
-        Route::get('all', 'all')->name('all')->middleware('can:course.view');
+        Route::get('all', 'all')->name('all');
         
         // ===== Import/Export Operations =====
         Route::post('import', 'import')->name('import')->middleware('can:course.create');
-        Route::post('remaining-credit-hours', 'getRemainingCreditHours')->name('remaining-credit-hours')->middleware('can:course.view');
+        Route::post('remaining-credit-hours', 'getRemainingCreditHours')->name('remaining-credit-hours');
 
         // ===== CRUD Operations =====
         // List & View

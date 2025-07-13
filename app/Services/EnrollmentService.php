@@ -140,16 +140,18 @@ class EnrollmentService
 
     protected function renderActionButtons($enrollment)
     {
-        return '
-        <div class="d-flex gap-2">
-          <button type="button"
-            class="btn btn-sm btn-icon btn-danger rounded-circle deleteEnrollmentBtn"
-            data-id="' . e($enrollment->id) . '"
-            title="Delete">
-            <i class="bx bx-trash"></i>
-          </button>
-        </div>
-        ';
+        $user = auth()->user();
+        $buttons = '<div class="d-flex gap-2">';
+        if ($user && $user->can('enrollment.delete')) {
+            $buttons .= '<button type="button"
+                class="btn btn-sm btn-icon btn-danger rounded-circle deleteEnrollmentBtn"
+                data-id="' . e($enrollment->id) . '"
+                title="Delete">
+                <i class="bx bx-trash"></i>
+              </button>';
+        }
+        $buttons .= '</div>';
+        return trim($buttons) === '<div class="d-flex gap-2"></div>' ? '' : $buttons;
     }
 
     public function getStudentEnrollments($studentId)

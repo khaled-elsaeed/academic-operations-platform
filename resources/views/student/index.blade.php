@@ -39,12 +39,14 @@
     description="Manage all student records, add new students, or import in bulk using the options on the right."
     icon="bx bx-group"
   >
+    @can('student.create')
     <button class="btn btn-success me-2" id="importStudentsBtn" type="button" data-bs-toggle="modal" data-bs-target="#importStudentsModal">
       <i class="bx bx-upload me-1"></i> Import Students
     </button>
     <button class="btn btn-primary" id="addStudentBtn" type="button" data-bs-toggle="modal" data-bs-target="#studentModal">
       <i class="bx bx-plus me-1"></i> Add Student
     </button>
+    @endcan
   </x-ui.page-header>
 
   <!-- Students DataTable -->

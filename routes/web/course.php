@@ -16,8 +16,8 @@ Route::middleware(['auth'])
         Route::get('datatable', 'datatable')->name('datatable')->middleware('can:course.view');
         Route::get('stats', 'stats')->name('stats')->middleware('can:course.view');
         Route::get('faculties', 'getFaculties')->name('faculties')->middleware('can:course.view');
-        Route::get('all', 'all')->name('all')->middleware('can:course.view');
-        Route::post('prerequisites', 'getPrerequisites')->name('prerequisites')->middleware('can:course.view');
+        Route::get('all', 'all')->name('all');
+        Route::post('prerequisites', 'getPrerequisites')->name('prerequisites');
 
         // ===== CRUD Operations =====
         // List & View

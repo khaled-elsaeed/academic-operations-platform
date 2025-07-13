@@ -89,7 +89,7 @@
           </div>
           <div class="col-md-6 mb-3">
             <label for="year" class="form-label">Year <span class="text-danger">*</span></label>
-            <input type="number" class="form-control" id="year" name="year" min="2000" max="2100" required>
+            <input type="text" class="form-control" id="year" name="year" required>
           </div>
         </div>
         <div class="row">
@@ -416,7 +416,6 @@ $(document).ready(function () {
   handleSeasonYearChange();
   
   // Set current year as default
-  $('#year').val(new Date().getFullYear());
 });
 </script>
 @endpush 

@@ -94,10 +94,19 @@ class EnrollmentService
 
     public function getStats(): array
     {
-        $latest = Enrollment::latest('created_at')->value('created_at');
+        $latest = Enrollment::latest('updated_at')->value('updated_at');
+        $totalStudents = \App\Models\Student::count();
+        $totalEnrollments = Enrollment::count();
+        $uniqueEnrolledStudents = Enrollment::distinct('student_id')->count();
+        
         return [
             'enrollments' => [
-                'total' => Enrollment::count(),
+                'total' => $totalEnrollments,
+                'lastUpdateTime' => formatDate($latest),
+            ],
+            'students' => [
+                'total' => $totalStudents,
+                'enrolled' => $uniqueEnrolledStudents,
                 'lastUpdateTime' => formatDate($latest),
             ],
         ];
@@ -108,12 +117,20 @@ class EnrollmentService
         $query = Enrollment::join('students', 'enrollments.student_id', '=', 'students.id')
             ->join('courses', 'enrollments.course_id', '=', 'courses.id')
             ->join('terms', 'enrollments.term_id', '=', 'terms.id')
-            ->select('enrollments.*', 'students.name_en as student_name', 'courses.title as course_title', 'courses.code as course_code', 'terms.season as term_season', 'terms.year as term_year');
-            
-        if (request()->has('student_id')) {
-            $query->where('enrollments.student_id', request('student_id'));
-        }
-        
+            ->select(
+                'enrollments.*',
+                'students.name_en as student_name',
+                'students.academic_id as student_academic_id',
+                'courses.title as course_title',
+                'courses.code as course_code',
+                'terms.season as term_season',
+                'terms.year as term_year'
+            );
+
+        $request = request();
+
+        $this->applySearchFilters($query, $request);
+
         return DataTables::of($query)
             ->addColumn('student', function($enrollment) {
                 return $enrollment->student_name ?? '-';
@@ -125,7 +142,20 @@ class EnrollmentService
                 return $enrollment->term_season && $enrollment->term_year ? "{$enrollment->term_season} {$enrollment->term_year}" : '-';
             })
             ->addColumn('score', function($enrollment) {
-                return $enrollment->score ? number_format($enrollment->score, 2) : '-';
+                if ($enrollment->score === null) {
+                    return '<span class="badge bg-label-secondary"><i class="bx bx-time me-1"></i>No Grade</span>';
+                }
+                
+                $score = number_format($enrollment->score, 2);
+                $badgeClass = match(true) {
+                    $enrollment->score >= 90 => 'bg-label-success',
+                    $enrollment->score >= 80 => 'bg-label-primary',
+                    $enrollment->score >= 70 => 'bg-label-warning',
+                    $enrollment->score >= 60 => 'bg-label-info',
+                    default => 'bg-label-danger'
+                };
+                
+                return "<span class='badge {$badgeClass}'><i class='bx bx-star me-1'></i>{$score}</span>";
             })
             ->addColumn('action', function($enrollment) {
                 return $this->renderActionButtons($enrollment);
@@ -134,8 +164,52 @@ class EnrollmentService
             ->orderColumn('course', 'courses.title $1')
             ->orderColumn('term', 'terms.season $1, terms.year $1')
             ->orderColumn('score', 'enrollments.score $1')
-            ->rawColumns(['action'])
+            ->rawColumns(['action', 'score'])
             ->make(true);
+    }
+
+    private function applySearchFilters($query, $request): void
+    {
+        // Apply search filters
+        if ($request->has('search_student') && !empty($request->input('search_student'))) {
+            $searchStudent = $request->input('search_student');
+            $query->where(function($q) use ($searchStudent) {
+                $q->where('students.name_en', 'like', "%{$searchStudent}%")
+                  ->orWhere('students.academic_id', 'like', "%{$searchStudent}%");
+            });
+        }
+        
+        if ($request->has('search_course') && !empty($request->input('search_course'))) {
+            $searchCourse = $request->input('search_course');
+            $query->where(function($q) use ($searchCourse) {
+                $q->where('courses.title', 'like', "%{$searchCourse}%")
+                  ->orWhere('courses.code', 'like', "%{$searchCourse}%");
+            });
+        }
+        
+        if ($request->has('search_term') && !empty($request->input('search_term'))) {
+            $searchTerm = $request->input('search_term');
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('terms.season', 'like', "%{$searchTerm}%")
+                  ->orWhere('terms.year', 'like', "%{$searchTerm}%")
+                  ->orWhere('terms.code', 'like', "%{$searchTerm}%");
+            });
+        }
+        
+        if ($request->has('search_score') && !empty($request->input('search_score'))) {
+            $searchScore = $request->input('search_score');
+            
+            if ($searchScore === 'no-grade') {
+                $query->whereNull('enrollments.score');
+            } else {
+                $range = explode('-', $searchScore);
+                if (count($range) === 2) {
+                    $min = (float) $range[0];
+                    $max = (float) $range[1];
+                    $query->whereBetween('enrollments.score', [$min, $max]);
+                }
+            }
+        }
     }
 
     protected function renderActionButtons($enrollment)
@@ -206,18 +280,13 @@ class EnrollmentService
      */
     public function importEnrollmentsFromFile(UploadedFile $file): array
     {
-        try {
-            $rows = Excel::toArray(new EnrollmentsImport, $file);
-            $data = $rows[0] ?? [];
-            
-            // Remove header row
-            array_shift($data);
-            
-            return $this->importEnrollmentsFromRows(collect($data));
-        } catch (\Exception $e) {
-            Log::error('Enrollment import failed', ['error' => $e->getMessage()]);
-            throw new BusinessValidationException('Failed to read the uploaded file. Please ensure it is a valid Excel file.');
-        }
+        $import = new EnrollmentsImport();
+
+        Excel::import($import, $file);
+
+        $rows = $import->rows ?? collect();
+        
+        return $this->importEnrollmentsFromRows($rows);
     }
 
     /**
@@ -228,39 +297,59 @@ class EnrollmentService
      */
     public function importEnrollmentsFromRows(Collection $rows): array
     {
-        $importedCount = 0;
         $errors = [];
+        $created = 0;
+        $updated = 0;
         
         foreach ($rows as $index => $row) {
-            $rowNum = $index + 2; // +2 because we removed header and arrays are 0-indexed
+            $rowNum = $index + 2;
             
             try {
-                // Skip empty rows
-                if (empty(array_filter($row))) {
-                    continue;
-                }
-                
-                $result = $this->processImportRow($row, $rowNum);
-                if ($result === 'success') {
-                    $importedCount++;
-                } else {
-                    $errors[] = $result;
-                }
+                DB::transaction(function () use ($row, $rowNum, &$created, &$updated) {
+                    $result = $this->processImportRow($row->toArray(), $rowNum);
+                    $result === 'created' ? $created++ : $updated++;
+                });
+            } catch (ValidationException $e) {
+                $errors[] = [
+                    'row' => $rowNum,
+                    'errors' => $e->errors()["Row {$rowNum}"] ?? [],
+                    'original_data' => $row->toArray()
+                ];
+            } catch (BusinessValidationException $e) {
+                $errors[] = [
+                    'row' => $rowNum,
+                    'errors' => ['general' => [$e->getMessage()]],
+                    'original_data' => $row->toArray()
+                ];
             } catch (\Exception $e) {
-                $errors[] = "Row {$rowNum}: " . $e->getMessage();
+                $errors[] = [
+                    'row' => $rowNum,
+                    'errors' => ['general' => ['Unexpected error - ' . $e->getMessage()]],
+                    'original_data' => $row->toArray()
+                ];
+                Log::error('Import row processing failed', [
+                    'row' => $rowNum,
+                    'error' => $e->getMessage(),
+                    'data' => $row
+                ]);
             }
         }
         
-        $message = "Import completed. {$importedCount} enrollments imported successfully.";
-        if (!empty($errors)) {
-            $message .= " " . count($errors) . " errors occurred.";
-        }
+        $totalProcessed = $created + $updated;
+        $message = empty($errors) 
+            ? "Successfully processed {$totalProcessed} students ({$created} created, {$updated} updated)." 
+            : "Import completed with {$totalProcessed} successful ({$created} created, {$updated} updated) and " . count($errors) . " failed rows.";
         
         return [
-            'imported_count' => $importedCount,
+            'success' => empty($errors),
+            'message' => $message,
             'errors' => $errors,
-            'message' => $message
+            'imported_count' => $totalProcessed,
+            'created_count' => $created,
+            'updated_count' => $updated,
         ];
+
+        
     }
 
     /**
@@ -272,55 +361,34 @@ class EnrollmentService
      */
     private function processImportRow(array $row, int $rowNum): string
     {
-        // Validate required fields
-        if (empty($row[0]) || empty($row[1]) || empty($row[2])) {
-            return "Row {$rowNum}: Missing required fields (Academic ID, Course Code, Term Code)";
-        }
-        
-        $academicId = trim($row[0]);
-        $courseCode = trim($row[1]);
-        $termCode = trim($row[2]);
-        
-        try {
-            // Find student
-            $student = $this->findStudentByAcademicId($academicId);
-            if (!$student) {
-                return "Row {$rowNum}: Student with Academic ID '{$academicId}' not found";
-            }
-            
-            // Find course
-            $course = $this->findCourseByCode($courseCode);
-            if (!$course) {
-                return "Row {$rowNum}: Course with code '{$courseCode}' not found";
-            }
-            
-            // Find term
-            $term = $this->findTermByCode($termCode);
-            if (!$term) {
-                return "Row {$rowNum}: Term with code '{$termCode}' not found";
-            }
-            
-            // Check if enrollment already exists
-            $existingEnrollment = Enrollment::where('student_id', $student->id)
-                ->where('course_id', $course->id)
-                ->where('term_id', $term->id)
-                ->first();
-                
-            if ($existingEnrollment) {
-                return "Row {$rowNum}: Student is already enrolled in this course for the specified term";
-            }
-            
-            // Create enrollment
-            Enrollment::create([
+        EnrollmentImportValidator::validateRow($row, $rowNum);
+
+        $student = $this->findStudentByAcademicId($row['academic_id'] ?? '');
+
+        $course = $this->findCourseByCode($row['course_code'] ?? '');
+
+        $term = $this->findTermByCode($row['term_code'] ?? '');
+
+        $enrollment = $this->createOrUpdateEnrollment($row, $student, $course, $term);
+
+        return $enrollment->wasRecentlyCreated ? 'created' : 'updated';
+    }
+
+    private function createOrUpdateEnrollment(array $row, Student $student, Course $course, Term $term): Enrollment
+    {
+        return Enrollment::updateOrCreate(
+            [
                 'student_id' => $student->id,
                 'course_id' => $course->id,
                 'term_id' => $term->id,
-            ]);
-            
-            return 'success';
-        } catch (\Exception $e) {
-            return "Row {$rowNum}: " . $e->getMessage();
-        }
+            ],
+            [
+                'student_id' => $student->id,
+                'course_id' => $course->id,
+                'term_id' => $term->id,
+                'score' => floatval($row['score']),
+            ]
+        );
     }
 
     /**
@@ -331,31 +399,49 @@ class EnrollmentService
      */
     private function findStudentByAcademicId(string $academicId): ?Student
     {
-        return Student::withoutGlobalScopes()
-            ->where('academic_id', $academicId)
-            ->first();
+        $student = Student::where('academic_id', $academicId)->first();
+
+        if (!$student) {
+            throw new BusinessValidationException("Student with academic ID '{$academicId}' not found.");
+        }
+        
+        return $student;
     }
 
     /**
      * Find a course by code.
      *
      * @param string $code
-     * @return Course|null
+     * @return Course
+     * @throws BusinessValidationException
      */
-    private function findCourseByCode(string $code): ?Course
+    private function findCourseByCode(string $code): Course
     {
-        return Course::where('code', $code)->first();
+        $course = Course::where('code', $code)->first();
+
+        if (!$course) {
+            throw new BusinessValidationException("Course with code '{$code}' not found.");
+        }
+
+        return $course;
     }
 
     /**
      * Find a term by code.
      *
      * @param string $code
-     * @return Term|null
+     * @return Term
+     * @throws BusinessValidationException
      */
-    private function findTermByCode(string $code): ?Term
+    private function findTermByCode(string $code): Term
     {
-        return Term::where('code', $code)->first();
+        $term = Term::where('code', $code)->first();
+
+        if (!$term) {
+            throw new BusinessValidationException("Term with code '{$code}' not found.");
+        }
+
+        return $term;
     }
 
     /**

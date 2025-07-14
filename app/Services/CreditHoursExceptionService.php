@@ -129,60 +129,72 @@ class CreditHoursExceptionService
     public function getDatatable(): \Illuminate\Http\JsonResponse
     {
         $query = CreditHoursException::query()
-            ->with(['student:id,name_en,academic_id', 'term:id,season,year', 'grantedBy:id,first_name,last_name'])
-            ->select([
-                'credit_hours_exceptions.id',
-                'credit_hours_exceptions.student_id',
-                'credit_hours_exceptions.term_id',
-                'credit_hours_exceptions.granted_by',
-                'credit_hours_exceptions.additional_hours',
-                'credit_hours_exceptions.reason',
-                'credit_hours_exceptions.is_active',
-                'credit_hours_exceptions.created_at',
-                'credit_hours_exceptions.updated_at'
-            ]);
+            ->with(['student', 'term', 'grantedBy']);
+   
+        $request = request();
+
+        // --- Student Name Filter ---
+        $searchStudentName = $request->input('search_student_name');
+        if (!empty($searchStudentName)) {
+            $query->whereHas('student', function ($q) use ($searchStudentName) {
+                $q->whereRaw('LOWER(name_en) LIKE ?', ['%' . mb_strtolower($searchStudentName) . '%']);
+            });
+        }
+
+        // --- Academic ID Filter ---
+        $searchAcademicId = $request->input('search_academic_id');
+        if (!empty($searchAcademicId)) {
+            $query->whereHas('student', function ($q) use ($searchAcademicId) {
+                $q->where('academic_id', 'like', '%' . $searchAcademicId . '%');
+            });
+        }
+
+        // --- National ID Filter ---
+        $searchNationalId = $request->input('search_national_id');
+        if (!empty($searchNationalId)) {
+            $query->whereHas('student', function ($q) use ($searchNationalId) {
+                $q->where('national_id', 'like', '%' . $searchNationalId . '%');
+            });
+        }
+
+        // --- Term Filter (season/year/code) ---
+        $searchTerm = $request->input('search_term');
+        if (!empty($searchTerm)) {
+            $query->whereHas('term', function ($q) use ($searchTerm) {
+                $q->whereRaw('LOWER(season) LIKE ?', ['%' . mb_strtolower($searchTerm) . '%'])
+                  ->orWhereRaw('CAST(year AS CHAR) LIKE ?', ['%' . mb_strtolower($searchTerm) . '%'])
+                  ->orWhereRaw('LOWER(code) LIKE ?', ['%' . mb_strtolower($searchTerm) . '%']);
+            });
+        }
 
         return DataTables::of($query)
-            ->addColumn('student_name', function($exception) {
-                return $exception->student_display_name;
+            ->addColumn('student', function($exception) {
+                return $exception->student ? $exception->student->name_en : '-';
             })
-            ->addColumn('term_name', function($exception) {
+            ->addColumn('academic_id', function($exception) {
+                return $exception->student ? $exception->student->academic_id : '-';
+            })
+            ->addColumn('national_id', function($exception) {
+                return $exception->student ? $exception->student->national_id : '-';
+            })
+            ->addColumn('term', function($exception) {
                 return $exception->term_display_name;
             })
-            ->addColumn('granted_by_name', function($exception) {
-                return $exception->grantedBy ? $exception->grantedBy->name : '-';
-            })
-            ->addColumn('status', function($exception) {
-                if (!$exception->is_active) {
-                    return '<span class="badge bg-secondary">Inactive</span>';
-                }
-                return '<span class="badge bg-success">Active</span>';
-            })
-            ->addColumn('action', function($exception) {
-                return $this->renderActionButtons($exception);
-            })
-            ->editColumn('created_at', function($exception) {
-                return $exception->created_at ? $exception->created_at->format('Y-m-d H:i') : '-';
+            ->editColumn('is_active', function($exception) {
+                return $exception->is_active
+                    ? '<span class="badge bg-success">Active</span>'
+                    : '<span class="badge bg-secondary">Inactive</span>';
             })
             ->editColumn('additional_hours', function($exception) {
                 return $exception->additional_hours . ' hours';
             })
             ->editColumn('reason', function($exception) {
-                return $exception->reason ? Str::limit($exception->reason, 50) : '-';
+                return $exception->reason ? \Illuminate\Support\Str::limit($exception->reason, 50) : '-';
             })
-            ->orderColumn('student_name', function($query, $order) {
-                $query->join('students', 'credit_hours_exceptions.student_id', '=', 'students.id')
-                      ->orderBy('students.name_en', $order);
+            ->addColumn('action', function($exception) {
+                return $this->renderActionButtons($exception);
             })
-            ->orderColumn('term_name', function($query, $order) {
-                $query->join('terms', 'credit_hours_exceptions.term_id', '=', 'terms.id')
-                      ->orderBy('terms.season', $order)->orderBy('terms.year', $order);
-            })
-            ->orderColumn('granted_by_name', function($query, $order) {
-                $query->join('users', 'credit_hours_exceptions.granted_by', '=', 'users.id')
-                      ->orderBy('users.first_name', $order)->orderBy('users.last_name', $order);
-            })
-            ->rawColumns(['status', 'action'])
+            ->rawColumns(['is_active', 'action'])
             ->make(true);
     }
 

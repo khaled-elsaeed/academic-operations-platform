@@ -13,24 +13,24 @@ Route::middleware(['auth'])
     ->controller(AcademicAdvisorAccessController::class)
     ->group(function () {
         // ===== Specific Routes First =====
-        Route::get('datatable', 'datatable')->name('datatable')->middleware('can:user.view');
-        Route::get('stats', 'stats')->name('stats')->middleware('can:user.view');
+        Route::get('datatable', 'datatable')->name('datatable')->middleware('can:academic_advisor_access.view');
+        Route::get('stats', 'stats')->name('stats')->middleware('can:academic_advisor_access.view');
                 // No middleware: not sensitive, for dropdown
 
         Route::get('all', 'all')->name('all');
 
         // ===== CRUD Operations =====
         // List & View
-        Route::get('/', 'index')->name('index')->middleware('can:user.view');
-        Route::get('{academicAdvisorAccess}', 'show')->name('show')->middleware('can:user.view');
+        Route::get('/', 'index')->name('index')->middleware('can:academic_advisor_access.view');
+        Route::get('{academicAdvisorAccess}', 'show')->name('show')->middleware('can:academic_advisor_access.view');
         
         // Create
-        Route::post('/', 'store')->name('store')->middleware('can:user.create');
+        Route::post('/', 'store')->name('store')->middleware('can:academic_advisor_access.create');
         
         // Update
-        Route::put('{academicAdvisorAccess}', 'update')->name('update')->middleware('can:user.edit');
-        Route::patch('{academicAdvisorAccess}', 'update')->middleware('can:user.edit');
+        Route::put('{academicAdvisorAccess}', 'update')->name('update')->middleware('can:academic_advisor_access.edit');
+        Route::patch('{academicAdvisorAccess}', 'update')->middleware('can:academic_advisor_access.edit');
         
         // Delete
-        Route::delete('{academicAdvisorAccess}', 'destroy')->name('destroy')->middleware('can:user.delete');
+        Route::delete('{academicAdvisorAccess}', 'destroy')->name('destroy')->middleware('can:academic_advisor_access.delete');
     }); 

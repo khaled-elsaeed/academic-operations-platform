@@ -23,12 +23,9 @@ use App\Models\Program;
 
 class StudentService
 {
-    private $enrollmentDocumentService;
 
-    public function __construct(EnrollmentDocumentService $enrollmentDocumentService)
-    {
-        $this->enrollmentDocumentService = $enrollmentDocumentService;
-    }
+    public function __construct(protected EnrollmentDocumentService $enrollmentDocumentService)
+    {}
 
     /**
      * Create a new student.
@@ -39,28 +36,28 @@ class StudentService
      */
     public function createStudent(array $data): Student
     {
-        // Check for duplicate academic_email, academic_id, or national_id
-        $duplicate = Student::where('academic_email', $data['academic_email'])
-            ->orWhere('academic_id', $data['academic_id'])
-            ->orWhere('national_id', $data['national_id'])
-            ->first();
+        $isExist = $this->isStudentExist($data);
 
-        if ($duplicate) {
-            $fields = [];
-            if ($duplicate->academic_email === $data['academic_email']) {
-                $fields[] = 'The academic email has already been taken.';
-            }
-            if ($duplicate->academic_id === $data['academic_id']) {
-                $fields[] = 'The academic id has already been taken.';
-            }
-            if ($duplicate->national_id === $data['national_id']) {
-                $fields[] = 'The national id has already been taken.';
-            }
-            $message = implode("<br>", $fields);
-            throw new BusinessValidationException($message);
+        if ($isExist) {
+            throw new BusinessValidationException('A student with the provided academic email, academic ID, or national ID already exists.');
         }
 
         return Student::create($data);
+    }
+
+    private function isStudentExist(array $data, $excludedStudentId = null)
+    {
+        $query = Student::where(function ($q) use ($data) {
+            $q->where('academic_email', $data['academic_email'])
+              ->orWhere('academic_id', $data['academic_id'])
+              ->orWhere('national_id', $data['national_id']);
+        });
+
+        if ($excludedStudentId !== null) {
+            $query->where('id', '!=', $excludedStudentId);
+        }
+
+        return $query->first();
     }
 
     /**
@@ -73,29 +70,11 @@ class StudentService
      */
     public function updateStudent(Student $student, array $data): Student
     {
-        // Check for duplicate academic_email, academic_id, or national_id (excluding current student)
-        $duplicate = Student::where(function($query) use ($data) {
-                $query->where('academic_email', $data['academic_email'])
-                    ->orWhere('academic_id', $data['academic_id'])
-                    ->orWhere('national_id', $data['national_id']);
-            })
-            ->where('id', '!=', $student->id)
-            ->first();
+        $isExist = $this->isStudentExist($data, $student->id);
 
-        if ($duplicate) {
-            $fields = [];
-            if ($duplicate->academic_email === $data['academic_email']) {
-                $fields[] = 'The academic email has already been taken.';
-            }
-            if ($duplicate->academic_id === $data['academic_id']) {
-                $fields[] = 'The academic id has already been taken.';
-            }
-            if ($duplicate->national_id === $data['national_id']) {
-                $fields[] = 'The national id has already been taken.';
-            }
-            $message = implode("<br>", $fields);
-            throw new BusinessValidationException($message);
-        }
+        if ($isExist) {
+            throw new BusinessValidationException('A student with the provided academic email, academic ID, or national ID already exists.');
+        }       
 
         $student->update($data);
         return $student;
@@ -119,9 +98,9 @@ class StudentService
      */
     public function getStats(): array
     {
-        $latestStudent = Student::latest('created_at')->value('created_at');
-        $latestMale = Student::where('gender', 'male')->latest('created_at')->value('created_at');
-        $latestFemale = Student::where('gender', 'female')->latest('created_at')->value('created_at');
+        $latestStudent = Student::max('updated_at');
+        $latestMale = Student::where('gender', 'male')->max('updated_at');
+        $latestFemale = Student::where('gender', 'female')->max('updated_at');
 
         return [
             'students' => [
@@ -147,6 +126,11 @@ class StudentService
     public function getDatatable(): JsonResponse
     {
         $query = Student::with(['program', 'level']);
+
+        $request = request();
+
+        $this->applySearchFilters($query,$request);
+
         return DataTables::of($query)
             ->addColumn('program', function($student) {
                 return $student->program ? $student->program->name : '-';
@@ -161,6 +145,39 @@ class StudentService
             ->make(true);
     }
 
+    private function applySearchFilters($query,$request): void
+    {
+        $nameEn = $request->input('search_name');
+        if (!empty($nameEn)) {
+            $query->whereRaw('LOWER(name_en) LIKE ?', ['%' . mb_strtolower($nameEn) . '%']);
+        }
+
+        $nationalId = $request->input('search_national_id');
+        if (!empty($nationalId)) {
+            $query->where('national_id', 'like', '%' . $nationalId . '%');
+        }
+
+        $academicId = $request->input('search_academic_id');
+        if (!empty($academicId)) {
+            $query->where('academic_id', 'like', '%' . $academicId . '%');
+        }
+
+        $gender = $request->input('search_gender');
+        if (!empty($gender)) {
+            $query->where('gender', $gender);
+        }
+
+        $levelId = $request->input('search_level');
+        if (!empty($levelId)) {
+            $query->where('level_id', $levelId);
+        }
+
+        $programId = $request->input('search_program');
+        if (!empty($programId)) {
+            $query->where('program_id', $programId);
+        }
+    }
+
     /**
      * Render action buttons for datatable rows.
      *
@@ -171,7 +188,6 @@ class StudentService
     {
         $user = auth()->user();
         $buttons = '<div class="d-flex gap-2">';
-        // Edit button
         if ($user && $user->can('student.edit')) {
             $buttons .= '<button type="button"
                 class="btn btn-sm btn-icon btn-primary rounded-circle editStudentBtn"
@@ -180,7 +196,6 @@ class StudentService
                 <i class="bx bx-edit"></i>
               </button>';
         }
-        // Delete button
         if ($user && $user->can('student.delete')) {
             $buttons .= '<button type="button"
                 class="btn btn-sm btn-icon btn-danger rounded-circle deleteStudentBtn"
@@ -189,7 +204,6 @@ class StudentService
                 <i class="bx bx-trash"></i>
               </button>';
         }
-        // Download dropdown
         if ($user && $user->can('student.view')) {
             $buttons .= '<div class="dropdown">
                 <button type="button"
@@ -204,7 +218,6 @@ class StudentService
               </div>';
         }
         $buttons .= '</div>';
-        // If no buttons, return empty string to avoid empty action column
         return trim($buttons) === '<div class="d-flex gap-2"></div>' ? '' : $buttons;
     }
 
@@ -216,25 +229,13 @@ class StudentService
      */
     public function importStudentsFromFile(UploadedFile $file): array
     {
-        try {
             $import = new StudentsImport();
+
             Excel::import($import, $file);
+
             $rows = $import->rows ?? collect();
             
             return $this->importStudentsFromRows($rows);
-        } catch (\Exception $e) {
-            Log::error('Failed to import students', [
-                'error' => $e->getMessage(),
-                'file' => $file->getClientOriginalName()
-            ]);
-            
-            return [
-                'success' => false,
-                'message' => 'Failed to process the uploaded file.',
-                'errors' => [$e->getMessage()],
-                'created' => 0,
-            ];
-        }
     }
 
     /**
@@ -250,16 +251,12 @@ class StudentService
         $updated = 0;
         
         foreach ($rows as $index => $row) {
-            $rowNum = $index + 2; // Account for header row and 0-based index
+            $rowNum = $index + 2;
             
             try {
                 DB::transaction(function () use ($row, $rowNum, &$created, &$updated) {
                     $result = $this->processImportRow($row->toArray(), $rowNum);
-                    if ($result === 'created') {
-                        $created++;
-                    } else {
-                        $updated++;
-                    }
+                    $result === 'created' ? $created++ : $updated++;
                 });
             } catch (ValidationException $e) {
                 $errors[] = [
@@ -314,14 +311,18 @@ class StudentService
     {
         StudentImportValidator::validateRow($row, $rowNum);
 
-        // Find related models
         $level = $this->findLevelByName($row['level'] ?? '');
         $program = $this->findProgramByName($row['program_name'] ?? '');
 
-        // Extract gender from Egyptian national ID
         $gender = $this->extractGenderFromNationalId($row['national_id'] ?? '');
 
-        // Use updateOrCreate to handle both creation and updates
+        $student = $this->createOrUpdateStudent($row, $level, $program, $gender);
+
+        return $student->wasRecentlyCreated ? 'created' : 'updated';
+    }
+
+    private function createOrUpdateStudent(array $row, $level, $program, $gender)
+    {
         $student = Student::updateOrCreate(
             ['national_id' => (string)($row['national_id'] ?? '')],
             [
@@ -335,9 +336,7 @@ class StudentService
                 'gender' => $gender,
             ]
         );
-
-        // Return whether the student was created or updated
-        return $student->wasRecentlyCreated ? 'created' : 'updated';
+        return $student;
     }
 
     /**

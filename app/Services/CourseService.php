@@ -7,11 +7,15 @@ use App\Models\Faculty;
 use App\Models\CoursePrerequisite;
 use App\Models\Enrollment;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Exceptions\BusinessValidationException;
 
 class CourseService
 {
+
+    private const FACULTY_NAME = 'Faculty of Computer Science & Engineering';
+
     /**
      * Get course statistics.
      *
@@ -19,13 +23,38 @@ class CourseService
      */
     public function getStats(): array
     {
-        $totalCourses = Course::count();
-        $coursesWithPrerequisites = Course::has('prerequisites')->count();
-        $coursesWithoutPrerequisites = Course::doesntHave('prerequisites')->count();
 
-        $lastCreatedAtTotal = Course::max('created_at');
-        $lastCreatedAtWithPrereq = Course::whereHas('prerequisites')->max('created_at');
-        $lastCreatedAtWithoutPrereq = Course::whereDoesntHave('prerequisites')->max('created_at');
+        $totalCourses = Course::whereHas('faculty', function($query) {
+            $query->where('name', self::FACULTY_NAME);
+        })->count();
+
+        $coursesWithPrerequisites = Course::whereHas('faculty', function($query) {
+                $query->where('name', self::FACULTY_NAME);
+            })
+            ->has('prerequisites')
+            ->count();
+
+        $coursesWithoutPrerequisites = Course::whereHas('faculty', function($query) {
+                $query->where('name', self::FACULTY_NAME);
+            })
+            ->doesntHave('prerequisites')
+            ->count();
+
+        $lastCreatedAtTotal = Course::whereHas('faculty', function($query) {
+            $query->where('name', self::FACULTY_NAME);
+        })->max('created_at');
+
+        $lastCreatedAtWithPrereq = Course::whereHas('faculty', function($query) {
+                $query->where('name', self::FACULTY_NAME);
+            })
+            ->whereHas('prerequisites')
+            ->max('created_at');
+
+        $lastCreatedAtWithoutPrereq = Course::whereHas('faculty', function($query) {
+                $query->where('name', self::FACULTY_NAME);
+            })
+            ->whereDoesntHave('prerequisites')
+            ->max('created_at');
 
         return [
             'total' => [
@@ -50,14 +79,21 @@ class CourseService
      */
     public function getDatatable(): JsonResponse
     {
-        $courses = Course::with(['faculty', 'prerequisites']);
+        $query = Course::with(['faculty', 'prerequisites'])
+            ->leftJoin('faculties', 'courses.faculty_id', '=', 'faculties.id')
+            ->leftJoin('course_prerequisite', 'courses.id', '=', 'course_prerequisite.course_id')
+            ->select('courses.*', DB::raw('COUNT(course_prerequisite.prerequisite_id) as prerequisites_count'))
+            ->groupBy('courses.id', 'courses.code', 'courses.title', 'courses.credit_hours', 'courses.faculty_id', 'courses.created_at', 'courses.updated_at');
+        $request = request();
 
-        return DataTables::of($courses)
+        $this->applySearchFilters($query, $request);
+
+        return DataTables::of($query)
             ->addColumn('faculty_name', function ($course) {
                 return $course->faculty ? $course->faculty->name : 'N/A';
             })
             ->addColumn('prerequisites_count', function ($course) {
-                return $course->prerequisites->count();
+                return $course->prerequisites_count ?? 0;
             })
             ->addColumn('prerequisites_list', function ($course) {
                 return $course->prerequisites->pluck('title')->join(', ') ?: 'None';
@@ -65,8 +101,38 @@ class CourseService
             ->addColumn('action', function ($course) {
                 return $this->renderActionButtons($course);
             })
+            ->orderColumn('faculty_name', 'faculties.name $1')
+            ->orderColumn('prerequisites_count', 'prerequisites_count $1')
             ->rawColumns(['action'])
             ->make(true);
+    }
+
+    /**
+     * Apply search filters to the query.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param \Illuminate\Http\Request $request
+     * @return void
+     */
+    private function applySearchFilters($query, $request): void
+    {
+        // Filter by course code
+        $searchCode = $request->input('search_code');
+        if (!empty($searchCode)) {
+            $query->whereRaw('LOWER(courses.code) LIKE ?', ['%' . mb_strtolower($searchCode) . '%']);
+        }
+
+        // Filter by course title
+        $searchTitle = $request->input('search_title');
+        if (!empty($searchTitle)) {
+            $query->whereRaw('LOWER(courses.title) LIKE ?', ['%' . mb_strtolower($searchTitle) . '%']);
+        }
+
+        // Filter by faculty
+        $searchFaculty = $request->input('search_faculty');
+        if (!empty($searchFaculty)) {
+            $query->where('courses.faculty_id', $searchFaculty);
+        }
     }
 
     /**
@@ -99,9 +165,19 @@ class CourseService
      *
      * @param array $data
      * @return Course
+     * @throws BusinessValidationException
      */
     public function createCourse(array $data): Course
     {
+        // Check if course with same code and faculty_id already exists
+        $existingCourse = Course::where('code', $data['code'])
+            ->where('faculty_id', $data['faculty_id'])
+            ->first();
+
+        if ($existingCourse) {
+            throw new BusinessValidationException('A course with this code already exists in the selected faculty.');
+        }
+
         return Course::create([
             'code' => $data['code'],
             'title' => $data['title'],
@@ -127,9 +203,20 @@ class CourseService
      * @param Course $course
      * @param array $data
      * @return Course
+     * @throws BusinessValidationException
      */
     public function updateCourse(Course $course, array $data): Course
     {
+        // Check if another course with same code and faculty_id already exists (excluding current course)
+        $existingCourse = Course::where('code', $data['code'])
+            ->where('faculty_id', $data['faculty_id'])
+            ->where('id', '!=', $course->id)
+            ->first();
+
+        if ($existingCourse) {
+            throw new BusinessValidationException('A course with this code already exists in the selected faculty.');
+        }
+
         $course->update([
             'code' => $data['code'],
             'title' => $data['title'],
@@ -152,25 +239,6 @@ class CourseService
         $course->delete();
     }
 
-    /**
-     * Get all faculties for dropdown.
-     *
-     * @return array
-     */
-    public function getFaculties(): array
-    {
-        return Faculty::all()->toArray();
-    }
-
-    /**
-     * Get all courses for prerequisite dropdown.
-     *
-     * @return array
-     */
-    public function getCourses(): array
-    {
-        return Course::all()->toArray();
-    }
 
     /**
      * Get all courses (for dropdown and forms).

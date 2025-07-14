@@ -20,18 +20,20 @@ class FacultyService
         $facultiesWithPrograms = Faculty::has('programs')->count();
         $facultiesWithoutPrograms = Faculty::doesntHave('programs')->count();
 
+        $lastUpdateTime = formatDate(Faculty::max('updated_at'));
+
         return [
             'total' => [
                 'total' => $totalFaculties,
-                'lastUpdateTime' => formatDate(now(), 'Y-m-d H:i:s')
+                'lastUpdateTime' => $lastUpdateTime
             ],
             'withPrograms' => [
                 'total' => $facultiesWithPrograms,
-                'lastUpdateTime' => formatDate(now(), 'Y-m-d H:i:s')
+                'lastUpdateTime' => $lastUpdateTime
             ],
             'withoutPrograms' => [
                 'total' => $facultiesWithoutPrograms,
-                'lastUpdateTime' => formatDate(now(), 'Y-m-d H:i:s')
+                'lastUpdateTime' => $lastUpdateTime
             ]
         ];
     }
@@ -43,17 +45,36 @@ class FacultyService
      */
     public function getDatatable(): JsonResponse
     {
-        $faculties = Faculty::with('programs');
+        $query = Faculty::with('programs')->withCount('programs');
+        $request = request();
 
-        return DataTables::of($faculties)
+        $this->applySearchFilters($query, $request);
+
+        return DataTables::of($query)
             ->addColumn('programs_count', function ($faculty) {
-                return $faculty->programs->count();
+                return $faculty->programs_count;
             })
             ->addColumn('action', function ($faculty) {
                 return $this->renderActionButtons($faculty);
             })
+            ->orderColumn('programs_count', 'programs_count $1')
             ->rawColumns(['action'])
             ->make(true);
+    }
+
+    /**
+     * Apply search filters to the query.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param \Illuminate\Http\Request $request
+     * @return void
+     */
+    private function applySearchFilters($query, $request): void
+    {
+        $searchName = $request->input('search_name');
+        if (!empty($searchName)) {
+            $query->whereRaw('LOWER(name) LIKE ?', ['%' . mb_strtolower($searchName) . '%']);
+        }
     }
 
     /**
@@ -136,5 +157,15 @@ class FacultyService
         }
 
         $faculty->delete();
+    }
+
+    /**
+     * Get all faculties (for dropdown and forms).
+     *
+     * @return array
+     */
+    public function getAll(): array
+    {
+        return Faculty::all()->toArray();
     }
 } 

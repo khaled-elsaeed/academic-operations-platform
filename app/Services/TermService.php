@@ -19,26 +19,23 @@ class TermService
         $totalTerms = Term::count();
         $activeTerms = Term::where('is_active', true)->count();
         $inactiveTerms = Term::where('is_active', false)->count();
-        $currentYear = date('Y');
-        $currentYearTerms = Term::where('year', $currentYear)->count();
+
+        $lastUpdateTime = formatDate(Term::max('updated_at'));
 
         return [
             'total' => [
                 'total' => $totalTerms,
-                'lastUpdateTime' => formatDate(now(), 'Y-m-d H:i:s')
+                'lastUpdateTime' => $lastUpdateTime
             ],
             'active' => [
                 'total' => $activeTerms,
-                'lastUpdateTime' => formatDate(now(), 'Y-m-d H:i:s')
+                'lastUpdateTime' => $lastUpdateTime
             ],
             'inactive' => [
                 'total' => $inactiveTerms,
-                'lastUpdateTime' => formatDate(now(), 'Y-m-d H:i:s')
+                'lastUpdateTime' => $lastUpdateTime
             ],
-            'currentYear' => [
-                'total' => $currentYearTerms,
-                'lastUpdateTime' => formatDate(now(), 'Y-m-d H:i:s')
-            ]
+
         ];
     }
 
@@ -50,6 +47,9 @@ class TermService
     public function getDatatable(): JsonResponse
     {
         $terms = Term::with('enrollments');
+
+        // Apply search filters
+        $terms = $this->applySearchFilters($terms);
 
         return DataTables::of($terms)
             ->addColumn('name', function ($term) {
@@ -68,6 +68,47 @@ class TermService
             })
             ->rawColumns(['status', 'action'])
             ->make(true);
+    }
+
+    /**
+     * Apply search filters to the query.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function applySearchFilters($query)
+    {
+        // Season filter
+        if (request()->filled('search_season')) {
+            $query->where('season', request('search_season'));
+        }
+
+        // Year filter (supports academic year format like 2015-2016)
+        if (request()->filled('search_year')) {
+            $searchYear = request('search_year');
+            // Check if it's in academic year format (e.g., 2015-2016)
+            if (strpos($searchYear, '-') !== false) {
+                $years = explode('-', $searchYear);
+                if (count($years) == 2) {
+                    $query->where('year', $searchYear);
+                }
+            } else {
+                // Single year search
+                $query->where('year', 'LIKE', '%' . $searchYear . '%');
+            }
+        }
+
+        // Code filter
+        if (request()->filled('search_code')) {
+            $query->where('code', 'LIKE', '%' . request('search_code') . '%');
+        }
+
+        // Active status filter
+        if (request()->filled('search_active')) {
+            $query->where('is_active', request('search_active'));
+        }
+
+        return $query;
     }
 
     /**

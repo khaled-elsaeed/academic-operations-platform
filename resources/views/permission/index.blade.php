@@ -24,6 +24,31 @@
         icon="bx bx-key"
     />
 
+    {{-- ===== ADVANCED SEARCH SECTION ===== --}}
+    <x-ui.advanced-search 
+        title="Advanced Search" 
+        formId="advancedPermissionSearch" 
+        collapseId="permissionSearchCollapse"
+        :collapsed="false"
+    >
+        <div class="col-md-4">
+            <label for="search_permission_name" class="form-label">Permission Name:</label>
+            <input type="text" class="form-control" id="search_permission_name" placeholder="Permission Name">
+        </div>
+        <div class="col-md-4">
+            <label for="search_guard_name" class="form-label">Guard Name:</label>
+            <input type="text" class="form-control" id="search_guard_name" placeholder="Guard Name">
+        </div>
+        <div class="col-md-4">
+            <label for="search_role" class="form-label">Role:</label>
+            <input type="text" class="form-control" id="search_role" placeholder="Role">
+        </div>
+        <div class="w-100"></div>
+        <button class="btn btn-outline-secondary mt-2 ms-2" id="clearPermissionFiltersBtn" type="button">
+            <i class="bx bx-x"></i> Clear Filters
+        </button>
+    </x-ui.advanced-search>
+
     <!-- Permissions DataTable -->
     <x-ui.datatable 
         :headers="['Name', 'Guard Name', 'Roles', 'Roles Count', 'Created At', 'Actions']"
@@ -37,6 +62,7 @@
         ]"
         :ajax-url="route('permissions.datatable')"
         :table-id="'permissions-table'"
+        :filter-fields="['search_permission_name','search_guard_name','search_role']"
         :filters="[]"
     />
 </div>
@@ -81,92 +107,150 @@
 
 @push('scripts')
 <script>
-let currentPermissionId = null;
-
-// Initialize page
-$(document).ready(function() {
-    loadStats();
-});
-
-// Utility: Shows/hides loading spinners and content for stat2 component
-function toggleLoadingState(elementId, isLoading) {
-  const $value = $(`#${elementId}-value`);
-  const $loader = $(`#${elementId}-loader`);
-  const $updated = $(`#${elementId}-last-updated`);
-  const $updatedLoader = $(`#${elementId}-last-updated-loader`);
-
-  if (isLoading) {
-    $value.addClass('d-none');
-    $loader.removeClass('d-none');
-    $updated.addClass('d-none');
-    $updatedLoader.removeClass('d-none');
-  } else {
-    $value.removeClass('d-none');
-    $loader.addClass('d-none');
-    $updated.removeClass('d-none');
-    $updatedLoader.addClass('d-none');
+// ===========================
+// CONSTANTS AND CONFIGURATION
+// ===========================
+const ROUTES = {
+  permissions: {
+    stats: '{{ route('permissions.stats') }}',
+    show: '{{ route('permissions.show', ':id') }}',
+    datatable: '{{ route('permissions.datatable') }}'
   }
-}
+};
 
-// Load statistics (robust, like student page)
-function loadStats() {
-  toggleLoadingState('permissions', true);
-  toggleLoadingState('roles', true);
-  toggleLoadingState('permissions-roles', true);
+const SELECTORS = {
+  permissionsTable: '#permissions-table',
+  viewPermissionModal: '#viewPermissionModal',
+  viewPermissionName: '#view-permission-name',
+  viewPermissionGuard: '#view-permission-guard',
+  viewPermissionRoles: '#view-permission-roles',
+  viewPermissionRolesCount: '#view-permission-roles-count',
+  viewPermissionCreated: '#view-permission-created',
+};
 
-  $.ajax({
-    url: '{{ route("permissions.stats") }}',
-    method: 'GET',
-    success: function(response) {
-      if (response.success) {
-        $('#permissions-value').text(response.data.total.total ?? '--');
-        $('#permissions-last-updated').text(response.data.total.lastUpdateTime ?? '--');
-        $('#roles-value').text(response.data.roles.total ?? '--');
-        $('#roles-last-updated').text(response.data.roles.lastUpdateTime ?? '--');
-        const permissionsWithRoles = response.data.permissionsWithRoles.filter(permission => permission.roles_count > 0).length;
-        $('#permissions-roles-value').text(permissionsWithRoles ?? '--');
-        $('#permissions-roles-last-updated').text(response.data.total.lastUpdateTime ?? '--');
-      } else {
+// ===========================
+// UTILITY FUNCTIONS
+// ===========================
+const Utils = {
+  showError(message) {
+    Swal.fire({ title: 'Error', html: message, icon: 'error' });
+  },
+  toggleLoadingState(elementId, isLoading) {
+    const $value = $(`#${elementId}-value`);
+    const $loader = $(`#${elementId}-loader`);
+    const $updated = $(`#${elementId}-last-updated`);
+    const $updatedLoader = $(`#${elementId}-last-updated-loader`);
+    if (isLoading) {
+      $value.addClass('d-none'); $loader.removeClass('d-none'); $updated.addClass('d-none'); $updatedLoader.removeClass('d-none');
+    } else {
+      $value.removeClass('d-none'); $loader.addClass('d-none'); $updated.removeClass('d-none'); $updatedLoader.addClass('d-none');
+    }
+  },
+  replaceRouteId(route, id) {
+    return route.replace(':id', id);
+  }
+};
+
+// ===========================
+// API SERVICE LAYER
+// ===========================
+const ApiService = {
+  request(options) { return $.ajax(options); },
+  fetchStats() { return this.request({ url: ROUTES.permissions.stats, method: 'GET' }); },
+  fetchPermission(id) { return this.request({ url: Utils.replaceRouteId(ROUTES.permissions.show, id), method: 'GET' }); }
+};
+
+// ===========================
+// STATISTICS MANAGEMENT
+// ===========================
+const StatsManager = {
+  loadStats() {
+    Utils.toggleLoadingState('permissions', true);
+    Utils.toggleLoadingState('roles', true);
+    Utils.toggleLoadingState('permissions-roles', true);
+    ApiService.fetchStats()
+      .done((response) => {
+        if (response.success) {
+          $('#permissions-value').text(response.data.total.total ?? '--');
+          $('#permissions-last-updated').text(response.data.total.lastUpdateTime ?? '--');
+          $('#roles-value').text(response.data.roles.total ?? '--');
+          $('#roles-last-updated').text(response.data.roles.lastUpdateTime ?? '--');
+          const permissionsWithRoles = response.data.permissionsWithRoles.filter(permission => permission.roles_count > 0).length;
+          $('#permissions-roles-value').text(permissionsWithRoles ?? '--');
+          $('#permissions-roles-last-updated').text(response.data.total.lastUpdateTime ?? '--');
+        } else {
+          $('#permissions-value, #roles-value, #permissions-roles-value').text('N/A');
+          $('#permissions-last-updated, #roles-last-updated, #permissions-roles-last-updated').text('N/A');
+        }
+        Utils.toggleLoadingState('permissions', false);
+        Utils.toggleLoadingState('roles', false);
+        Utils.toggleLoadingState('permissions-roles', false);
+      })
+      .fail(() => {
         $('#permissions-value, #roles-value, #permissions-roles-value').text('N/A');
         $('#permissions-last-updated, #roles-last-updated, #permissions-roles-last-updated').text('N/A');
-      }
-      toggleLoadingState('permissions', false);
-      toggleLoadingState('roles', false);
-      toggleLoadingState('permissions-roles', false);
-    },
-    error: function() {
-      $('#permissions-value, #roles-value, #permissions-roles-value').text('N/A');
-      $('#permissions-last-updated, #roles-last-updated, #permissions-roles-last-updated').text('N/A');
-      toggleLoadingState('permissions', false);
-      toggleLoadingState('roles', false);
-      toggleLoadingState('permissions-roles', false);
-      Swal.fire('Error', 'Failed to load permission statistics', 'error');
-    }
-  });
-}
+        Utils.toggleLoadingState('permissions', false);
+        Utils.toggleLoadingState('roles', false);
+        Utils.toggleLoadingState('permissions-roles', false);
+        Utils.showError('Failed to load permission statistics');
+      });
+  }
+};
 
-// View permission details
-function viewPermission(permissionId) {
-    $.get(`{{ route('permissions.show', ':id') }}`.replace(':id', permissionId))
-        .done(function(response) {
-            if (response.success) {
-                const permission = response.data;
-                $('#view-permission-name').text(permission.name);
-                $('#view-permission-guard').text(permission.guard_name);
-                $('#view-permission-roles').text(permission.roles.map(role => role.name).join(', ') || 'No roles assigned');
-                $('#view-permission-roles-count').text(permission.roles.length);
-                $('#view-permission-created').text(new Date(permission.created_at).toLocaleString());
-                $('#viewPermissionModal').modal('show');
-            }
+// ===========================
+// PERMISSION VIEW MODAL
+// ===========================
+const PermissionManager = {
+  handleViewPermission() {
+    $(document).on('click', '.viewPermissionBtn', function() {
+      const permissionId = $(this).data('id');
+      ApiService.fetchPermission(permissionId)
+        .done((response) => {
+          if (response.success) {
+            const permission = response.data;
+            $(SELECTORS.viewPermissionName).text(permission.name);
+            $(SELECTORS.viewPermissionGuard).text(permission.guard_name);
+            $(SELECTORS.viewPermissionRoles).text(permission.roles.map(role => role.name).join(', ') || 'No roles assigned');
+            $(SELECTORS.viewPermissionRolesCount).text(permission.roles.length);
+            $(SELECTORS.viewPermissionCreated).text(new Date(permission.created_at).toLocaleString());
+            $(SELECTORS.viewPermissionModal).modal('show');
+          }
         })
-        .fail(function() {
-            Swal.fire('Error', 'Failed to load permission data', 'error');
+        .fail(() => {
+          Utils.showError('Failed to load permission data');
         });
-}
+    });
+  }
+};
 
-// Get DataTable instance
-function getDataTable() {
-    return $('#permissions-table').DataTable();
-}
+// ===========================
+// SEARCH FUNCTIONALITY
+// ===========================
+const SearchManager = {
+  initializeAdvancedSearch() {
+    $('#search_permission_name, #search_guard_name, #search_role').on('keyup change', function() {
+      $('#permissions-table').DataTable().ajax.reload();
+    });
+    $('#clearPermissionFiltersBtn').on('click', function() {
+      $('#search_permission_name, #search_guard_name, #search_role').val('');
+      $('#permissions-table').DataTable().ajax.reload();
+    });
+  }
+};
+
+// ===========================
+// MAIN APPLICATION
+// ===========================
+const PermissionApp = {
+  init() {
+    StatsManager.loadStats();
+    PermissionManager.handleViewPermission();
+    SearchManager.initializeAdvancedSearch();
+  }
+};
+
+$(document).ready(() => {
+  PermissionApp.init();
+});
 </script>
 @endpush 

@@ -1,7 +1,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ __('INVOICE') }}</title>
+    <title>{{ __('ENROLLMENT') }}</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta charset="UTF-8">
     <style media="all">
@@ -173,7 +173,7 @@
             <!-- ===== DOCUMENT TITLE ===== -->
             <div style="text-align: center; margin-bottom: 30px;">
                 <h2 style="font-family: 'KFGQPC', Arial, sans-serif; font-size: 18px; font-weight: bold; color: #333; margin: 0;">
-                    نموذج ارشاد الطلاب لفصل {{ $semester ?? 'الصيف' }} {{ $academic_year ?? '2024/2025' }} المستوى الأول
+                    نموذج ارشاد الطلاب لفصل {{ $semester ?? 'الصيف' }} {{ $academic_year ?? '2024/2025' }} المستوى {{ $level ?? 'الأول' }}
                 </h2>
             </div>
             <!-- ===== STUDENT INFORMATION SECTION ===== -->
@@ -199,7 +199,7 @@
             <!-- ===== NOTICE SECTION ===== -->
             <div style="margin-bottom: 30px; text-align: justify; line-height: 1.6;">
                 <p style="margin: 0; font-size: 14px;">
-                    نحيطكم علماً بأن المقررات المسجلة في فصل الصيف من العام الأكاديمي الحالي 2024/2025 الخاصة بك هي على النحو التالي:
+                    نحيطكم علماً بأن المقررات المسجلة في فصل {{ $semester ?? 'الصيف' }} من العام الأكاديمي الحالي {{ $academic_year ?? '2024/2025' }} الخاصة بك هي على النحو التالي:
                 </p>
             </div>
             <!-- ===== COURSES TABLE SECTION ===== -->
@@ -242,9 +242,10 @@
             <div style="margin: 20px 0 20px 0;">
                 <strong>ملاحظات:</strong>
                 <ul style="font-size: 14px; margin-top: 8px; margin-bottom: 0; padding-right: 20px;">
-                    <li>يتعهد الطالب بتسجيل المقررات علي نظام معلومات الطالب SIS مطابق تماما للتسجيل الورقي الذي قام بالتوقيع عليه.</li>
+                    <li>يتعهد الطالب بتسجيل المقررات علي نظام معلومات الطالب <span style="font-family: 'DejaVu Sans', Arial, sans-serif;">SIS</span> مطابق تماما للتسجيل الورقي الذي قام بالتوقيع عليه.</li>
                     <li>في حالة رغبة الطالب في اجراء أي تعديل في تسجيل المقررات خلال فترة التسجيل الممكنة أن يتم ذلك بموافقة وتوقيع المرشد الأكاديمي أولاً.</li>
-                    <li>أيضا إتاحة المقرر في الفصل الصيفي يعتمد علي اكتمال الحد الأدنى لفتح المقرر طبقا للأعداد المقررة بلائحة الجامعة.</li>
+                    <li>أيضا إتاحة المقرر في الفصل {{ $semester ?? 'الصيف' }} يعتمد علي اكتمال الحد الأدنى لفتح المقرر طبقا للأعداد المقررة بلائحة الجامعة.</li>
+                    <li>لن يُعتمد تسجيل أي طالب لم يقم بسداد رسوم الفصل الدراسي على النظام <span style="font-family: 'DejaVu Sans', Arial, sans-serif;">SIS</span> فقط، وسيتم إلغاء تسجيله نهائيًا.</li>
                 </ul>
             </div>
             <!-- ===== SIGNATURES SECTION ON NEW PAGE ===== -->
@@ -309,7 +310,7 @@
         </div>
         <!-- ===== PAGE FOOTER ===== -->
         <htmlpagefooter name="page-footer">
-            <div style="width: 100%; text-align: center; font-size: 12px; color: #888; font-family: 'DejaVu Sans', Arial, sans-serif;">
+            <div style="width: 100%; text-align: right; font-size: 12px; color: #888; font-family: 'DejaVu Sans', Arial, sans-serif;">
                 تاريخ استخراج النموذج: {{ $enrollment_date ?? '---' }}
             </div>
         </htmlpagefooter>

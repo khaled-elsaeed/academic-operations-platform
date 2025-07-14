@@ -4,111 +4,129 @@
 
 @section('page-content')
 <div class="container-xxl flex-grow-1 container-p-y">
-  <!-- Statistics Cards -->
-  <div class="row g-4 mb-4">
-    <div class="col-sm-6 col-xl-4">
-      <x-ui.card.stat2 
-        id="exceptions"
-        label="Total Exceptions"
-        color="primary"
-        icon="bx bx-time"
-      />
-    </div>
-    <div class="col-sm-6 col-xl-4">
-      <x-ui.card.stat2 
-        id="active-exceptions"
-        label="Active Exceptions"
-        color="success"
-        icon="bx bx-check-circle"
-      />
-    </div>
-    <div class="col-sm-6 col-xl-4">
-      <x-ui.card.stat2 
-        id="inactive-exceptions"
-        label="Inactive Exceptions"
-        color="warning"
-        icon="bx bx-x-circle"
-      />
-    </div>
-  </div>
+    {{-- ===== PAGE HEADER & ACTION BUTTONS ===== --}}
+    <x-ui.page-header 
+        title="Credit Hours Exceptions"
+        description="Manage exceptions to credit hour limits for students."
+        icon="bx bx-error"
+    >
+        @can('credit_hours_exception.create')
+            <button class="btn btn-primary mx-2" 
+                    id="addExceptionBtn" 
+                    type="button" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#exceptionModal">
+                <i class="bx bx-plus me-1"></i> Add Exception
+            </button>
+        @endcan
+        <button class="btn btn-secondary"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#exceptionSearchCollapse"
+                aria-expanded="false"
+                aria-controls="exceptionSearchCollapse">
+            <i class="bx bx-filter-alt me-1"></i> Search
+        </button>
+    </x-ui.page-header>
 
-  <!-- Page Header and Actions -->
-  <x-ui.page-header 
-    title="Credit Hours Exceptions"
-    description="Manage credit hours exceptions for students and add new exceptions using the options on the right."
-    icon="bx bx-time"
-  >
-    <button class="btn btn-primary" id="addExceptionBtn" type="button" data-bs-toggle="modal" data-bs-target="#exceptionModal">
-      <i class="bx bx-plus me-1"></i> Add Exception
-    </button>
-  </x-ui.page-header>
-
-  <!-- Exceptions DataTable -->
-  <x-ui.datatable
-    :headers="['Student', 'Term', 'Additional Hours', 'Reason', 'Granted By', 'Status', 'Created', 'Action']"
-    :columns="[
-        ['data' => 'student_name', 'name' => 'student_name'],
-        ['data' => 'term_name', 'name' => 'term_name'],
-        ['data' => 'additional_hours', 'name' => 'additional_hours'],
-        ['data' => 'reason', 'name' => 'reason'],
-        ['data' => 'granted_by_name', 'name' => 'granted_by_name'],
-        ['data' => 'status', 'name' => 'status'],
-        ['data' => 'created_at', 'name' => 'created_at'],
-        ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
-    ]"
-    :ajax-url="route('credit-hours-exceptions.datatable')"
-    table-id="exceptions-table"
-  />
-
-  <!-- Add/Edit Exception Modal -->
-  <x-ui.modal 
-    id="exceptionModal"
-    title="Add/Edit Credit Hours Exception"
-    size="lg"
-    :scrollable="false"
-    class="exception-modal"
-  >
-    <x-slot name="slot">
-      <form id="exceptionForm">
-        <input type="hidden" id="exception_id" name="exception_id">
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label for="student_id" class="form-label">Student</label>
-            <select class="form-select select2" id="student_id" name="student_id" required>
-              <option value="">Select Student</option>
-            </select>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label for="term_id" class="form-label">Term</label>
-            <select class="form-select select2" id="term_id" name="term_id" required>
-              <option value="">Select Term</option>
-            </select>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label for="additional_hours" class="form-label">Additional Hours</label>
-            <input type="number" class="form-control" id="additional_hours" name="additional_hours" min="1" max="12" required>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label for="is_active" class="form-label">Status</label>
-            <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" checked>
-              <label class="form-check-label" for="is_active">Active</label>
-            </div>
-          </div>
-          <div class="col-12 mb-3">
-            <label for="reason" class="form-label">Reason</label>
-            <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="Reason for granting additional credit hours..."></textarea>
-          </div>
+    {{-- ===== ADVANCED SEARCH SECTION ===== --}}
+    <x-ui.advanced-search 
+        title="Advanced Search" 
+        formId="advancedExceptionSearch" 
+        collapseId="exceptionSearchCollapse"
+        :collapsed="false"
+    >
+        <div class="col-md-3">
+            <label for="search_student_name" class="form-label">Student Name:</label>
+            <input type="text" class="form-control" id="search_student_name" placeholder="Student Name">
         </div>
-      </form>
-    </x-slot>
-    <x-slot name="footer">
-      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-        Close
-      </button>
-      <button type="submit" class="btn btn-primary" id="saveExceptionBtn" form="exceptionForm">Save</button>
-    </x-slot>
-  </x-ui.modal>
+        <div class="col-md-3">
+            <label for="search_academic_id" class="form-label">Academic ID:</label>
+            <input type="text" class="form-control" id="search_academic_id" placeholder="Academic ID">
+        </div>
+        <div class="col-md-3">
+            <label for="search_national_id" class="form-label">National ID:</label>
+            <input type="text" class="form-control" id="search_national_id" placeholder="National ID">
+        </div>
+        <div class="col-md-3">
+            <label for="search_term" class="form-label">Term:</label>
+            <input type="text" class="form-control" id="search_term" placeholder="Term">
+        </div>
+        <div class="w-100"></div>
+        <button class="btn btn-outline-secondary mt-2 ms-2" id="clearExceptionFiltersBtn" type="button">
+            <i class="bx bx-x"></i> Clear Filters
+        </button>
+    </x-ui.advanced-search>
+
+    {{-- ===== DATA TABLE ===== --}}
+    <x-ui.datatable
+        :headers="['ID', 'Student', 'Academic ID', 'National ID', 'Term', 'Additional Hours', 'Status', 'Reason', 'Action']"
+        :columns="[
+            ['data' => 'id', 'name' => 'id'],
+            ['data' => 'student', 'name' => 'student'],
+            ['data' => 'academic_id', 'name' => 'academic_id'],
+            ['data' => 'national_id', 'name' => 'national_id'],
+            ['data' => 'term', 'name' => 'term'],
+            ['data' => 'additional_hours', 'name' => 'additional_hours'],
+            ['data' => 'is_active', 'name' => 'is_active'],
+            ['data' => 'reason', 'name' => 'reason'],
+            ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
+        ]"
+        :ajax-url="route('credit-hours-exceptions.datatable')"
+        table-id="credit-hours-exceptions-table"
+        :filter-fields="['search_student_name','search_academic_id','search_national_id','search_term']"
+    />
+
+    {{-- ===== MODALS SECTION ===== --}}
+    {{-- Add/Edit Exception Modal --}}
+    <x-ui.modal 
+        id="exceptionModal"
+        title="Add/Edit Credit Hours Exception"
+        size="lg"
+        :scrollable="false"
+        class="exception-modal"
+    >
+        <x-slot name="slot">
+            <form id="exceptionForm">
+                <input type="hidden" id="exception_id" name="exception_id">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="student_id" class="form-label">Student</label>
+                        <select class="form-select select2" id="student_id" name="student_id" required>
+                            <option value="">Select Student</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="term_id" class="form-label">Term</label>
+                        <select class="form-select select2" id="term_id" name="term_id" required>
+                            <option value="">Select Term</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="additional_hours" class="form-label">Additional Hours</label>
+                        <input type="number" class="form-control" id="additional_hours" name="additional_hours" min="1" max="12" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="is_active" class="form-label">Status</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" checked>
+                            <label class="form-check-label" for="is_active">Active</label>
+                        </div>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label for="reason" class="form-label">Reason</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="Reason for granting additional credit hours..."></textarea>
+                    </div>
+                </div>
+            </form>
+        </x-slot>
+        <x-slot name="footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                Close
+            </button>
+            <button type="submit" class="btn btn-primary" id="saveExceptionBtn" form="exceptionForm">Save</button>
+        </x-slot>
+    </x-ui.modal>
 </div>
 @endsection
 
@@ -417,6 +435,7 @@ function handleExceptionFormSubmit() {
         }
       },
       error: function (xhr) {
+        $('#exceptionModal').modal('hide');
         const message = xhr.responseJSON?.message || 'An error occurred';
         showError(message);
       }
@@ -549,6 +568,21 @@ function handleDeleteExceptionBtn() {
 }
 
 // ===========================
+// SEARCH FUNCTIONALITY
+// ===========================
+const SearchManager = {
+  initializeAdvancedSearch() {
+    $('#search_student_name, #search_academic_id, #search_national_id, #search_term').on('keyup change', function() {
+      $('#credit-hours-exceptions-table').DataTable().ajax.reload();
+    });
+    $('#clearExceptionFiltersBtn').on('click', function() {
+      $('#search_student_name, #search_academic_id, #search_national_id, #search_term').val('');
+      $('#credit-hours-exceptions-table').DataTable().ajax.reload();
+    });
+  }
+};
+
+// ===========================
 // INITIALIZATION
 // ===========================
 
@@ -563,6 +597,7 @@ $(document).ready(function() {
   handleDeactivateExceptionBtn();
   handleActivateExceptionBtn();
   handleDeleteExceptionBtn();
+  SearchManager.initializeAdvancedSearch();
   
   // Handle modal cleanup when closed
   $('#exceptionModal').on('hidden.bs.modal', function () {

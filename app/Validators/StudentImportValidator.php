@@ -28,7 +28,7 @@ class StudentImportValidator
                 'max:255'
             ],
             'academic_id'    => 'required|max:50',
-            // Accept either a valid Egyptian national ID (14 digits) or a passport number (alphanumeric, 6-20 chars)
+            // Accept either a valid Egyptian national ID (14 digits) or a passport number
             'national_id'    => [
                 'required',
                 'max:50',

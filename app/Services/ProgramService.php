@@ -21,18 +21,20 @@ class ProgramService
         $programsWithStudents = Program::has('students')->count();
         $programsWithoutStudents = Program::doesntHave('students')->count();
 
+        $lastUpdateTime = formatDate(Program::max('updated_at'));
+
         return [
             'total' => [
                 'total' => $totalPrograms,
-                'lastUpdateTime' => formatDate(now(), 'Y-m-d H:i:s')
+                'lastUpdateTime' => $lastUpdateTime
             ],
             'withStudents' => [
                 'total' => $programsWithStudents,
-                'lastUpdateTime' => formatDate(now(), 'Y-m-d H:i:s')
+                'lastUpdateTime' => $lastUpdateTime
             ],
             'withoutStudents' => [
                 'total' => $programsWithoutStudents,
-                'lastUpdateTime' => formatDate(now(), 'Y-m-d H:i:s')
+                'lastUpdateTime' => $lastUpdateTime
             ]
         ];
     }
@@ -44,9 +46,13 @@ class ProgramService
      */
     public function getDatatable(): JsonResponse
     {
-        $programs = Program::with(['faculty', 'students']);
+        $query = Program::with(['faculty', 'students']);
+        
+        $request = request();
 
-        return DataTables::of($programs)
+        $this->applySearchFilters($query, $request);
+
+        return DataTables::of($query)
             ->addColumn('faculty_name', function ($program) {
                 return $program->faculty ? $program->faculty->name : 'N/A';
             })
@@ -58,6 +64,34 @@ class ProgramService
             })
             ->rawColumns(['action'])
             ->make(true);
+    }
+
+    /**
+     * Apply search filters to the query.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param \Illuminate\Http\Request $request
+     * @return void
+     */
+    private function applySearchFilters($query, $request): void
+    {
+        // Filter by program name
+        $searchName = $request->input('search_name');
+        if (!empty($searchName)) {
+            $query->whereRaw('LOWER(programs.name) LIKE ?', ['%' . mb_strtolower($searchName) . '%']);
+        }
+
+        // Filter by program code
+        $searchCode = $request->input('search_code');
+        if (!empty($searchCode)) {
+            $query->whereRaw('LOWER(programs.code) LIKE ?', ['%' . mb_strtolower($searchCode) . '%']);
+        }
+
+        // Filter by faculty
+        $searchFaculty = $request->input('search_faculty');
+        if (!empty($searchFaculty)) {
+            $query->where('programs.faculty_id', $searchFaculty);
+        }
     }
 
     /**
@@ -90,9 +124,18 @@ class ProgramService
      *
      * @param array $data
      * @return Program
+     * @throws BusinessValidationException
      */
     public function createProgram(array $data): Program
     {
+        $existingProgram = Program::where('code', $data['code'])
+            ->where('faculty_id', $data['faculty_id'])
+            ->first();
+
+        if ($existingProgram) {
+            throw new BusinessValidationException('A program with this code already exists in the selected faculty.');
+        }
+
         return Program::create([
             'name' => $data['name'],
             'code' => $data['code'],
@@ -117,9 +160,19 @@ class ProgramService
      * @param Program $program
      * @param array $data
      * @return Program
+     * @throws BusinessValidationException
      */
     public function updateProgram(Program $program, array $data): Program
     {
+        $existingProgram = Program::where('code', $data['code'])
+            ->where('faculty_id', $data['faculty_id'])
+            ->where('id', '!=', $program->id)
+            ->first();
+
+        if ($existingProgram) {
+            throw new BusinessValidationException('A program with this code already exists in the selected faculty.');
+        }
+
         $program->update([
             'name' => $data['name'],
             'code' => $data['code'],

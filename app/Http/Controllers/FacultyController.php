@@ -123,4 +123,18 @@ class FacultyController extends Controller
             return errorResponse('Internal server error.', [], 500);
         }
     }
+
+    /**
+     * Get all faculties (for dropdown and forms)
+     */
+    public function all(): JsonResponse
+    {
+        try {
+            $faculties = $this->facultyService->getAll();
+            return successResponse('Faculties fetched successfully.', $faculties);
+        } catch (Exception $e) {
+            logError('FacultyController@all', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
 } 

@@ -11,7 +11,7 @@ class Datatable extends Component
     public array $headers;
     public array $columns;
     public string $ajaxUrl;
-    public array $filters;
+    public array $filterFields;
     public string $tableId;
 
     /**
@@ -21,13 +21,13 @@ class Datatable extends Component
         array $headers = [],
         array $columns = [],
         string $ajaxUrl = '',
-        array $filters = [],
+        array $filterFields = [],
         string $tableId = 'datatable'
     ) {
         $this->headers = $headers;
         $this->columns = $columns;
         $this->ajaxUrl = $ajaxUrl;
-        $this->filters = $filters;
+        $this->filterFields = $filterFields;
         $this->tableId = $tableId;
     }
 

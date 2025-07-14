@@ -25,7 +25,14 @@ class EnrollmentDocumentService
     private const DEFAULT_ACADEMIC_YEAR = '2024-2025';
     private const DEFAULT_SEMESTER = 'الصيف';
     private const DEFAULT_LEVEL = 'الأول';
-    private const VALID_LEVELS = ['1', '2', '3', '4', '5', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس'];
+    private const VALID_LEVELS = ['1', '2', '3', '4', '5'];
+    private const LEVEL_MAPPING = [
+        '1' => 'الأول',
+        '2' => 'الثاني', 
+        '3' => 'الثالث',
+        '4' => 'الرابع',
+        '5' => 'الخامس',
+    ];
     private const FONT_NAME = 'kfgqpc';
     private const FONT_DIR = 'public/fonts/KFGQPC';
     private const FONT_FILES = [
@@ -76,7 +83,7 @@ class EnrollmentDocumentService
             
             $pdfData = $this->prepareDataForPdf($studentWithEnrollments, $enrollments);
             // Add latest enrollment date as 'enrollment_date'
-            $pdfData['enrollment_date'] = now()->format('Y-m-d');
+            $pdfData['enrollment_date'] = \Carbon\Carbon::now('Africa/Cairo')->translatedFormat('l d/m/Y h:i A');
             $html = view('pdf.enrollment', $pdfData)->render();
             
             $filename = $this->generateFilename($student, 'pdf');
@@ -248,6 +255,7 @@ class EnrollmentDocumentService
     private function prepareStudentData(Student $student): array
     {
         $levelName = $student->level->name ?? null;
+        $mappedLevel = $this->mapLevel($levelName);
 
         $data = [
             'academic_number' => $student->academic_id,
@@ -255,7 +263,7 @@ class EnrollmentDocumentService
             'national_id' => $student->national_id,
             'program_name' => $student->program->name ?? '',
             'student_phone' => $student->phone ?? '',
-            'level' => (in_array($levelName, self::VALID_LEVELS) ? $levelName : self::DEFAULT_LEVEL),
+            'level' => $mappedLevel,
             'academic_year' => self::DEFAULT_ACADEMIC_YEAR,
             'semester' => self::DEFAULT_SEMESTER
         ];
@@ -271,6 +279,21 @@ class EnrollmentDocumentService
         ]);
 
         return $data;
+    }
+
+    /**
+     * Map level to the required format 
+     *
+     * @param string|null $levelName
+     * @return string
+     */
+    private function mapLevel(?string $levelName): string
+    {
+        if (!$levelName || !in_array($levelName, self::VALID_LEVELS)) {
+            return self::LEVEL_MAPPING[self::DEFAULT_LEVEL];
+        }
+
+        return self::LEVEL_MAPPING[$levelName] ?? self::LEVEL_MAPPING[self::DEFAULT_LEVEL];
     }
 
     /**
@@ -382,8 +405,7 @@ class EnrollmentDocumentService
      */
     private function addWatermark(\Mpdf\Mpdf $mpdf): void
     {
-        // Watermark text: only "ACADOPS", font: "endlight"
-        $watermarkText = 'ACADOPS';
+        $watermarkText = 'ACADCSE';
 
         // Set watermark text with custom alpha (transparency) - 0.1 = very transparent
         $mpdf->SetWatermarkText($watermarkText, 0.1);

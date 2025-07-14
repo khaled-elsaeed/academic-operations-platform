@@ -38,7 +38,6 @@ Route::middleware(['auth'])
         Route::delete('{student}', 'destroy')->name('destroy')->middleware('can:student.delete');
 
         // ===== Download Operations =====
-        Route::get('{student}/download/pdf', 'downloadPdf')->name('download.pdf')->middleware('can:student.view');
-        Route::get('{student}/download/word', 'downloadWord')->name('download.word')->middleware('can:student.view');
-        Route::get('{student}/download-options', 'getDownloadOptions')->name('download.options')->middleware('can:student.view');
+        Route::get('{student}/download/pdf', 'downloadPdf')->name('download.pdf')->middleware('can:student.download');
+        Route::get('{student}/download/word', 'downloadWord')->name('download.word')->middleware('can:student.download');
     });

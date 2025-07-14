@@ -15,6 +15,7 @@ Route::middleware(['auth'])
         // ===== Specific Routes First =====
         Route::get('datatable', 'datatable')->name('datatable')->middleware('can:faculty.view');
         Route::get('stats', 'stats')->name('stats')->middleware('can:faculty.view');
+        Route::get('all', 'all')->name('all');
 
         // ===== CRUD Operations =====
         // List & View

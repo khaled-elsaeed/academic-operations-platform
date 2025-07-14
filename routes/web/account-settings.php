@@ -13,11 +13,11 @@ Route::middleware(['auth'])
     ->controller(AccountSettingsController::class)
     ->group(function () {
         // Display account settings page
-        Route::get('/', 'index')->name('index');
+        Route::get('/', 'index')->name('index')->middleware('can:account_settings.view');
         
         // Update account settings
-        Route::put('/', 'update')->name('update');
+        Route::put('/', 'update')->name('update')->middleware('can:account_settings.edit');
         
         // Update password
-        Route::put('/password', 'updatePassword')->name('update-password');
+        Route::put('/password', 'updatePassword')->name('update-password')->middleware('can:account_settings.password');
     }); 

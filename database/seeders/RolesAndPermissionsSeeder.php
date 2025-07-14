@@ -25,6 +25,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'student.create',
             'student.edit',
             'student.delete',
+            'student.download',
             'faculty.view',
             'faculty.create',
             'faculty.edit',
@@ -41,6 +42,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'enrollment.create',
             'enrollment.edit',
             'enrollment.delete',
+            'enrollment.import',
             'term.view',
             'term.create',
             'term.edit',
@@ -54,6 +56,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'home.view',
             'home.admin',
             'home.advisor',
+            // Account Settings Permissions
+            'account_settings.view',
+            'account_settings.edit',
+            'account_settings.password',
+            // Academic Advisor Access Permissions
+            'academic_advisor_access.view',
+            'academic_advisor_access.create',
+            'academic_advisor_access.edit',
+            'academic_advisor_access.delete',
         ];
 
         foreach ($permissions as $permission) {
@@ -77,10 +88,15 @@ class RolesAndPermissionsSeeder extends Seeder
         // Advisor gets limited permissions, but only assign those not already assigned
         $advisorPermissions = [
             'student.view',
+            'student.download',
             'enrollment.view',
             'enrollment.create',
             'home.view',
             'home.advisor',
+            // Account Settings Permissions for advisor
+            'account_settings.view',
+            'account_settings.edit',
+            'account_settings.password',
         ];
         $advisorCurrentPermissions = $advisorRole->permissions->pluck('name')->toArray();
         $advisorNewPermissions = array_diff($advisorPermissions, $advisorCurrentPermissions);

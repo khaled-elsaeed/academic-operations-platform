@@ -2,816 +2,1304 @@
 
 @section('title', 'Admin Home | AcadOps')
 
-
 @section('page-content')
 <div class="container-xxl flex-grow-1 container-p-y">
-  <!-- Statistics Cards -->
-  <div class="row g-4 mb-4">
-    <div class="col-sm-6 col-xl-4">
-      <x-ui.card.stat2 
-        id="students"
-        label="Total Students"
-        color="primary"
+    
+    {{-- ===== STATISTICS CARDS ===== --}}
+    <div class="row g-4 mb-4">
+        <div class="col-sm-6 col-xl-4">
+            <x-ui.card.stat2 
+                id="students"
+                label="Total Students"
+                color="primary"
+                icon="bx bx-group"
+            />
+        </div>
+        <div class="col-sm-6 col-xl-4">
+            <x-ui.card.stat2 
+                id="male-students"
+                label="Total Male Students"
+                color="danger"
+                icon="bx bx-user-plus"
+            />
+        </div>
+        <div class="col-sm-6 col-xl-4">
+            <x-ui.card.stat2 
+                id="female-students"
+                label="Total Female Students"
+                color="success"
+                icon="bx bx-user-check"
+            />
+        </div>
+    </div>
+
+    {{-- ===== PAGE HEADER & ACTION BUTTONS ===== --}}
+    <x-ui.page-header 
+        title="Students"
+        description="Manage all student records, add new students, or import in bulk using the options on the right."
         icon="bx bx-group"
-      />
-    </div>
-    <div class="col-sm-6 col-xl-4">
-      <x-ui.card.stat2 
-        id="male-students"
-        label="Total Male Students"
-        color="danger"
-        icon="bx bx-user-plus"
-      />
-    </div>
-    <div class="col-sm-6 col-xl-4">
-      <x-ui.card.stat2 
-        id="female-students"
-        label="Total Female Students"
-        color="success"
-        icon="bx bx-user-check"
-      />
-    </div>
-  </div>
+    >
+        @can('student.create')
+            <button class="btn btn-success" 
+                    id="importStudentsBtn" 
+                    type="button" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#importStudentsModal">
+                <i class="bx bx-upload me-1"></i> Import Students
+            </button>
+            
+            <button class="btn btn-primary mx-2" 
+                    id="addStudentBtn" 
+                    type="button" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#studentModal">
+                <i class="bx bx-plus me-1"></i> Add Student
+            </button>
+        @endcan
+        
+        <button class="btn btn-secondary"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#studentSearchCollapse"
+                aria-expanded="false"
+                aria-controls="studentSearchCollapse">
+            <i class="bx bx-filter-alt me-1"></i> Search
+        </button>
+    </x-ui.page-header>
 
-  <!-- Page Header and Actions -->
-  <x-ui.page-header 
-    title="Students"
-    description="Manage all student records, add new students, or import in bulk using the options on the right."
-    icon="bx bx-group"
-  >
-    @can('student.create')
-    <button class="btn btn-success me-2" id="importStudentsBtn" type="button" data-bs-toggle="modal" data-bs-target="#importStudentsModal">
-      <i class="bx bx-upload me-1"></i> Import Students
-    </button>
-    <button class="btn btn-primary" id="addStudentBtn" type="button" data-bs-toggle="modal" data-bs-target="#studentModal">
-      <i class="bx bx-plus me-1"></i> Add Student
-    </button>
-    @endcan
-  </x-ui.page-header>
-
-  <!-- Students DataTable -->
-  <x-ui.datatable
-    :headers="['ID', 'Name (EN)', 'Name (AR)', 'Academic ID', 'National ID', 'Academic Email', 'Level', 'CGPA', 'Gender', 'Program', 'Action']"
-    :columns="[
-        ['data' => 'id', 'name' => 'id'],
-        ['data' => 'name_en', 'name' => 'name_en'],
-        ['data' => 'name_ar', 'name' => 'name_ar'],
-        ['data' => 'academic_id', 'name' => 'academic_id'],
-        ['data' => 'national_id', 'name' => 'national_id'],
-        ['data' => 'academic_email', 'name' => 'academic_email'],
-        ['data' => 'level', 'name' => 'level'],
-        ['data' => 'cgpa', 'name' => 'cgpa'],
-        ['data' => 'gender', 'name' => 'gender'],
-        ['data' => 'program', 'name' => 'program', 'orderable' => false, 'searchable' => false],
-        ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
-    ]"
-                    :ajax-url="route('students.datatable')"
-    table-id="students-table"
-  />
-
-  <!-- Add/Edit Student Modal -->
-  <x-ui.modal 
-    id="studentModal"
-    title="Add/Edit Student"
-    size="lg"
-    :scrollable="true"
-    class="student-modal"
-  >
-    <x-slot name="slot">
-      <form id="studentForm">
-        <input type="hidden" id="student_id" name="student_id">
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label for="name_en" class="form-label">Name (EN)</label>
-            <input type="text" class="form-control" id="name_en" name="name_en" required>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label for="name_ar" class="form-label">Name (AR)</label>
-            <input type="text" class="form-control" id="name_ar" name="name_ar" required>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label for="academic_id" class="form-label">Academic ID</label>
-            <input type="text" class="form-control" id="academic_id" name="academic_id" required>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label for="national_id" class="form-label">National ID</label>
-            <input type="text" class="form-control" id="national_id" name="national_id" required>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label for="academic_email" class="form-label">Academic Email</label>
-            <input type="email" class="form-control" id="academic_email" name="academic_email" required>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label for="level_id" class="form-label">Level</label>
-            <select class="form-control" id="level_id" name="level_id" required>
-              <option value="">Select Level</option>
-              <!-- Options will be loaded via AJAX -->
-            </select>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label for="cgpa" class="form-label">CGPA</label>
-            <input type="number" step="0.01" class="form-control" id="cgpa" name="cgpa" required>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label for="gender" class="form-label">Gender</label>
-            <select class="form-control" id="gender" name="gender" required>
-              <option value="">Select Gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
-          </div>
-          <div class="col-md-6 mb-3">
-            <label for="program_id" class="form-label">Program</label>
-            <select class="form-control" id="program_id" name="program_id" required>
-              <option value="">Select Program</option>
-              <!-- Options will be loaded via AJAX -->
-            </select>
-          </div>
+    {{-- ===== ADVANCED SEARCH SECTION ===== --}}
+    <x-ui.advanced-search 
+        title="Advanced Search" 
+        formId="advancedStudentSearch" 
+        collapseId="studentSearchCollapse"
+        :collapsed="false"
+    >
+        <div class="col-md-4">
+            <label for="search_name" class="form-label">Name:</label>
+            <input type="text" class="form-control" id="search_name" placeholder="Student Name">
         </div>
-      </form>
-    </x-slot>
-    <x-slot name="footer">
-      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-        Close
-      </button>
-      <button type="submit" class="btn btn-primary" id="saveStudentBtn" form="studentForm">Save</button>
-    </x-slot>
-  </x-ui.modal>
-
-  <!-- Import Students Modal -->
-  <x-ui.modal 
-    id="importStudentsModal"
-    title="Import Students"
-    size="md"
-    :scrollable="false"
-    class="import-students-modal"
-  >
-    <x-slot name="slot">
-      <form id="importStudentsForm" enctype="multipart/form-data">
-        <div class="mb-3">
-          <label for="students_file" class="form-label">Upload Excel File</label>
-          <input type="file" class="form-control" id="students_file" name="students_file" accept=".xlsx,.xls" required>
+        
+        <div class="col-md-4">
+            <label for="search_national_id" class="form-label">National ID:</label>
+            <input type="text" class="form-control" id="search_national_id" placeholder="National ID">
         </div>
-        <div class="alert alert-info d-flex align-items-center justify-content-between p-3 mb-3">
-          <div>
-            <i class="bx bx-info-circle me-2"></i>
-            <span class="small">Use the template for correct student data formatting.</span>
-          </div>
-                          <a href="{{ route('students.template') }}" class="btn btn-sm btn-outline-primary" download>
-            <i class="bx bx-download me-1"></i>Template
-          </a>
+        
+        <div class="col-md-4">
+            <label for="search_academic_id" class="form-label">Academic ID:</label>
+            <input type="text" class="form-control" id="search_academic_id" placeholder="Academic ID">
         </div>
-      </form>
-    </x-slot>
-    <x-slot name="footer">
-      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-        Close
-      </button>
-      <button type="submit" class="btn btn-success" id="importStudentsSubmitBtn" form="importStudentsForm">Import</button>
-    </x-slot>
-  </x-ui.modal>
+        
+        <div class="w-100"></div>
+        
+        <div class="col-md-4">
+            <label for="search_gender" class="form-label">Gender:</label>
+            <select class="form-control" id="search_gender">
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+        </div>
+        
+        <div class="col-md-4">
+            <label for="search_program" class="form-label">Program:</label>
+            <select class="form-control" id="search_program">
+                <option value="">Select Program</option>
+                <!-- Options loaded via AJAX -->
+            </select>
+        </div>
+        
+        <div class="col-md-4">
+            <label for="search_level" class="form-label">Level:</label>
+            <select class="form-control" id="search_level">
+                <option value="">Select Level</option>
+                <!-- Options loaded via AJAX -->
+            </select>
+        </div>
+        
+        <button class="btn btn-outline-secondary" id="clearFiltersBtn" type="button">
+            <i class="bx bx-x"></i> Clear Filters
+        </button>
+    </x-ui.advanced-search>
 
-  {{-- Add the modal for downloading enrollment document by term --}}
-  <x-ui.modal 
-      id="downloadEnrollmentModal"
-      title="Download Enrollment Document"
-      size="md"
-      :scrollable="false"
-      class="download-enrollment-modal"
-  >
-      <x-slot name="slot">
-          <form id="downloadEnrollmentForm">
-              <input type="hidden" id="modal_student_id" name="student_id">
-              <input type="hidden" id="download_type" name="download_type">
-              <div class="mb-3">
-                  <label for="term_id" class="form-label">Select Term <span class="text-danger">(Required)</span></label>
-                  <select class="form-control" id="term_id" name="term_id" required>
-                  </select>
-                  <small class="form-text text-muted">You must select a term to download the enrollment document.</small>
-              </div>
-          </form>
-      </x-slot>
-      <x-slot name="footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-              Close
-          </button>
-          <button type="button" class="btn btn-primary" id="downloadEnrollmentBtn">Download</button>
-      </x-slot>
-  </x-ui.modal>
+    {{-- ===== DATA TABLE ===== --}}
+    <x-ui.datatable
+        :headers="[
+            'ID', 
+            'Name (EN)', 
+            'Name (AR)', 
+            'Academic ID', 
+            'National ID', 
+            'Academic Email', 
+            'Level', 
+            'CGPA', 
+            'Gender', 
+            'Program', 
+            'Action'
+        ]"
+        :columns="[
+            ['data' => 'id', 'name' => 'id'],
+            ['data' => 'name_en', 'name' => 'name_en'],
+            ['data' => 'name_ar', 'name' => 'name_ar'],
+            ['data' => 'academic_id', 'name' => 'academic_id'],
+            ['data' => 'national_id', 'name' => 'national_id'],
+            ['data' => 'academic_email', 'name' => 'academic_email'],
+            ['data' => 'level', 'name' => 'level'],
+            ['data' => 'cgpa', 'name' => 'cgpa'],
+            ['data' => 'gender', 'name' => 'gender'],
+            ['data' => 'program', 'name' => 'program', 'orderable' => false, 'searchable' => false],
+            ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
+        ]"
+        :ajax-url="route('students.datatable')"
+        table-id="students-table"
+        :filter-fields="[
+            'search_name',
+            'search_national_id',
+            'search_academic_id',
+            'search_gender',
+            'search_program',
+            'search_level'
+        ]"
+    />
+
+    {{-- ===== MODALS SECTION ===== --}}
+    
+    {{-- Add/Edit Student Modal --}}
+    <x-ui.modal 
+        id="studentModal"
+        title="Add/Edit Student"
+        size="lg"
+        :scrollable="true"
+        class="student-modal"
+    >
+        <x-slot name="slot">
+            <form id="studentForm">
+                <input type="hidden" id="student_id" name="student_id">
+                
+                <div class="row">
+                    {{-- Name Fields --}}
+                    <div class="col-md-6 mb-3">
+                        <label for="name_en" class="form-label">Name (EN)</label>
+                        <input type="text" class="form-control" id="name_en" name="name_en" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="name_ar" class="form-label">Name (AR)</label>
+                        <input type="text" class="form-control" id="name_ar" name="name_ar" required>
+                    </div>
+                    
+                    {{-- ID Fields --}}
+                    <div class="col-md-6 mb-3">
+                        <label for="academic_id" class="form-label">Academic ID</label>
+                        <input type="text" class="form-control" id="academic_id" name="academic_id" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="national_id" class="form-label">National ID</label>
+                        <input type="text" class="form-control" id="national_id" name="national_id" required>
+                    </div>
+                    
+                    {{-- Email and Level --}}
+                    <div class="col-md-6 mb-3">
+                        <label for="academic_email" class="form-label">Academic Email</label>
+                        <input type="email" class="form-control" id="academic_email" name="academic_email" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="level_id" class="form-label">Level</label>
+                        <select class="form-control" id="level_id" name="level_id" required>
+                            <option value="">Select Level</option>
+                            <!-- Options will be loaded via AJAX -->
+                        </select>
+                    </div>
+                    
+                    {{-- CGPA and Gender --}}
+                    <div class="col-md-6 mb-3">
+                        <label for="cgpa" class="form-label">CGPA</label>
+                        <input type="number" step="0.01" class="form-control" id="cgpa" name="cgpa" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="gender" class="form-label">Gender</label>
+                        <select class="form-control" id="gender" name="gender" required>
+                            <option value="">Select Gender</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                    
+                    {{-- Program --}}
+                    <div class="col-md-6 mb-3">
+                        <label for="program_id" class="form-label">Program</label>
+                        <select class="form-control" id="program_id" name="program_id" required>
+                            <option value="">Select Program</option>
+                            <!-- Options will be loaded via AJAX -->
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </x-slot>
+        
+        <x-slot name="footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                Close
+            </button>
+            <button type="submit" class="btn btn-primary" id="saveStudentBtn" form="studentForm">
+                Save
+            </button>
+        </x-slot>
+    </x-ui.modal>
+
+    {{-- Import Students Modal --}}
+    <x-ui.modal 
+        id="importStudentsModal"
+        title="Import Students"
+        size="md"
+        :scrollable="false"
+        class="import-students-modal"
+    >
+        <x-slot name="slot">
+            <form id="importStudentsForm" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="students_file" class="form-label">Upload Excel File</label>
+                    <input type="file" 
+                           class="form-control" 
+                           id="students_file" 
+                           name="students_file" 
+                           accept=".xlsx,.xls" 
+                           required>
+                </div>
+                
+                <div class="alert alert-info d-flex align-items-center justify-content-between p-3 mb-3">
+                    <div>
+                        <i class="bx bx-info-circle me-2"></i>
+                        <span class="small">Use the template for correct student data formatting.</span>
+                    </div>
+                    <button type="button" 
+                            class="btn btn-sm btn-outline-primary" 
+                            id="downloadTemplateBtn">
+                        <i class="bx bx-download me-1"></i>Template
+                    </button>
+                </div>
+            </form>
+        </x-slot>
+        
+        <x-slot name="footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                Close
+            </button>
+            <button type="submit" class="btn btn-success" id="importStudentsSubmitBtn" form="importStudentsForm">
+                Import
+            </button>
+        </x-slot>
+    </x-ui.modal>
+
+    {{-- Download Enrollment Document Modal --}}
+    <x-ui.modal 
+        id="downloadEnrollmentModal"
+        title="Download Enrollment Document"
+        size="md"
+        :scrollable="false"
+        class="download-enrollment-modal"
+    >
+        <x-slot name="slot">
+            <form id="downloadEnrollmentForm">
+                <input type="hidden" id="modal_student_id" name="student_id">
+                <input type="hidden" id="download_type" name="download_type">
+                
+                <div class="mb-3">
+                    <label for="term_id" class="form-label">
+                        Select Term 
+                        <span class="text-danger">(Required)</span>
+                    </label>
+                    <select class="form-control" id="term_id" name="term_id" required>
+                        <!-- Options will be loaded via AJAX -->
+                    </select>
+                    <small class="form-text text-muted">
+                        You must select a term to download the enrollment document.
+                    </small>
+                </div>
+            </form>
+        </x-slot>
+        
+        <x-slot name="footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                Close
+            </button>
+            <button type="button" class="btn btn-primary" id="downloadEnrollmentBtn">
+                Download
+            </button>
+        </x-slot>
+    </x-ui.modal>
+
 </div>
 @endsection
-
 @push('scripts')
 <script>
 /**
  * Student Management System JavaScript
+ * Organized and structured for better maintainability
  * Handles CRUD operations, imports, and document downloads for students
  */
+
+// ===========================
+// CONSTANTS AND CONFIGURATION
+// ===========================
+
+const ROUTES = {
+  programs: {
+    all: '{{ route('programs.all') }}'
+  },
+  levels: {
+    all: '{{ route('levels.all') }}'
+  },
+  terms: {
+    all: '{{ route('terms.all') }}'
+  },
+  students: {
+    stats: '{{ route('students.stats') }}',
+    store: '{{ route('students.store') }}',
+    show: '{{ route('students.show', ':id') }}',
+    destroy: '{{ route('students.destroy', ':id') }}',
+    import: '{{ route('students.import') }}',
+    template: '{{ route('students.template') }}',
+    downloadPdf: '{{ route('students.download.pdf', ':id') }}',
+    downloadWord: '{{ route('students.download.word', ':id') }}'
+  }
+};
+
+const SELECTORS = {
+  // Forms
+  studentForm: '#studentForm',
+  importForm: '#importStudentsForm',
+  
+  // Modals
+  studentModal: '#studentModal',
+  importModal: '#importStudentsModal',
+  downloadModal: '#downloadEnrollmentModal',
+  
+  // Buttons
+  addStudentBtn: '#addStudentBtn',
+  saveStudentBtn: '#saveStudentBtn',
+  importSubmitBtn: '#importStudentsSubmitBtn',
+  downloadBtn: '#downloadEnrollmentBtn',
+  downloadTemplateBtn: '#downloadTemplateBtn',
+  clearFiltersBtn: '#clearFiltersBtn',
+  
+  // Tables
+  studentsTable: '#students-table',
+  
+  // Search inputs
+  searchName: '#search_name',
+  searchNationalId: '#search_national_id',
+  searchAcademicId: '#search_academic_id',
+  searchGender: '#search_gender',
+  searchProgram: '#search_program',
+  searchLevel: '#search_level'
+};
 
 // ===========================
 // UTILITY FUNCTIONS
 // ===========================
 
-/**
- * Shows success notification
- * @param {string} message - Success message to display
- */
-function showSuccess(message) {
-  Swal.fire({
-    toast: true,
-    position: 'top-end',
-    icon: 'success',
-    title: message,
-    showConfirmButton: false,
-    timer: 2500,
-    timerProgressBar: true
-  });
-}
+const Utils = {
+  /**
+   * Shows success notification
+   * @param {string} message - Success message to display
+   */
+  showSuccess(message) {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: message,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true
+    });
+  },
 
-/**
- * Shows error notification
- * @param {string} message - Error message to display
- */
-function showError(message) {
-  Swal.fire({
-    title: 'Error',
-    html: message,
-    icon: 'error'
-  });
-}
+  /**
+   * Shows error notification
+   * @param {string} message - Error message to display
+   */
+  showError(message) {
+    Swal.fire({
+      title: 'Error',
+      html: message,
+      icon: 'error'
+    });
+  },
 
-/**
- * Shows/hides loading spinners and content for stat2 component
- * @param {string} elementId - Base element ID
- * @param {boolean} isLoading - Whether to show loading state
- */
-function toggleLoadingState(elementId, isLoading) {
-  const $value = $(`#${elementId}-value`);
-  const $loader = $(`#${elementId}-loader`);
-  const $updated = $(`#${elementId}-last-updated`);
-  const $updatedLoader = $(`#${elementId}-last-updated-loader`);
+  /**
+   * Shows/hides loading spinners and content for stat2 component
+   * @param {string} elementId - Base element ID
+   * @param {boolean} isLoading - Whether to show loading state
+   */
+  toggleLoadingState(elementId, isLoading) {
+    const $value = $(`#${elementId}-value`);
+    const $loader = $(`#${elementId}-loader`);
+    const $updated = $(`#${elementId}-last-updated`);
+    const $updatedLoader = $(`#${elementId}-last-updated-loader`);
 
-  if (isLoading) {
-    $value.addClass('d-none');
-    $loader.removeClass('d-none');
-    $updated.addClass('d-none');
-    $updatedLoader.removeClass('d-none');
-  } else {
-    $value.removeClass('d-none');
-    $loader.addClass('d-none');
-    $updated.removeClass('d-none');
-    $updatedLoader.addClass('d-none');
+    if (isLoading) {
+      $value.addClass('d-none');
+      $loader.removeClass('d-none');
+      $updated.addClass('d-none');
+      $updatedLoader.removeClass('d-none');
+    } else {
+      $value.removeClass('d-none');
+      $loader.addClass('d-none');
+      $updated.removeClass('d-none');
+      $updatedLoader.addClass('d-none');
+    }
+  },
+
+  /**
+   * Replaces :id placeholder in route URLs
+   * @param {string} route - Route URL with :id placeholder
+   * @param {number} id - ID to replace placeholder with
+   * @returns {string} - Updated URL
+   */
+  replaceRouteId(route, id) {
+    return route.replace(':id', id);
   }
-}
+};
 
 // ===========================
-// DROPDOWN POPULATION
+// API SERVICE LAYER
 // ===========================
 
-/**
- * Loads all programs into the program select dropdown
- * @param {number|null} selectedId - The program ID to preselect (optional)
- * @returns {Promise} jQuery promise
- */
-function loadPrograms(selectedId = null) {
-  return $.ajax({
-          url: '{{ route('programs.all') }}',
-    method: 'GET',
-    success: function (response) {
-      const data = response.data;
-      const $programSelect = $('#program_id');
-      $programSelect.empty().append('<option value="">Select Program</option>');
-      data.forEach(function (program) {
-        $programSelect.append(
-          $('<option>', { value: program.id, text: program.name })
-        );
-      });
-      if (selectedId) {
-        $programSelect.val(selectedId);
-      }
-      $programSelect.trigger('change');
-    },
-    error: function() {
-      showError('Failed to load programs');
-    }
-  });
-}
+const ApiService = {
+  /**
+   * Generic AJAX request wrapper
+   * @param {Object} options - jQuery AJAX options
+   * @returns {Promise} - jQuery promise
+   */
+  request(options) {
+    return $.ajax(options);
+  },
 
-/**
- * Fetches all levels from the server
- * @returns {Promise} jQuery promise
- */
-function fetchLevels() {
-      return $.getJSON("{{ route('levels.all') }}");
-}
-
-/**
- * Populates the level dropdown with available levels
- * @param {number|null} selectedLevelId - The level ID to preselect (optional)
- */
-function populateLevelDropdown(selectedLevelId = null) {
-  fetchLevels()
-    .done(function(levels) {
-      const $levelSelect = $('#level_id');
-      $levelSelect.empty().append('<option value="">Select Level</option>');
-      (levels.data || levels).forEach(function(item) {
-        $levelSelect.append($('<option>', { value: item.id, text: item.name }));
-      });
-      if (selectedLevelId) {
-        $levelSelect.val(selectedLevelId);
-      }
-      $levelSelect.trigger('change');
-    })
-    .fail(function() {
-      showError('Failed to load levels');
+  /**
+   * Fetches all programs
+   * @returns {Promise}
+   */
+  fetchPrograms() {
+    return this.request({
+      url: ROUTES.programs.all,
+      method: 'GET'
     });
-}
+  },
 
-/**
- * Loads terms into the term select dropdown
- * @param {number|null} selectedTermId - The term ID to preselect (optional)
- * @returns {Promise} jQuery promise
- */
-function loadTerms(selectedTermId = null) {
-      return $.getJSON("{{ route('terms.all') }}")
-    .done(function(response) {
-      const $termSelect = $('#term_id');
-      $termSelect.empty().append('<option value="">All Terms</option>');
-      
-      (response.data || []).forEach(function(term) {
-        $termSelect.append('<option value="' + term.id + '">' + term.name + '</option>');
-      });
-      
-      if (selectedTermId) {
-        $termSelect.val(selectedTermId);
-      }
-    })
-    .fail(function() {
-      showError('Failed to load terms');
+  /**
+   * Fetches all levels
+   * @returns {Promise}
+   */
+  fetchLevels() {
+    return this.request({
+      url: ROUTES.levels.all,
+      method: 'GET'
     });
-}
+  },
 
-// ===========================
-// STATISTICS MANAGEMENT
-// ===========================
+  /**
+   * Fetches all terms
+   * @returns {Promise}
+   */
+  fetchTerms() {
+    return this.request({
+      url: ROUTES.terms.all,
+      method: 'GET'
+    });
+  },
 
-/**
- * Loads student statistics and updates stat cards
- */
-function loadStudentStats() {
-  // Show loading state for all stats
-  toggleLoadingState('students', true);
-  toggleLoadingState('male-students', true);
-  toggleLoadingState('female-students', true);
-  
-  $.ajax({
-                url: '{{ route('students.stats') }}',
-    method: 'GET',
-    success: function (response) {
-      const data = response.data;
-      // Update student statistics
-      $('#students-value').text(data.students.total ?? '--');
-      $('#students-last-updated').text(data.students.lastUpdateTime ?? '--');
-      $('#male-students-value').text(data.maleStudents.total ?? '--');
-      $('#male-students-last-updated').text(data.maleStudents.lastUpdateTime ?? '--');
-      $('#female-students-value').text(data.femaleStudents.total ?? '--');
-      $('#female-students-last-updated').text(data.femaleStudents.lastUpdateTime ?? '--');
-      // Hide loading state
-      toggleLoadingState('students', false);
-      toggleLoadingState('male-students', false);
-      toggleLoadingState('female-students', false);
-    },
-    error: function() {
-      // Show error state
-      $('#students-value, #male-students-value, #female-students-value').text('N/A');
-      $('#students-last-updated, #male-students-last-updated, #female-students-last-updated').text('N/A');
-      toggleLoadingState('students', false);
-      toggleLoadingState('male-students', false);
-      toggleLoadingState('female-students', false);
-      showError('Failed to load student statistics');
-    }
-  });
-}
+  /**
+   * Fetches student statistics
+   * @returns {Promise}
+   */
+  fetchStudentStats() {
+    return this.request({
+      url: ROUTES.students.stats,
+      method: 'GET'
+    });
+  },
 
-// ===========================
-// STUDENT CRUD OPERATIONS
-// ===========================
+  /**
+   * Fetches a specific student
+   * @param {number} id - Student ID
+   * @returns {Promise}
+   */
+  fetchStudent(id) {
+    return this.request({
+      url: Utils.replaceRouteId(ROUTES.students.show, id),
+      method: 'GET'
+    });
+  },
 
-/**
- * Handles the Add Student button click event
- */
-function handleAddStudentBtn() {
-  $('#addStudentBtn').on('click', function () {
-    $('#studentForm')[0].reset();
-    $('#student_id').val('');
-    $('#studentModal .modal-title').text('Add Student');
-    $('#saveStudentBtn').text('Save');
+  /**
+   * Saves a student (create or update)
+   * @param {Object} data - Student data
+   * @param {number|null} id - Student ID for update, null for create
+   * @returns {Promise}
+   */
+  saveStudent(data, id = null) {
+    const url = id ? Utils.replaceRouteId(ROUTES.students.show, id) : ROUTES.students.store;
+    const method = id ? 'PUT' : 'POST';
     
-    // Load dropdown data
-    loadPrograms();
-    populateLevelDropdown();
-    
-    $('#studentModal').modal('show');
-  });
-}
-
-/**
- * Handles the Add/Edit Student form submission
- */
-function handleStudentFormSubmit() {
-  $('#studentForm').on('submit', function (e) {
-    e.preventDefault();
-    
-    const studentId = $('#student_id').val();
-    const url = studentId
-                          ? '{{ route('students.show', ':id') }}'.replace(':id', studentId)
-            : '{{ route('students.store') }}';
-    const method = studentId ? 'PUT' : 'POST';
-    const formData = $(this).serialize();
-    
-    // Disable submit button during request
-    const $submitBtn = $('#saveStudentBtn');
-    const originalText = $submitBtn.text();
-    $submitBtn.prop('disabled', true).text('Saving...');
-    
-    $.ajax({
+    return this.request({
       url: url,
       method: method,
-      data: formData,
-      success: function () {
-        $('#studentModal').modal('hide');
-        $('#students-table').DataTable().ajax.reload(null, false);
-        showSuccess('Student has been saved successfully.');
-        loadStudentStats(); // Refresh stats
-      },
-      error: function (xhr) {
-        $('#studentModal').modal('hide');
-        const message = xhr.responseJSON?.message || 'An error occurred. Please check your input.';
-        showError(message);
-      },
-      complete: function() {
-        $submitBtn.prop('disabled', false).text(originalText);
-      }
+      data: data
     });
-  });
-}
+  },
 
-/**
- * Handles the Edit Student button click event (delegated)
- */
-function handleEditStudentBtn() {
-  $(document).on('click', '.editStudentBtn', function () {
-    const studentId = $(this).data('id');
-    
-    $.ajax({
-                  url: '{{ route('students.show', ':id') }}'.replace(':id', studentId),
-      method: 'GET',
-      success: function (student) {
-        // Populate form fields
-        $('#student_id').val(student.id);
-        $('#name_en').val(student.name_en);
-        $('#name_ar').val(student.name_ar);
-        $('#academic_id').val(student.academic_id);
-        $('#national_id').val(student.national_id);
-        $('#academic_email').val(student.academic_email);
-        $('#cgpa').val(student.cgpa);
-        $('#gender').val(student.gender).trigger('change');
-        
-        // Load dropdowns with preselected values
-        loadPrograms(student.program_id);
-        populateLevelDropdown(student.level_id);
-        
-        // Update modal
-        $('#studentModal .modal-title').text('Edit Student');
-        $('#saveStudentBtn').text('Update');
-        $('#studentModal').modal('show');
-      },
-      error: function () {
-        showError('Failed to fetch student data.');
-      }
+  /**
+   * Deletes a student
+   * @param {number} id - Student ID
+   * @returns {Promise}
+   */
+  deleteStudent(id) {
+    return this.request({
+      url: Utils.replaceRouteId(ROUTES.students.destroy, id),
+      method: 'DELETE'
     });
-  });
-}
+  },
 
-/**
- * Handles the Delete Student button click event (delegated)
- */
-function handleDeleteStudentBtn() {
-  $(document).on('click', '.deleteStudentBtn', function () {
-    const studentId = $(this).data('id');
-    
-    Swal.fire({
-      title: 'Are you sure?',
-      text: "You won't be able to revert this!",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes, delete it!'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        $.ajax({
-                      url: '{{ route('students.destroy', ':id') }}'.replace(':id', studentId),
-          method: 'DELETE',
-          success: function () {
-            $('#students-table').DataTable().ajax.reload(null, false);
-            showSuccess('Student has been deleted.');
-            loadStudentStats(); // Refresh stats
-          },
-          error: function () {
-            showError('Failed to delete student.');
-          }
-        });
-      }
-    });
-  });
-}
-
-// ===========================
-// IMPORT FUNCTIONALITY
-// ===========================
-
-/**
- * Handles the Import Students form submission via AJAX
- */
-function handleImportStudentsForm() {
-  $('#importStudentsForm').on('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    const $submitBtn = $('#importStudentsSubmitBtn');
-    
-    $submitBtn.prop('disabled', true).text('Importing...');
-    
-    $.ajax({
-                  url: '{{ route('students.import') }}',
+  /**
+   * Imports students from file
+   * @param {FormData} formData - Form data containing file
+   * @returns {Promise}
+   */
+  importStudents(formData) {
+    return this.request({
+      url: ROUTES.students.import,
       method: 'POST',
       data: formData,
       processData: false,
-      contentType: false,
-      success: function(response) {
-        $('#importStudentsModal').modal('hide');
-        $('#students-table').DataTable().ajax.reload(null, false);
-        
-        // Show success message
-        showSuccess(response.message);
-        
-        // If there are errors, show them in a detailed modal
-        if (response.data && response.data.errors && response.data.errors.length > 0) {
-          showImportErrors(response.data.errors, response.data.imported_count);
-        }
-        
-        loadStudentStats(); // Refresh stats
-      },
-      error: function(xhr) {
-        $('#importStudentsModal').modal('hide');
-        const response = xhr.responseJSON;
-        if (response && response.errors && Object.keys(response.errors).length > 0) {
-          // Handle validation errors
-          const errorMessages = [];
-          Object.keys(response.errors).forEach(field => {
-            if (Array.isArray(response.errors[field])) {
-              errorMessages.push(...response.errors[field]);
-            } else {
-              errorMessages.push(response.errors[field]);
-            }
-          });
-          showError(errorMessages.join('<br>'));
-        } else {
-          // Handle general errors
-          const message = response?.message || 'Import failed. Please check your file.';
-          showError(message);
-        }
-      },
-      complete: function() {
-        $submitBtn.prop('disabled', false).text('Import');
-      }
+      contentType: false
     });
-  });
-}
+  },
 
-/**
- * Shows import errors in a detailed modal
- * @param {Array} errors - Array of error objects
- * @param {number} importedCount - Number of successfully imported records
- */
-function showImportErrors(errors, importedCount) {
-  let errorHtml = '<div class="text-start">';
-  errorHtml += `<p class="mb-3"><strong>Successfully imported: ${importedCount} students</strong></p>`;
-  errorHtml += '<p class="mb-3"><strong>Errors found:</strong></p>';
-  
-  errors.forEach(function(error) {
-    errorHtml += `<div class="mb-2 p-2 border-start border-danger border-3 bg-light">`;
-    errorHtml += `<strong>Row ${error.row}:</strong><br>`;
-    
-    Object.keys(error.errors).forEach(function(field) {
-      const fieldErrors = error.errors[field];
-      // Handle both array and string error formats
-      if (Array.isArray(fieldErrors)) {
-        fieldErrors.forEach(function(errorMessage) {
-          errorHtml += `<span class="text-danger">• ${errorMessage}</span><br>`;
-        });
-      } else if (typeof fieldErrors === 'string') {
-        errorHtml += `<span class="text-danger">• ${fieldErrors}</span><br>`;
-      } else {
-        // Fallback for any other format
-        errorHtml += `<span class="text-danger">• ${String(fieldErrors)}</span><br>`;
-      }
-    });
-    errorHtml += '</div>';
-  });
-  
-  errorHtml += '</div>';
-  
-  Swal.fire({
-    title: 'Import Completed with Errors',
-    html: errorHtml,
-    icon: 'warning',
-    confirmButtonText: 'OK',
-    width: '600px'
-  });
-}
-
-// ===========================
-// DOCUMENT DOWNLOAD FUNCTIONALITY
-// ===========================
-
-/**
- * Handles download enrollment button click (legacy)
- */
-function handleDownloadEnrollmentBtn() {
-  $(document).on('click', '.downloadEnrollmentBtn', function() {
-    const studentId = $(this).data('id');
-    setupDownloadModal(studentId, 'legacy', 'Download Enrollment Document');
-  });
-}
-
-/**
- * Handles PDF download button click
- */
-function handleDownloadPdfBtn() {
-  $(document).on('click', '.downloadPdfBtn', function(e) {
-    e.preventDefault();
-    const studentId = $(this).data('id');
-    setupDownloadModal(studentId, 'pdf', 'Download Enrollment as PDF');
-  });
-}
-
-/**
- * Handles Word download button click
- */
-function handleDownloadWordBtn() {
-  $(document).on('click', '.downloadWordBtn', function(e) {
-    e.preventDefault();
-    const studentId = $(this).data('id');
-    setupDownloadModal(studentId, 'word', 'Download Enrollment as Word');
-  });
-}
-
-/**
- * Sets up the download modal with student ID and type
- * @param {number} studentId - The student ID
- * @param {string} downloadType - Type of download (legacy, pdf, word)
- * @param {string} modalTitle - Title for the modal
- */
-function setupDownloadModal(studentId, downloadType, modalTitle) {
-  $('#modal_student_id').val(studentId);
-  $('#download_type').val(downloadType);
-  
-  loadTerms().done(function() {
-    $('#downloadEnrollmentModal .modal-title').text(modalTitle);
-    $('#downloadEnrollmentModal').modal('show');
-  });
-}
-
-/**
- * Handles the actual download process
- */
-function handleDownloadProcess() {
-  $('#downloadEnrollmentBtn').on('click', function() {
-    const studentId = $('#modal_student_id').val();
-    const termId = $('#term_id').val();
-    const downloadType = $('#download_type').val();
-
-    // Validation
-    if (!downloadType) {
-      showError('Please select a download type.');
-      return;
-    }
-
-    if (!termId) {
-      showError('Please select a term.');
-      return;
-    }
-
-    // Build URL based on download type
+  /**
+   * Downloads student document
+   * @param {number} studentId - Student ID
+   * @param {string} type - Document type (pdf, word, legacy)
+   * @param {number} termId - Term ID
+   * @returns {Promise}
+   */
+  downloadDocument(studentId, type, termId) {
     let url;
-    switch (downloadType) {
+    switch (type) {
       case 'pdf':
-                    url = '{{ route('students.download.pdf', ':id') }}'.replace(':id', studentId);
+        url = Utils.replaceRouteId(ROUTES.students.downloadPdf, studentId);
         break;
       case 'word':
-                    url = '{{ route('students.download.word', ':id') }}'.replace(':id', studentId);
+        url = Utils.replaceRouteId(ROUTES.students.downloadWord, studentId);
         break;
       default:
         url = '/enrollment/download/' + studentId;
     }
 
-    // Add term parameter
     if (termId) {
       url += '?term_id=' + termId;
     }
 
-    // Show loading
-    Swal.fire({
-      title: 'Generating Document...',
-      text: 'Please wait while we prepare your document.',
-      allowOutsideClick: false,
-      showConfirmButton: false,
-      willOpen: () => {
-        Swal.showLoading();
-      }
-    });
-
-    $.ajax({
+    return this.request({
       url: url,
       method: 'GET',
-      dataType: 'json',
-      success: function(response) {
-        if (response.url) {
-          window.open(response.url, '_blank');
-          Swal.close();
-          $('#downloadEnrollmentModal').modal('hide');
-        } else {
-          $('#downloadEnrollmentModal').modal('hide');
-          showError('Invalid response from server.');
-        }
-      },
-      error: function(xhr) {
-        Swal.close();
-        $('#downloadEnrollmentModal').modal('hide');
-        const message = xhr.responseJSON?.message || 'Failed to generate document.';
-        showError(message);
+      dataType: 'json'
+    });
+  },
+
+  /**
+   * Downloads template file
+   * @returns {Promise}
+   */
+  downloadTemplate() {
+    return this.request({
+      url: ROUTES.students.template,
+      method: 'GET',
+      xhrFields: {
+        responseType: 'blob'
       }
     });
-  });
-}
+  }
+};
 
 // ===========================
-// INITIALIZATION
+// DROPDOWN MANAGEMENT
 // ===========================
 
-/**
- * Initialize all event handlers and load initial data
- */
-function initializeStudentManagement() {
-  // Load initial data
-  loadStudentStats();
-  
-  // Initialize CRUD handlers
-  handleAddStudentBtn();
-  handleStudentFormSubmit();
-  handleEditStudentBtn();
-  handleDeleteStudentBtn();
-  
-  // Initialize import functionality
-  handleImportStudentsForm();
-  
-  // Initialize download functionality
-  handleDownloadEnrollmentBtn();
-  handleDownloadPdfBtn();
-  handleDownloadWordBtn();
-  handleDownloadProcess();
-}
+const DropdownManager = {
+  /**
+   * Loads programs into dropdown
+   * @param {string} selector - Dropdown selector
+   * @param {number|null} selectedId - Pre-selected ID
+   * @returns {Promise}
+   */
+  loadPrograms(selector = '#program_id', selectedId = null) {
+    return ApiService.fetchPrograms()
+      .done((response) => {
+        const programs = response.data;
+        const $select = $(selector);
+        
+        $select.empty().append('<option value="">Select Program</option>');
+        programs.forEach((program) => {
+          $select.append($('<option>', { value: program.id, text: program.name }));
+        });
+        
+        if (selectedId) {
+          $select.val(selectedId);
+        }
+        $select.trigger('change');
+      })
+      .fail(() => {
+        Utils.showError('Failed to load programs');
+      });
+  },
+
+  /**
+   * Loads levels into dropdown
+   * @param {string} selector - Dropdown selector
+   * @param {number|null} selectedId - Pre-selected ID
+   * @returns {Promise}
+   */
+  loadLevels(selector = '#level_id', selectedId = null) {
+    return ApiService.fetchLevels()
+      .done((response) => {
+        const levels = response.data || response;
+        const $select = $(selector);
+        
+        $select.empty().append('<option value="">Select Level</option>');
+        levels.forEach((level) => {
+          $select.append($('<option>', { value: level.id, text: level.name }));
+        });
+        
+        if (selectedId) {
+          $select.val(selectedId);
+        }
+        $select.trigger('change');
+      })
+      .fail(() => {
+        Utils.showError('Failed to load levels');
+      });
+  },
+
+  /**
+   * Loads terms into dropdown
+   * @param {string} selector - Dropdown selector
+   * @param {number|null} selectedId - Pre-selected ID
+   * @returns {Promise}
+   */
+  loadTerms(selector = '#term_id', selectedId = null) {
+    return ApiService.fetchTerms()
+      .done((response) => {
+        const terms = response.data || [];
+        const $select = $(selector);
+        
+        $select.empty().append('<option value="">All Terms</option>');
+        terms.forEach((term) => {
+          $select.append($('<option>', { value: term.id, text: term.name }));
+        });
+        
+        if (selectedId) {
+          $select.val(selectedId);
+        }
+        $select.trigger('change');
+      })
+      .fail(() => {
+        Utils.showError('Failed to load terms');
+      });
+  }
+};
+
+// ===========================
+// STATISTICS MANAGEMENT
+// ===========================
+
+const StatsManager = {
+  /**
+   * Loads and displays student statistics
+   */
+  loadStudentStats() {
+    // Show loading state for all stats
+    Utils.toggleLoadingState('students', true);
+    Utils.toggleLoadingState('male-students', true);
+    Utils.toggleLoadingState('female-students', true);
+    
+    ApiService.fetchStudentStats()
+      .done((response) => {
+        const data = response.data;
+        
+        // Update student statistics
+        $('#students-value').text(data.students.total ?? '--');
+        $('#students-last-updated').text(data.students.lastUpdateTime ?? '--');
+        $('#male-students-value').text(data.maleStudents.total ?? '--');
+        $('#male-students-last-updated').text(data.maleStudents.lastUpdateTime ?? '--');
+        $('#female-students-value').text(data.femaleStudents.total ?? '--');
+        $('#female-students-last-updated').text(data.femaleStudents.lastUpdateTime ?? '--');
+        
+        // Hide loading state
+        Utils.toggleLoadingState('students', false);
+        Utils.toggleLoadingState('male-students', false);
+        Utils.toggleLoadingState('female-students', false);
+      })
+      .fail(() => {
+        // Show error state
+        $('#students-value, #male-students-value, #female-students-value').text('N/A');
+        $('#students-last-updated, #male-students-last-updated, #female-students-last-updated').text('N/A');
+        
+        Utils.toggleLoadingState('students', false);
+        Utils.toggleLoadingState('male-students', false);
+        Utils.toggleLoadingState('female-students', false);
+        
+        Utils.showError('Failed to load student statistics');
+      });
+  }
+};
+
+// ===========================
+// STUDENT CRUD OPERATIONS
+// ===========================
+
+const StudentManager = {
+  /**
+   * Handles Add Student button click
+   */
+  handleAddStudent() {
+    $(SELECTORS.addStudentBtn).on('click', () => {
+      $(SELECTORS.studentForm)[0].reset();
+      $('#student_id').val('');
+      
+      $(SELECTORS.studentModal + ' .modal-title').text('Add Student');
+      $(SELECTORS.saveStudentBtn).text('Save');
+      
+      // Load dropdown data
+      DropdownManager.loadPrograms();
+      DropdownManager.loadLevels();
+      
+      $(SELECTORS.studentModal).modal('show');
+    });
+  },
+
+  /**
+   * Handles student form submission
+   */
+  handleStudentFormSubmit() {
+    $(SELECTORS.studentForm).on('submit', (e) => {
+      e.preventDefault();
+      
+      const studentId = $('#student_id').val();
+      const formData = $(SELECTORS.studentForm).serialize();
+      
+      // Disable submit button during request
+      const $submitBtn = $(SELECTORS.saveStudentBtn);
+      const originalText = $submitBtn.text();
+      $submitBtn.prop('disabled', true).text('Saving...');
+      
+      ApiService.saveStudent(formData, studentId || null)
+        .done(() => {
+          $(SELECTORS.studentModal).modal('hide');
+          $(SELECTORS.studentsTable).DataTable().ajax.reload(null, false);
+          Utils.showSuccess('Student has been saved successfully.');
+          StatsManager.loadStudentStats(); // Refresh stats
+        })
+        .fail((xhr) => {
+          $(SELECTORS.studentModal).modal('hide');
+          const message = xhr.responseJSON?.message || 'An error occurred. Please check your input.';
+          Utils.showError(message);
+        })
+        .always(() => {
+          $submitBtn.prop('disabled', false).text(originalText);
+        });
+    });
+  },
+
+  /**
+   * Handles Edit Student button click
+   */
+  handleEditStudent() {
+    $(document).on('click', '.editStudentBtn', function () {
+      const studentId = $(this).data('id');
+      
+      ApiService.fetchStudent(studentId)
+        .done((student) => {
+          // Populate form fields
+          $('#student_id').val(student.id);
+          $('#name_en').val(student.name_en);
+          $('#name_ar').val(student.name_ar);
+          $('#academic_id').val(student.academic_id);
+          $('#national_id').val(student.national_id);
+          $('#academic_email').val(student.academic_email);
+          $('#cgpa').val(student.cgpa);
+          $('#gender').val(student.gender).trigger('change');
+          
+          // Load dropdowns with preselected values
+          DropdownManager.loadPrograms('#program_id', student.program_id);
+          DropdownManager.loadLevels('#level_id', student.level_id);
+          
+          // Update modal
+          $(SELECTORS.studentModal + ' .modal-title').text('Edit Student');
+          $(SELECTORS.saveStudentBtn).text('Update');
+          $(SELECTORS.studentModal).modal('show');
+        })
+        .fail(() => {
+          Utils.showError('Failed to fetch student data.');
+        });
+    });
+  },
+
+  /**
+   * Handles Delete Student button click (delegated)
+   */
+  handleDeleteStudent() {
+    $(document).on('click', '.deleteStudentBtn', function () {
+      const studentId = $(this).data('id');
+      
+      Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          ApiService.deleteStudent(studentId)
+            .done(() => {
+              $(SELECTORS.studentsTable).DataTable().ajax.reload(null, false);
+              Utils.showSuccess('Student has been deleted.');
+              StatsManager.loadStudentStats(); // Refresh stats
+            })
+            .fail(() => {
+              Utils.showError('Failed to delete student.');
+            });
+        }
+      });
+    });
+  }
+};
+
+// ===========================
+// IMPORT FUNCTIONALITY
+// ===========================
+
+const ImportManager = {
+  /**
+   * Handles import form submission
+   */
+  handleImportStudents() {
+    $(SELECTORS.importForm).on('submit', (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(e.target);
+      const $submitBtn = $(SELECTORS.importSubmitBtn);
+      
+      $submitBtn.prop('disabled', true).text('Importing...');
+      
+      ApiService.importStudents(formData)
+        .done((response) => {
+          $(SELECTORS.importModal).modal('hide');
+          $(SELECTORS.studentsTable).DataTable().ajax.reload(null, false);
+          
+          Utils.showSuccess(response.message);
+          
+          // If there are errors, show them in a detailed modal
+          if (response.data?.errors?.length > 0) {
+            this.showImportErrors(response.data.errors, response.data.imported_count);
+          }
+          
+          StatsManager.loadStudentStats(); // Refresh stats
+        })
+        .fail((xhr) => {
+          $(SELECTORS.importModal).modal('hide');
+          const response = xhr.responseJSON;
+          
+          if (response?.errors && Object.keys(response.errors).length > 0) {
+            // Handle validation errors
+            const errorMessages = [];
+            Object.keys(response.errors).forEach(field => {
+              if (Array.isArray(response.errors[field])) {
+                errorMessages.push(...response.errors[field]);
+              } else {
+                errorMessages.push(response.errors[field]);
+              }
+            });
+            Utils.showError(errorMessages.join('<br>'));
+          } else {
+            const message = response?.message || 'Import failed. Please check your file.';
+            Utils.showError(message);
+          }
+        })
+        .always(() => {
+          $submitBtn.prop('disabled', false).text('Import');
+        });
+    });
+  },
+
+  /**
+   * Shows import errors in a detailed modal
+   * @param {Array} errors - Array of error objects
+   * @param {number} importedCount - Number of successfully imported records
+   */
+  showImportErrors(errors, importedCount) {
+    let errorHtml = '<div class="text-start">';
+    errorHtml += `<p class="mb-3"><strong>Successfully imported: ${importedCount} students</strong></p>`;
+    errorHtml += '<p class="mb-3"><strong>Errors found:</strong></p>';
+    
+    // Make the table scrollable with a fixed max height
+    errorHtml += '<div class="table-responsive" style="max-height:400px; overflow-y:auto;">';
+    errorHtml += '<table class="table table-sm table-bordered table-striped mb-0">';
+    errorHtml += '<thead>';
+    errorHtml += '<tr>';
+    errorHtml += '<th style="width: 80px;">Row #</th>';
+    errorHtml += '<th style="width: 200px;">Error</th>';
+    errorHtml += '<th>Original Data</th>';
+    errorHtml += '</tr>';
+    errorHtml += '</thead>';
+    errorHtml += '<tbody>';
+    errors.forEach((error) => {
+      // Get error messages as a single string
+      let errorMessages = '';
+      if (Array.isArray(error.errors)) {
+        errorMessages = error.errors.join('<br>');
+      } else if (typeof error.errors === 'object') {
+        Object.keys(error.errors).forEach((field) => {
+          const fieldErrors = error.errors[field];
+          if (Array.isArray(fieldErrors)) {
+            errorMessages += fieldErrors.join('<br>') + '<br>';
+          } else if (typeof fieldErrors === 'string') {
+            errorMessages += fieldErrors + '<br>';
+          } else {
+            errorMessages += String(fieldErrors) + '<br>';
+          }
+        });
+      } else {
+        errorMessages = String(error.errors);
+      }
+      
+      // Format original data as JSON-like display
+      let originalDataHtml = '';
+      if (error.original_data) {
+        originalDataHtml = '<div class="small">';
+        Object.keys(error.original_data).forEach((key) => {
+          const value = error.original_data[key];
+          const displayValue = value === null || value === undefined ? '<em class="text-muted">null</em>' : value;
+          originalDataHtml += `<strong>${key}:</strong> ${displayValue}<br>`;
+        });
+        originalDataHtml += '</div>';
+      }
+      
+      errorHtml += '<tr>';
+      errorHtml += `<td class="text-center fw-bold">${error.row}</td>`;
+      errorHtml += `<td class="text-danger small">${errorMessages}</td>`;
+      errorHtml += `<td class="small">${originalDataHtml}</td>`;
+      errorHtml += '</tr>';
+    });
+    
+    errorHtml += '</tbody>';
+    errorHtml += '</table>';
+    errorHtml += '</div>';
+    
+    Swal.fire({
+      title: 'Import Completed with Errors',
+      html: errorHtml,
+      icon: 'warning',
+      confirmButtonText: 'OK',
+      width: '800px',
+      customClass: {
+        popup: 'swal-wide'
+      }
+    });
+  }
+};
+
+// ===========================
+// TEMPLATE DOWNLOAD FUNCTIONALITY
+// ===========================
+
+const TemplateDownloadManager = {
+  /**
+   * Handles template download button click
+   */
+  handleTemplateDownload() {
+    $(SELECTORS.downloadTemplateBtn).on('click', () => {
+      const $btn = $(SELECTORS.downloadTemplateBtn);
+      const originalText = $btn.html();
+      
+      // Show loading state
+      $btn.prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i>Downloading...');
+      
+      ApiService.downloadTemplate()
+        .done((response) => {
+          // Create blob and download
+          const blob = new Blob([response], { 
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+          });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'students_template.xlsx';
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          
+          Utils.showSuccess('Template downloaded successfully!');
+        })
+        .fail((xhr) => {
+          const message = xhr.responseJSON?.message || 'Failed to download template.';
+          Utils.showError(message);
+        })
+        .always(() => {
+          // Restore button state
+          $btn.prop('disabled', false).html(originalText);
+        });
+    });
+  }
+};
+
+// ===========================
+// DOWNLOAD FUNCTIONALITY
+// ===========================
+
+const DownloadManager = {
+  /**
+   * Handles download enrollment button click (legacy)
+   */
+  handleDownloadEnrollment() {
+    $(document).on('click', '.downloadEnrollmentBtn', function() {
+      const studentId = $(this).data('id');
+      DownloadManager.setupDownloadModal(studentId, 'legacy', 'Download Enrollment Document');
+    });
+  },
+
+  /**
+   * Handles PDF download button click
+   */
+  handleDownloadPdf() {
+    $(document).on('click', '.downloadPdfBtn', function(e) {
+      e.preventDefault();
+      const studentId = $(this).data('id');
+      DownloadManager.setupDownloadModal(studentId, 'pdf', 'Download Enrollment as PDF');
+    });
+  },
+
+  /**
+   * Handles Word download button click
+   */
+  handleDownloadWord() {
+    $(document).on('click', '.downloadWordBtn', function(e) {
+      e.preventDefault();
+      const studentId = $(this).data('id');
+      DownloadManager.setupDownloadModal(studentId, 'word', 'Download Enrollment as Word');
+    });
+  },
+
+  /**
+   * Sets up the download modal
+   * @param {number} studentId - Student ID
+   * @param {string} downloadType - Type of download
+   * @param {string} modalTitle - Modal title
+   */
+  setupDownloadModal(studentId, downloadType, modalTitle) {
+    $('#modal_student_id').val(studentId);
+    $('#download_type').val(downloadType);
+    
+    DropdownManager.loadTerms('#term_id').done(() => {
+      $(SELECTORS.downloadModal + ' .modal-title').text(modalTitle);
+      $(SELECTORS.downloadModal).modal('show');
+    });
+  },
+
+  /**
+   * Handles the download process
+   */
+  handleDownloadProcess() {
+    $(SELECTORS.downloadBtn).on('click', () => {
+      const studentId = $('#modal_student_id').val();
+      const termId = $('#term_id').val();
+      const downloadType = $('#download_type').val();
+
+      // Validation
+      if (!downloadType) {
+        Utils.showError('Please select a download type.');
+        return;
+      }
+
+      if (!termId) {
+        Utils.showError('Please select a term.');
+        return;
+      }
+
+      // Close modal first
+      $(SELECTORS.downloadModal).modal('hide');
+
+      // Show loading
+      Swal.fire({
+        title: 'Generating Document...',
+        text: 'Please wait while we prepare your document.',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        willOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      ApiService.downloadDocument(studentId, downloadType, termId)
+        .done((response) => {
+          if (response.url) {
+            window.open(response.url, '_blank');
+            Swal.close();
+          } else {
+            Utils.showError('Invalid response from server.');
+          }
+        })
+        .fail((xhr) => {
+          Swal.close();
+          const message = xhr.responseJSON?.message || 'Failed to generate document.';
+          Utils.showError(message);
+        });
+    });
+  }
+};
+
+// ===========================
+// SEARCH FUNCTIONALITY
+// ===========================
+
+const SearchManager = {
+  /**
+   * Initializes advanced search functionality
+   */
+  initializeAdvancedSearch() {
+    // Initialize Select2 for search dropdowns
+    this.initSearchSelect2();
+    
+    // Load dropdown data
+    DropdownManager.loadPrograms(SELECTORS.searchProgram);
+    DropdownManager.loadLevels(SELECTORS.searchLevel);
+    
+    // Bind search events
+    this.bindSearchEvents();
+  },
+
+  /**
+   * Initializes Select2 for search dropdowns
+   */
+  initSearchSelect2() {
+    $(`${SELECTORS.searchGender}, ${SELECTORS.searchProgram}, ${SELECTORS.searchLevel}`).select2({
+      theme: 'bootstrap-5',
+      placeholder: function() {
+        const id = $(this).attr('id');
+        if (id === 'search_gender') return 'Select Gender';
+        if (id === 'search_program') return 'Select Program';
+        if (id === 'search_level') return 'Select Level';
+        return '';
+      },
+      allowClear: true,
+      width: '100%',
+      dropdownParent: $('#studentSearchCollapse')
+    });
+  },
+
+  /**
+   * Binds search events
+   */
+  bindSearchEvents() {
+    // Clear filters button
+    $(SELECTORS.clearFiltersBtn).on('click', () => {
+      $(`${SELECTORS.searchName}, ${SELECTORS.searchNationalId}, ${SELECTORS.searchAcademicId}`).val('');
+      $(`${SELECTORS.searchGender}, ${SELECTORS.searchProgram}, ${SELECTORS.searchLevel}`).val('').trigger('change');
+      $(SELECTORS.studentsTable).DataTable().ajax.reload();
+    });
+
+    // Search input events
+    $(`${SELECTORS.searchName}, ${SELECTORS.searchNationalId}, ${SELECTORS.searchAcademicId}, ${SELECTORS.searchGender}, ${SELECTORS.searchProgram}, ${SELECTORS.searchLevel}`).on('keyup change', () => {
+      $(SELECTORS.studentsTable).DataTable().ajax.reload();
+    });
+  }
+};
+
+// ===========================
+// SELECT2 INITIALIZATION
+// ===========================
+
+const Select2Manager = {
+  /**
+   * Initializes Select2 for student modal
+   */
+  initStudentModalSelect2() {
+    $(`${SELECTORS.studentModal} select`).select2({
+      theme: 'bootstrap-5',
+      placeholder: function() {
+        const id = $(this).attr('id');
+        if (id === 'level_id') return 'Select Level';
+        if (id === 'gender') return 'Select Gender';
+        if (id === 'program_id') return 'Select Program';
+        return '';
+      },
+      allowClear: true,
+      width: '100%',
+      dropdownParent: $(SELECTORS.studentModal)
+    });
+  },
+
+  /**
+   * Initializes Select2 for download modal
+   */
+  initDownloadModalSelect2() {
+    $(`${SELECTORS.downloadModal} #term_id`).select2({
+      theme: 'bootstrap-5',
+      placeholder: 'Select Term',
+      allowClear: true,
+      width: '100%',
+      dropdownParent: $(SELECTORS.downloadModal)
+    });
+  }
+};
+
+// ===========================
+// MAIN APPLICATION
+// ===========================
+
+const StudentManagementApp = {
+  /**
+   * Initializes the entire application
+   */
+  init() {
+    // Load initial data
+    StatsManager.loadStudentStats();
+    
+    // Initialize CRUD operations
+    StudentManager.handleAddStudent();
+    StudentManager.handleStudentFormSubmit();
+    StudentManager.handleEditStudent();
+    StudentManager.handleDeleteStudent();
+    
+    // Initialize import functionality
+    ImportManager.handleImportStudents();
+    
+    // Initialize download functionality
+    DownloadManager.handleDownloadEnrollment();
+    DownloadManager.handleDownloadPdf();
+    DownloadManager.handleDownloadWord();
+    DownloadManager.handleDownloadProcess();
+    
+    // Initialize template download functionality
+    TemplateDownloadManager.handleTemplateDownload();
+    
+    // Initialize Select2 components
+    Select2Manager.initStudentModalSelect2();
+    Select2Manager.initDownloadModalSelect2();
+    
+    // Initialize search functionality
+    SearchManager.initializeAdvancedSearch();
+  }
+};
 
 // ===========================
 // DOCUMENT READY
 // ===========================
 
-$(document).ready(function () {
-  initializeStudentManagement();
-  // Initialize Select2 for all selects in the student modal
-  $('#studentModal select').select2({
-    theme: 'bootstrap-5',
-    placeholder: function(){
-      var id = $(this).attr('id');
-      if(id === 'level_id') return 'Select Level';
-      if(id === 'gender') return 'Select Gender';
-      if(id === 'program_id') return 'Select Program';
-      return '';
-    },
-    allowClear: true,
-    width: '100%',
-    dropdownParent: $('#studentModal')
-  });
-  // Initialize Select2 for the term select in the download enrollment modal
-  $('#downloadEnrollmentModal #term_id').select2({
-    theme: 'bootstrap-5',
-    placeholder: 'Select Term',
-    allowClear: true,
-    width: '100%',
-    dropdownParent: $('#downloadEnrollmentModal')
-  });
+$(document).ready(() => {
+  StudentManagementApp.init();
 });
 </script>
 @endpush

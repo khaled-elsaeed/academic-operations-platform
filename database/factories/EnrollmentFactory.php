@@ -18,6 +18,7 @@ class EnrollmentFactory extends Factory
             'student_id' => Student::factory(),
             'course_id' => Course::factory(),
             'term_id' => Term::factory(),
+            'score' => $this->faker->optional(0.8)->randomFloat(2, 60, 100), // 80% chance of having a score, between 60-100
         ];
     }
 } 

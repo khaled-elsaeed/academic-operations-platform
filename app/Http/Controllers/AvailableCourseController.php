@@ -233,6 +233,20 @@ class AvailableCourseController extends Controller
     }
 
     /**
+     * Get available course statistics for stat2 cards.
+     */
+    public function stats(): JsonResponse
+    {
+        try {
+            $stats = $this->availableCourseService->getStats();
+            return successResponse('Stats fetched successfully.', $stats);
+        } catch (\Exception $e) {
+            logError('AvailableCourseController@stats', $e);
+            return errorResponse('Internal server error.', 500);
+        }
+    }
+
+    /**
      * Get remaining credit hours for a student in a specific term.
      *
      * @param  Request  $request

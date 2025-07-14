@@ -11,7 +11,7 @@ class EnrollmentsTemplateExport implements FromArray, WithHeadings, WithStyles
 {
     public function array(): array
     {
-        // Sample data for template
+        // Sample data for template with Egyptian academic context
         return [
             [
                 '20230001', // academic_id (example Academic ID)
@@ -23,7 +23,19 @@ class EnrollmentsTemplateExport implements FromArray, WithHeadings, WithStyles
                 '20230002', // academic_id
                 'MATH201',        // course_code
                 '2252',       // term_code
-                '',          // score (empty for no score)
+                '92.0',       // score
+            ],
+            [
+                '20230003', // academic_id
+                'ENG101',        // course_code
+                '2252',       // term_code
+                '',          // score (empty for no score yet)
+            ],
+            [
+                '20230004', // academic_id
+                'PHY101',        // course_code
+                '2252',       // term_code
+                '78.5',       // score
             ],
         ];
     }

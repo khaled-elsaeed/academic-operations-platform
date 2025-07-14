@@ -15,7 +15,6 @@ Route::middleware(['auth'])
         // ===== Specific Routes First =====
         Route::get('datatable', 'datatable')->name('datatable')->middleware('can:course.view');
         Route::get('stats', 'stats')->name('stats')->middleware('can:course.view');
-        Route::get('faculties', 'getFaculties')->name('faculties')->middleware('can:course.view');
         Route::get('all', 'all')->name('all');
         Route::post('prerequisites', 'getPrerequisites')->name('prerequisites');
 

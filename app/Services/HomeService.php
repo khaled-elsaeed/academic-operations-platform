@@ -13,27 +13,57 @@ use Illuminate\Support\Facades\Auth;
 
 class HomeService
 {
+
+    private const FACULTY_NAME = 'Faculty of Computer Science & Engineering';
+    private const CGPA_RANGES = [
+        '0.0-1.0' => [0.0, 1.0],
+        '1.0-2.0' => [1.0, 2.0],
+        '2.0-2.5' => [2.0, 2.5],
+        '2.5-3.0' => [2.5, 3.0],
+        '3.0-3.5' => [3.0, 3.5],
+        '3.5-4.0' => [3.5, 4.0],
+    ];
+    
     /**
-     * Get admin dashboard statistics.
+     * Get admin dashboard statistics for Faculty of Computer Science & Engineering
+     * 
+     * @return array Dashboard statistics including counts and last updated times
      */
     public function getAdminDashboardStats(): array
     {
+        // ===== STUDENTS STATISTICS =====
+        $studentsCount = $this->getStudentsCount();
+        $studentsLastUpdated = $this->getStudentsLastUpdated();
+
+        // ===== FACULTY STATISTICS =====
+        $facultyCount = $this->getFacultyCount();
+        $facultyLastUpdated = $this->getFacultyLastUpdated();
+
+        // ===== PROGRAMS STATISTICS =====
+        $programsCount = $this->getProgramsCount();
+        $programsLastUpdated = $this->getProgramsLastUpdated();
+
+        // ===== COURSES STATISTICS =====
+        $coursesCount = $this->getCoursesCount();
+        $coursesLastUpdated = $this->getCoursesLastUpdated();
+
+        // ===== RETURN ORGANIZED DASHBOARD DATA =====
         return [
             'students' => [
-                'total' => Student::count(),
-                'lastUpdatedTime' => formatDate(Student::max('updated_at')),
+                'total' => $studentsCount,
+                'lastUpdatedTime' => $studentsLastUpdated,
             ],
             'faculty' => [
-                'total' => Faculty::count(),
-                'lastUpdatedTime' => formatDate(Faculty::max('updated_at')),
+                'total' => $facultyCount,
+                'lastUpdatedTime' => $facultyLastUpdated,
             ],
             'programs' => [
-                'total' => Program::count(),
-                'lastUpdatedTime' => formatDate(Program::max('updated_at')),
+                'total' => $programsCount,
+                'lastUpdatedTime' => $programsLastUpdated,
             ],
             'courses' => [
-                'total' => Course::count(),
-                'lastUpdatedTime' => formatDate(Course::max('updated_at')),
+                'total' => $coursesCount,
+                'lastUpdatedTime' => $coursesLastUpdated,
             ],
             'levelDistribution' => $this->getAdminLevelDistribution(),
             'cgpaDistribution' => $this->getAdminCGPADistribution(),
@@ -41,11 +71,109 @@ class HomeService
     }
 
     /**
+     * Get count of students in specified faculty
+     * 
+     * @return int
+     */
+    private function getStudentsCount(): int
+    {
+        return Student::whereHas('program.faculty', function ($query) {
+            $query->where('name', self::FACULTY_NAME);
+        })->count();
+    }
+
+    /**
+     * Get last updated time for students in specified faculty
+     * 
+     * @return string|null
+     */
+    private function getStudentsLastUpdated(): ?string
+    {
+        $lastUpdated = Student::whereHas('program.faculty', function ($query) {
+            $query->where('name', self::FACULTY_NAME);
+        })->max('updated_at');
+
+        return $lastUpdated ? formatDate($lastUpdated) : null;
+    }
+
+    /**
+     * Get count of faculty by name
+     * 
+     * @return int
+     */
+    private function getFacultyCount(): int
+    {
+        return Faculty::where('name', self::FACULTY_NAME)->count();
+    }
+
+    /**
+     * Get last updated time for all faculties (filtered by FACULTY_NAME)
+     * 
+     * @return string|null
+     */
+    private function getFacultyLastUpdated(): ?string
+    {
+        $lastUpdated = Faculty::where('name', self::FACULTY_NAME)->max('updated_at');
+        return $lastUpdated ? formatDate($lastUpdated) : null;
+    }
+
+    /**
+     * Get count of programs in specified faculty
+     * 
+     * @return int
+     */
+    private function getProgramsCount(): int
+    {
+        return Program::whereHas('faculty', function ($query) {
+            $query->where('name', self::FACULTY_NAME);
+        })->count();
+    }
+
+    /**
+     * Get last updated time for programs in specified faculty
+     * 
+     * @return string|null
+     */
+    private function getProgramsLastUpdated(): ?string
+    {
+        $lastUpdated = Program::whereHas('faculty', function ($query) {
+            $query->where('name', self::FACULTY_NAME);
+        })->max('updated_at');
+
+        return $lastUpdated ? formatDate($lastUpdated) : null;
+    }
+
+    /**
+     * Get count of courses in specified faculty
+     * 
+     * @return int
+     */
+    private function getCoursesCount(): int
+    {
+        return Course::whereHas('faculty', function ($query) {
+            $query->where('name', self::FACULTY_NAME);
+        })->count();
+    }
+
+    /**
+     * Get last updated time for courses in specified faculty
+     * 
+     * @return string|null
+     */
+    private function getCoursesLastUpdated(): ?string
+    {
+        $lastUpdated = Course::whereHas('faculty', function ($query) {
+            $query->where('name', self::FACULTY_NAME);
+        })->max('updated_at');
+
+        return $lastUpdated ? formatDate($lastUpdated) : null;
+    }
+
+    /**
      * Get advisor dashboard statistics.
      */
     public function getAdvisorDashboardStats(): array
     {
-        // All Student::query() is already filtered by AcademicAdvisorScope for the logged-in advisor
         $advisees = Student::query();
 
         return [
@@ -87,19 +215,10 @@ class HomeService
      */
     private function getAdminCGPADistribution(): array
     {
-        $cgpaRanges = [
-            '0.0-1.0' => [0.0, 1.0],
-            '1.0-2.0' => [1.0, 2.0],
-            '2.0-2.5' => [2.0, 2.5],
-            '2.5-3.0' => [2.5, 3.0],
-            '3.0-3.5' => [3.0, 3.5],
-            '3.5-4.0' => [3.5, 4.0],
-        ];
-
         $data = [];
         $labels = [];
 
-        foreach ($cgpaRanges as $range => $bounds) {
+        foreach (self::CGPA_RANGES as $range => $bounds) {
             $count = Student::whereBetween('cgpa', $bounds)->count();
             $labels[] = $range;
             $data[] = $count;
@@ -134,19 +253,10 @@ class HomeService
      */
     private function getAdvisorCGPADistribution(): array
     {
-        $cgpaRanges = [
-            '0.0-1.0' => [0.0, 1.0],
-            '1.0-2.0' => [1.0, 2.0],
-            '2.0-2.5' => [2.0, 2.5],
-            '2.5-3.0' => [2.5, 3.0],
-            '3.0-3.5' => [3.0, 3.5],
-            '3.5-4.0' => [3.5, 4.0],
-        ];
-
         $data = [];
         $labels = [];
 
-        foreach ($cgpaRanges as $range => $bounds) {
+        foreach (self::CGPA_RANGES as $range => $bounds) {
             $count = Student::query()
                 ->whereBetween('cgpa', $bounds)
                 ->count();

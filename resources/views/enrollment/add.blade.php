@@ -145,12 +145,18 @@
       <!-- Enrollment History -->
       <div class="col-lg-4 mb-4">
         <div class="card h-100">
-          <div class="card-header d-flex align-items-center justify-content-between">
-            <div class="d-flex align-items-center">
-              <i class="bx bx-history me-2"></i>
-              <h5 class="mb-0">Enrollment History</h5>
+          <div class="card-header">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="d-flex align-items-center">
+                <i class="bx bx-history me-2"></i>
+                <h5 class="mb-0">Enrollment History</h5>
+              </div>
+              <span class="badge bg-label-secondary" id="historyCount">0</span>
             </div>
-            <span class="badge bg-label-secondary" id="historyCount">0</span>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text"><i class="bx bx-search"></i></span>
+              <input type="text" class="form-control" id="historySearch" placeholder="Search courses, terms, or grades...">
+            </div>
           </div>
           <div class="card-body">
             <div id="enrollmentHistoryBox" class="enrollment-history-container">
@@ -168,12 +174,18 @@
       <!-- Available Courses -->
       <div class="col-lg-4 mb-4">
         <div class="card h-100">
-          <div class="card-header d-flex align-items-center justify-content-between">
-            <div class="d-flex align-items-center">
-              <i class="bx bx-book me-2"></i>
-              <h5 class="mb-0">Available Courses</h5>
+          <div class="card-header">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="d-flex align-items-center">
+                <i class="bx bx-book me-2"></i>
+                <h5 class="mb-0">Available Courses</h5>
+              </div>
+              <span class="badge bg-label-primary" id="coursesCount">0</span>
             </div>
-            <span class="badge bg-label-primary" id="coursesCount">0</span>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text"><i class="bx bx-search"></i></span>
+              <input type="text" class="form-control" id="coursesSearch" placeholder="Search course names or codes...">
+            </div>
           </div>
           <div class="card-body">
             <form id="enrollForm">
@@ -200,12 +212,18 @@
       <!-- Course Prerequisites -->
       <div class="col-lg-4 mb-4">
         <div class="card h-100">
-          <div class="card-header d-flex align-items-center justify-content-between">
-            <div class="d-flex align-items-center">
-              <i class="bx bx-link me-2"></i>
-              <h5 class="mb-0">Course Prerequisites</h5>
+          <div class="card-header">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="d-flex align-items-center">
+                <i class="bx bx-link me-2"></i>
+                <h5 class="mb-0">Course Prerequisites</h5>
+              </div>
+              <span class="badge bg-label-info" id="prerequisitesCount">0</span>
             </div>
-            <span class="badge bg-label-info" id="prerequisitesCount">0</span>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text"><i class="bx bx-search"></i></span>
+              <input type="text" class="form-control" id="prerequisitesSearch" placeholder="Search prerequisite courses...">
+            </div>
           </div>
           <div class="card-body">
             <div id="prerequisitesBox" class="prerequisites-container">
@@ -476,7 +494,7 @@ function loadEnrollmentHistory(studentId) {
                     <i class="bx bx-calendar me-1"></i>
                     ${enr.term ? enr.term.name : 'Term #' + enr.term_id}
                   </p>
-                  ${enr.score ? `<small class="text-muted"><i class="bx bx-star me-1"></i>Score: <strong>${enr.score}</strong></small>` : ''}
+                  ${enr.score ? `<div class="mt-1"><span class="badge bg-label-primary"><i class="bx bx-star me-1"></i>Grade: <strong>${parseFloat(enr.score).toFixed(2)}</strong></span></div>` : '<div class="mt-1"><span class="badge bg-label-secondary"><i class="bx bx-time me-1"></i>No Grade Yet</span></div>'}
                 </div>
                 <span class="badge bg-label-success">Enrolled</span>
               </div>
@@ -1151,7 +1169,7 @@ $(document).ready(function () {
                   window.open(fileUrl, '_blank');
                   Swal.fire({
                     icon: 'success',
-                    title: 'Word Ready',
+                    title: 'Pdf Ready',
                     html: `<div>Your pdf document is ready for download.</div>`,
                     showConfirmButton: false,
                     timer: 5000
@@ -1186,6 +1204,415 @@ $(document).ready(function () {
       }
     });
   });
+
+  // ===========================
+  // SEARCH FUNCTIONALITY
+  // ===========================
+
+  // Global variables to store original data
+  let originalHistoryData = [];
+  let originalCoursesData = [];
+  let originalPrerequisitesData = [];
+
+  // Enrollment History Search
+  $('#historySearch').on('input', function() {
+    const searchTerm = $(this).val().toLowerCase();
+    filterEnrollmentHistory(searchTerm);
+  });
+
+  function filterEnrollmentHistory(searchTerm) {
+    if (!originalHistoryData.length) return;
+    
+    const filteredData = originalHistoryData.filter(enrollment => {
+      const courseName = (enrollment.course?.name || '').toLowerCase();
+      const courseCode = (enrollment.course?.code || '').toLowerCase();
+      const termName = (enrollment.term?.name || '').toLowerCase();
+      const score = enrollment.score ? enrollment.score.toString() : '';
+      
+      return courseName.includes(searchTerm) || 
+             courseCode.includes(searchTerm) || 
+             termName.includes(searchTerm) || 
+             score.includes(searchTerm);
+    });
+
+    displayFilteredHistory(filteredData);
+  }
+
+  function displayFilteredHistory(enrollments) {
+    if (enrollments.length === 0) {
+      $('#enrollmentHistoryBox').html(`
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+          <div class="text-center text-muted">
+            <i class="bx bx-search-alt display-4 mb-3"></i>
+            <p>No enrollments found matching your search</p>
+          </div>
+        </div>
+      `);
+    } else {
+      let html = '';
+      enrollments.forEach(function(enr) {
+        html += `
+          <div class="history-item">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <h6 class="mb-1">${enr.course ? enr.course.name : 'Course #' + enr.course_id}</h6>
+                <p class="text-muted mb-1">
+                  <i class="bx bx-calendar me-1"></i>
+                  ${enr.term ? enr.term.name : 'Term #' + enr.term_id}
+                </p>
+                ${enr.score ? `<div class="mt-1"><span class="badge bg-label-primary"><i class="bx bx-star me-1"></i>Grade: <strong>${parseFloat(enr.score).toFixed(2)}</strong></span></div>` : '<div class="mt-1"><span class="badge bg-label-secondary"><i class="bx bx-time me-1"></i>No Grade Yet</span></div>'}
+              </div>
+              <span class="badge bg-label-success">Enrolled</span>
+            </div>
+          </div>
+        `;
+      });
+      $('#enrollmentHistoryBox').html(html);
+    }
+  }
+
+  // Available Courses Search
+  $('#coursesSearch').on('input', function() {
+    const searchTerm = $(this).val().toLowerCase();
+    filterAvailableCourses(searchTerm);
+  });
+
+  function filterAvailableCourses(searchTerm) {
+    if (!originalCoursesData.length) return;
+    
+    const filteredData = originalCoursesData.filter(course => {
+      const courseName = (course.name || '').toLowerCase();
+      const courseCode = (course.code || '').toLowerCase();
+      
+      return courseName.includes(searchTerm) || courseCode.includes(searchTerm);
+    });
+
+    displayFilteredCourses(filteredData);
+  }
+
+  function displayFilteredCourses(courses) {
+    if (courses.length === 0) {
+      $('#coursesBox').html(`
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+          <div class="text-center text-muted">
+            <i class="bx bx-search-alt display-4 mb-3"></i>
+            <p>No courses found matching your search</p>
+          </div>
+        </div>
+      `);
+    } else {
+      let html = '';
+      courses.forEach(function(course) {
+        const capacityClass = course.remaining_capacity > 10 ? 'success' : 
+                            course.remaining_capacity > 5 ? 'warning' : 'danger';
+        html += `
+          <div class="course-item">
+            <div class="form-check">
+              <input class="form-check-input course-checkbox" type="checkbox" 
+                     name="available_course_ids[]" value="${course.available_course_id}" 
+                     data-credit-hours="${course.credit_hours}" 
+                     id="course_${course.available_course_id}">
+              <label class="form-check-label w-100" for="course_${course.available_course_id}">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 class="mb-1">${course.name}</h6>
+                    <p class="text-muted mb-0 small">
+                      <i class="bx bx-book me-1"></i>
+                      Course Code: ${course.code || 'N/A'}
+                      <span class="ms-2"><i class="bx bx-timer me-1"></i>Credit Hours: <strong>${course.credit_hours}</strong></span>
+                    </p>
+                  </div>
+                  <span class="badge bg-label-${capacityClass} capacity-badge">
+                    <i class="bx bx-group me-1"></i>
+                    ${course.remaining_capacity} spots left
+                  </span>
+                </div>
+              </label>
+            </div>
+          </div>
+        `;
+      });
+      $('#coursesBox').html(html);
+      
+      // Reattach event handlers
+      $('.course-checkbox').on('change', function() {
+        updateEnrollButton();
+        updateCreditHoursSummary();
+        
+        // Load prerequisites for selected courses
+        const selectedCourseIds = [];
+        $('.course-checkbox:checked').each(function() {
+          selectedCourseIds.push($(this).val());
+        });
+        loadPrerequisites(currentStudentId, selectedCourseIds);
+      });
+    }
+  }
+
+  // Prerequisites Search
+  $('#prerequisitesSearch').on('input', function() {
+    const searchTerm = $(this).val().toLowerCase();
+    filterPrerequisites(searchTerm);
+  });
+
+  function filterPrerequisites(searchTerm) {
+    if (!originalPrerequisitesData.length) return;
+    
+    const filteredData = originalPrerequisitesData.filter(prereq => {
+      const courseName = (prereq.course_name || '').toLowerCase();
+      const courseCode = (prereq.course_code || '').toLowerCase();
+      const requiredFor = (prereq.required_for || '').toLowerCase();
+      
+      return courseName.includes(searchTerm) || 
+             courseCode.includes(searchTerm) || 
+             requiredFor.includes(searchTerm);
+    });
+
+    displayFilteredPrerequisites(filteredData);
+  }
+
+  function displayFilteredPrerequisites(prerequisites) {
+    if (prerequisites.length === 0) {
+      $('#prerequisitesBox').html(`
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+          <div class="text-center text-muted">
+            <i class="bx bx-search-alt display-4 mb-3"></i>
+            <p>No prerequisites found matching your search</p>
+          </div>
+        </div>
+      `);
+    } else {
+      let html = '';
+      prerequisites.forEach(function(prereq) {
+        const statusClass = prereq.is_enrolled ? 'success' : 'danger';
+        const statusText = prereq.is_enrolled ? 'Enrolled' : 'Not Enrolled';
+        const statusIcon = prereq.is_enrolled ? 'bx-check-circle' : 'bx-x-circle';
+        
+        html += `
+          <div class="prerequisite-item">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <h6 class="mb-1">${prereq.course_name || 'Course Name N/A'}</h6>
+                <p class="text-muted mb-0 small">
+                  <i class="bx bx-book me-1"></i>
+                  Course Code: ${prereq.course_code || 'N/A'}
+                  <span class="ms-2"><i class="bx bx-timer me-1"></i>Credit Hours: <strong>${prereq.credit_hours || 'N/A'}</strong></span>
+                </p>
+                <p class="text-muted mb-0 small">
+                  <i class="bx bx-link me-1"></i>
+                  Required for: <strong>${prereq.required_for || 'N/A'}</strong>
+                </p>
+              </div>
+              <span class="badge bg-label-${statusClass}">
+                <i class="bx ${statusIcon} me-1"></i>${statusText}
+              </span>
+            </div>
+          </div>
+        `;
+      });
+      $('#prerequisitesBox').html(html);
+    }
+  }
+
+  // Update the existing functions to store original data
+  function loadEnrollmentHistory(studentId) {
+    if (!studentId) {
+      $('#enrollmentHistoryBox').html(`
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+          <div class="text-center text-muted">
+            <i class="bx bx-search-alt-2 display-4 mb-3"></i>
+            <p>Find a student to view enrollment history</p>
+          </div>
+        </div>
+      `);
+      $('#historyCount').text('0');
+      originalHistoryData = [];
+      return;
+    }
+    showLoading('#enrollmentHistoryBox', 'Loading enrollment history...');
+    $.ajax({
+      url: '{{ route('enrollments.studentEnrollments') }}',
+      method: 'POST',
+      data: { student_id: studentId, _token: '{{ csrf_token() }}' },
+      success: function(res) {
+        let history = (res.data || []);
+        originalHistoryData = history; // Store original data
+        $('#historyCount').text(history.length);
+        if (history.length === 0) {
+          $('#enrollmentHistoryBox').html(`
+            <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+              <div class="text-center text-muted">
+                <i class="bx bx-info-circle display-4 mb-3"></i>
+                <p>No enrollment history found</p>
+              </div>
+            </div>
+          `);
+        } else {
+          displayFilteredHistory(history);
+        }
+      },
+      error: function() {
+        $('#enrollmentHistoryBox').html(`
+          <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+            <div class="text-center text-muted">
+              <i class="bx bx-error-circle display-4 mb-3"></i>
+              <p>Could not load enrollment history</p>
+            </div>
+          </div>
+        `);
+        $('#historyCount').text('0');
+        originalHistoryData = [];
+      }
+    });
+  }
+
+  function loadAvailableCourses(studentId, termId) {
+    if (!studentId || !termId) {
+      $('#coursesBox').html(`
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+          <div class="text-center text-muted">
+            <i class="bx bx-book-bookmark display-4 mb-3"></i>
+            <p>Select a term to view available courses</p>
+          </div>
+        </div>
+      `);
+      $('#coursesCount').text('0');
+      $('#enrollBtn').hide();
+      $('#creditHoursSummary').hide();
+      $('#exceptionAlert').hide();
+      $('#prerequisitesBox').html(`
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+          <div class="text-center text-muted">
+            <i class="bx bx-link-alt display-4 mb-3"></i>
+            <p>Select courses to view prerequisites</p>
+          </div>
+        </div>
+      `);
+      $('#prerequisitesCount').text('0');
+      originalCoursesData = [];
+      return;
+    }
+    showLoading('#coursesBox', 'Loading available courses...');
+    $.ajax({
+      url: '{{ route('available_courses.all') }}',
+      method: 'GET',
+      data: { student_id: studentId, term_id: termId },
+      success: function(res) {
+        let courses = (res.courses || []);
+        originalCoursesData = courses; // Store original data
+        $('#coursesCount').text(courses.length);
+        if (courses.length === 0) {
+          $('#coursesBox').html(`
+            <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+              <div class="text-center text-muted">
+                <i class="bx bx-info-circle display-4 mb-3"></i>
+                <p>No available courses found for this term</p>
+              </div>
+            </div>
+          `);
+          $('#enrollBtn').hide();
+          $('#creditHoursSummary').hide();
+          $('#exceptionAlert').hide();
+          $('#prerequisitesBox').html(`
+            <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+              <div class="text-center text-muted">
+                <i class="bx bx-link-alt display-4 mb-3"></i>
+                <p>Select courses to view prerequisites</p>
+              </div>
+            </div>
+          `);
+          $('#prerequisitesCount').text('0');
+        } else {
+          displayFilteredCourses(courses);
+          $('#enrollBtn').show();
+          updateEnrollButton();
+          updateCreditHoursSummary();
+          
+          // Load remaining credit hours for the student in this term
+          loadRemainingCreditHours(studentId, termId);
+        }
+      },
+      error: function() {
+        $('#coursesBox').html(`
+          <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+            <div class="text-center text-muted">
+              <i class="bx bx-error-circle display-4 mb-3"></i>
+              <p>Could not load available courses</p>
+            </div>
+          </div>
+        `);
+        $('#coursesCount').text('0');
+        $('#enrollBtn').hide();
+        $('#creditHoursSummary').hide();
+        $('#exceptionAlert').hide();
+        $('#prerequisitesBox').html(`
+          <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+            <div class="text-center text-muted">
+              <i class="bx bx-link-alt display-4 mb-3"></i>
+              <p>Select courses to view prerequisites</p>
+            </div>
+          </div>
+        `);
+        $('#prerequisitesCount').text('0');
+        originalCoursesData = [];
+      }
+    });
+  }
+
+  function loadPrerequisites(studentId, selectedCourseIds) {
+    if (!studentId || !selectedCourseIds || selectedCourseIds.length === 0) {
+      $('#prerequisitesBox').html(`
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+          <div class="text-center text-muted">
+            <i class="bx bx-link-alt display-4 mb-3"></i>
+            <p>Select courses to view prerequisites</p>
+          </div>
+        </div>
+      `);
+      $('#prerequisitesCount').text('0');
+      originalPrerequisitesData = [];
+      return;
+    }
+    showLoading('#prerequisitesBox', 'Loading prerequisites...');
+    $.ajax({
+      url: '{{ route('courses.prerequisites') }}',
+      method: 'POST',
+      data: { 
+        student_id: studentId, 
+        course_ids: selectedCourseIds, 
+        _token: '{{ csrf_token() }}' 
+      },
+      success: function(reponse) {
+        let prerequisites = (reponse.data || []);
+        originalPrerequisitesData = prerequisites; // Store original data
+        $('#prerequisitesCount').text(prerequisites.length);
+        if (prerequisites.length === 0) {
+          $('#prerequisitesBox').html(`
+            <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+              <div class="text-center text-muted">
+                <i class="bx bx-info-circle display-4 mb-3"></i>
+                <p>No prerequisites found for selected courses</p>
+              </div>
+            </div>
+          `);
+        } else {
+          displayFilteredPrerequisites(prerequisites);
+        }
+      },
+      error: function() {
+        $('#prerequisitesBox').html(`
+          <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+            <div class="text-center text-muted">
+              <i class="bx bx-error-circle display-4 mb-3"></i>
+              <p>Could not load prerequisites</p>
+            </div>
+          </div>
+        `);
+        $('#prerequisitesCount').text('0');
+        originalPrerequisitesData = [];
+      }
+    });
+  }
 });
 </script>
 @endpush

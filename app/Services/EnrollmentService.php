@@ -150,7 +150,11 @@ class EnrollmentService
                     'A-', 'B+', 'B' => 'bg-label-primary',
                     'B-', 'C+', 'C' => 'bg-label-warning',
                     'C-', 'D+', 'D' => 'bg-label-info',
-                    'F' => 'bg-label-danger',
+                    'F', 'FL', 'FD' => 'bg-label-danger',
+                    'P' => 'bg-label-success',
+                    'AU' => 'bg-label-info',
+                    'W' => 'bg-label-secondary',
+                    'I' => 'bg-label-warning',
                     default => 'bg-label-secondary',
                 };
                 return "<span class='badge {$badgeClass}'><i class='bx bx-star me-1'></i>{$enrollment->grade}</span>";

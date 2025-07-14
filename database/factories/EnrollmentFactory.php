@@ -14,7 +14,7 @@ class EnrollmentFactory extends Factory
 
     public function definition(): array
     {
-        $grades = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'F'];
+        $grades = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'F', 'FL', 'FD', 'P', 'AU', 'W', 'I'];
         return [
             'student_id' => Student::factory(),
             'course_id' => Course::factory(),

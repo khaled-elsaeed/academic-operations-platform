@@ -20,7 +20,7 @@ class EnrollmentImportValidator
             'academic_id' => 'required|exists:students,academic_id',
             'course_code'         => 'required|exists:courses,code',
             'term_code'           => 'required|exists:terms,code',
-            'grade'               => 'nullable|in:A+,A,A-,B+,B,B-,C+,C,C-,D+,D,F',
+            'grade'               => 'nullable|in:A+,A,A-,B+,B,B-,C+,C,C-,D+,D,F,FL,FD,P,AU,W,I',
         ], [
             'academic_id.required' => 'Academic ID is required.',
             'academic_id.exists'   => 'Student with this academic ID does not exist.',

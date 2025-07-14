@@ -179,7 +179,7 @@ class HomeService
         return [
             'advisees' => [
                 'total' => $advisees->count(),
-                'avgCgpa' => number_format($advisees->avg('cgpa'), 2),
+                'avgCgpa' => number_format($advisees->avg('cgpa'), 3),
                 'lastUpdatedTime' => formatDate($advisees->max('updated_at')),
             ],
             'courses' => [

@@ -43,7 +43,7 @@ class StudentImportValidator
             ],
             'academic_email' => 'required|email',
             'level'          => 'required|exists:levels,name',
-            'cgpa'           => 'nullable|numeric|min:0|max:4',
+            'cgpa'           => ['nullable','numeric','min:0','max:4','regex:/^\d{1}(\.\d{1,3})?$/'],
             'program_name'   => 'required|exists:programs,name',
         ], [
             'name_en.required'        => 'English name is required.',

@@ -212,7 +212,7 @@
                     {{-- CGPA and Gender --}}
                     <div class="col-md-6 mb-3">
                         <label for="cgpa" class="form-label">CGPA</label>
-                        <input type="number" step="0.01" class="form-control" id="cgpa" name="cgpa" required>
+                        <input type="number" step="0.001" class="form-control" id="cgpa" name="cgpa" required>
                     </div>
                     <div class="col-md-6 mb-3">
                         <label for="gender" class="form-label">Gender</label>

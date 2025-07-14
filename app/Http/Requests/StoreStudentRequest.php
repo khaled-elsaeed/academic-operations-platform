@@ -28,7 +28,7 @@ class StoreStudentRequest extends FormRequest
             'national_id' => 'required|string|max:50|unique:students,national_id',
             'academic_email' => 'required|email|unique:students,academic_email',
             'level_id' => 'required|exists:levels,id',
-            'cgpa' => 'required|numeric|min:0|max:4',
+            'cgpa' => ['required','numeric','min:0','max:4', 'regex:/^\d{1}(\.\d{1,3})?$/'],
             'program_id' => 'required|exists:programs,id',
             'gender' => 'required|in:male,female',
         ];

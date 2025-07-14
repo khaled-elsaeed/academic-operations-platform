@@ -54,7 +54,7 @@ function loadAdvisorDashboardStats() {
 function populateStatCards(data) {
     updateStatCard('advisees', data.advisees.total, data.advisees.lastUpdatedTime);
     updateStatCard('courses', data.courses.total, data.courses.lastUpdatedTime);
-    updateStatCard('avg-cgpa', data.advisees.avgCgpa, data.advisees.lastUpdatedTime);
+    updateStatCard('avg-cgpa', parseFloat(data.advisees.avgCgpa).toFixed(3), data.advisees.lastUpdatedTime);
 }
 
 function updateStatCard(id, total, lastUpdatedTime) {

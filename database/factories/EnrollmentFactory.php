@@ -14,11 +14,12 @@ class EnrollmentFactory extends Factory
 
     public function definition(): array
     {
+        $grades = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'F'];
         return [
             'student_id' => Student::factory(),
             'course_id' => Course::factory(),
             'term_id' => Term::factory(),
-            'score' => $this->faker->optional(0.8)->randomFloat(2, 60, 100), // 80% chance of having a score, between 60-100
+            'grade' => $this->faker->optional(0.8)->randomElement($grades), // 80% chance of having a grade
         ];
     }
 } 

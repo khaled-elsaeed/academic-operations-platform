@@ -66,14 +66,21 @@
         </div>
         
         <div class="col-md-3">
-            <label for="search_score" class="form-label">Score Range:</label>
-            <select class="form-control" id="search_score">
-                <option value="">All Scores</option>
-                <option value="90-100">90-100 (Excellent)</option>
-                <option value="80-89">80-89 (Very Good)</option>
-                <option value="70-79">70-79 (Good)</option>
-                <option value="60-69">60-69 (Pass)</option>
-                <option value="0-59">0-59 (Fail)</option>
+            <label for="search_grade" class="form-label">Grade:</label>
+            <select class="form-control" id="search_grade">
+                <option value="">All Grades</option>
+                <option value="A+">A+</option>
+                <option value="A">A</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B">B</option>
+                <option value="B-">B-</option>
+                <option value="C+">C+</option>
+                <option value="C">C</option>
+                <option value="C-">C-</option>
+                <option value="D+">D+</option>
+                <option value="D">D</option>
+                <option value="F">F</option>
                 <option value="no-grade">No Grade</option>
             </select>
         </div>
@@ -85,18 +92,18 @@
 
     {{-- ===== DATA TABLE ===== --}}
     <x-ui.datatable
-        :headers="['ID', 'Student', 'Course', 'Term', 'Score', 'Action']"
+        :headers="['ID', 'Student', 'Course', 'Term', 'Grade', 'Action']"
         :columns="[
             ['data' => 'id', 'name' => 'id'],
             ['data' => 'student', 'name' => 'student'],
             ['data' => 'course', 'name' => 'course'],
             ['data' => 'term', 'name' => 'term'],
-            ['data' => 'score', 'name' => 'score'],
+            ['data' => 'grade', 'name' => 'grade'],
             ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
         ]"
         :ajax-url="route('enrollments.datatable')"
         table-id="enrollments-table"
-        :filter-fields="['search_student','search_course','search_term','search_score']"
+        :filter-fields="['search_student','search_course','search_term','search_grade']"
     />
 
     {{-- ===== MODALS SECTION ===== --}}
@@ -188,7 +195,7 @@ const SELECTORS = {
   searchStudent: '#search_student',
   searchCourse: '#search_course',
   searchTerm: '#search_term',
-  searchScore: '#search_score'
+  searchGrade: '#search_grade'
 };
 
 // ===========================

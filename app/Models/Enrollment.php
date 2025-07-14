@@ -22,7 +22,7 @@ class Enrollment extends Model
         'student_id',
         'course_id',
         'term_id',
-        'score',
+        'grade',
     ];
 
     /**
@@ -33,7 +33,7 @@ class Enrollment extends Model
     protected function casts(): array
     {
         return [
-            'score' => 'decimal:2',
+            'grade' => 'string',
         ];
     }
 

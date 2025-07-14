@@ -494,7 +494,7 @@ function loadEnrollmentHistory(studentId) {
                     <i class="bx bx-calendar me-1"></i>
                     ${enr.term ? enr.term.name : 'Term #' + enr.term_id}
                   </p>
-                  ${enr.score ? `<div class="mt-1"><span class="badge bg-label-primary"><i class="bx bx-star me-1"></i>Grade: <strong>${parseFloat(enr.score).toFixed(2)}</strong></span></div>` : '<div class="mt-1"><span class="badge bg-label-secondary"><i class="bx bx-time me-1"></i>No Grade Yet</span></div>'}
+                  ${enr.grade ? `<div class="mt-1"><span class="badge bg-label-primary"><i class="bx bx-star me-1"></i>Grade: <strong>${enr.grade}</strong></span></div>` : '<div class="mt-1"><span class="badge bg-label-secondary"><i class="bx bx-time me-1"></i>No Grade Yet</span></div>'}
                 </div>
                 <span class="badge bg-label-success">Enrolled</span>
               </div>
@@ -1227,12 +1227,12 @@ $(document).ready(function () {
       const courseName = (enrollment.course?.name || '').toLowerCase();
       const courseCode = (enrollment.course?.code || '').toLowerCase();
       const termName = (enrollment.term?.name || '').toLowerCase();
-      const score = enrollment.score ? enrollment.score.toString() : '';
+      const grade = enrollment.grade ? enrollment.grade.toString() : '';
       
       return courseName.includes(searchTerm) || 
              courseCode.includes(searchTerm) || 
              termName.includes(searchTerm) || 
-             score.includes(searchTerm);
+             grade.includes(searchTerm);
     });
 
     displayFilteredHistory(filteredData);
@@ -1260,7 +1260,7 @@ $(document).ready(function () {
                   <i class="bx bx-calendar me-1"></i>
                   ${enr.term ? enr.term.name : 'Term #' + enr.term_id}
                 </p>
-                ${enr.score ? `<div class="mt-1"><span class="badge bg-label-primary"><i class="bx bx-star me-1"></i>Grade: <strong>${parseFloat(enr.score).toFixed(2)}</strong></span></div>` : '<div class="mt-1"><span class="badge bg-label-secondary"><i class="bx bx-time me-1"></i>No Grade Yet</span></div>'}
+                ${enr.grade ? `<div class="mt-1"><span class="badge bg-label-primary"><i class="bx bx-star me-1"></i>Grade: <strong>${enr.grade}</strong></span></div>` : '<div class="mt-1"><span class="badge bg-label-secondary"><i class="bx bx-time me-1"></i>No Grade Yet</span></div>'}
               </div>
               <span class="badge bg-label-success">Enrolled</span>
             </div>

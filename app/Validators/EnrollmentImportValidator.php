@@ -20,7 +20,7 @@ class EnrollmentImportValidator
             'academic_id' => 'required|exists:students,academic_id',
             'course_code'         => 'required|exists:courses,code',
             'term_code'           => 'required|exists:terms,code',
-            'score'               => 'nullable|numeric|min:0|max:100',
+            'grade'               => 'nullable|in:A+,A,A-,B+,B,B-,C+,C,C-,D+,D,F',
         ], [
             'academic_id.required' => 'Academic ID is required.',
             'academic_id.exists'   => 'Student with this academic ID does not exist.',
@@ -28,9 +28,7 @@ class EnrollmentImportValidator
             'course_code.exists'           => 'Course code does not exist.',
             'term_code.required'           => 'Term code is required.',
             'term_code.exists'             => 'Term code does not exist.',
-            'score.numeric'                => 'Score must be a valid number.',
-            'score.min'                    => 'Score must be at least 0.',
-            'score.max'                    => 'Score cannot exceed 100.',
+            'grade.in'                     => 'Grade must be one of: A+, A, A-, B+, B, B-, C+, C, C-, D+, D, F.',
         ]);
 
         if ($validator->fails()) {

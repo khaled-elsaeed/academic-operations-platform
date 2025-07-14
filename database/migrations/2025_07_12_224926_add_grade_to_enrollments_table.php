@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('enrollments', function (Blueprint $table) {
-            $table->decimal('score', 5, 2)->nullable()->after('term_id');
+            $table->enum('grade', ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'F'])->nullable()->after('term_id');
         });
     }
 
@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('enrollments', function (Blueprint $table) {
-            $table->dropColumn('score');
+            $table->dropColumn('grade');
         });
     }
 };

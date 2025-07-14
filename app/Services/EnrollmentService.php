@@ -141,21 +141,19 @@ class EnrollmentService
             ->addColumn('term', function($enrollment) {
                 return $enrollment->term_season && $enrollment->term_year ? "{$enrollment->term_season} {$enrollment->term_year}" : '-';
             })
-            ->addColumn('score', function($enrollment) {
-                if ($enrollment->score === null) {
+            ->addColumn('grade', function($enrollment) {
+                if ($enrollment->grade === null) {
                     return '<span class="badge bg-label-secondary"><i class="bx bx-time me-1"></i>No Grade</span>';
                 }
-                
-                $score = number_format($enrollment->score, 2);
-                $badgeClass = match(true) {
-                    $enrollment->score >= 90 => 'bg-label-success',
-                    $enrollment->score >= 80 => 'bg-label-primary',
-                    $enrollment->score >= 70 => 'bg-label-warning',
-                    $enrollment->score >= 60 => 'bg-label-info',
-                    default => 'bg-label-danger'
+                $badgeClass = match($enrollment->grade) {
+                    'A+', 'A' => 'bg-label-success',
+                    'A-', 'B+', 'B' => 'bg-label-primary',
+                    'B-', 'C+', 'C' => 'bg-label-warning',
+                    'C-', 'D+', 'D' => 'bg-label-info',
+                    'F' => 'bg-label-danger',
+                    default => 'bg-label-secondary',
                 };
-                
-                return "<span class='badge {$badgeClass}'><i class='bx bx-star me-1'></i>{$score}</span>";
+                return "<span class='badge {$badgeClass}'><i class='bx bx-star me-1'></i>{$enrollment->grade}</span>";
             })
             ->addColumn('action', function($enrollment) {
                 return $this->renderActionButtons($enrollment);
@@ -163,8 +161,8 @@ class EnrollmentService
             ->orderColumn('student', 'students.name_en $1')
             ->orderColumn('course', 'courses.title $1')
             ->orderColumn('term', 'terms.season $1, terms.year $1')
-            ->orderColumn('score', 'enrollments.score $1')
-            ->rawColumns(['action', 'score'])
+            ->orderColumn('grade', 'enrollments.grade $1')
+            ->rawColumns(['action', 'grade'])
             ->make(true);
     }
 
@@ -196,18 +194,12 @@ class EnrollmentService
             });
         }
         
-        if ($request->has('search_score') && !empty($request->input('search_score'))) {
-            $searchScore = $request->input('search_score');
-            
-            if ($searchScore === 'no-grade') {
-                $query->whereNull('enrollments.score');
+        if ($request->has('search_grade') && !empty($request->input('search_grade'))) {
+            $searchGrade = $request->input('search_grade');
+            if ($searchGrade === 'no-grade') {
+                $query->whereNull('enrollments.grade');
             } else {
-                $range = explode('-', $searchScore);
-                if (count($range) === 2) {
-                    $min = (float) $range[0];
-                    $max = (float) $range[1];
-                    $query->whereBetween('enrollments.score', [$min, $max]);
-                }
+                $query->where('enrollments.grade', $searchGrade);
             }
         }
     }
@@ -386,7 +378,7 @@ class EnrollmentService
                 'student_id' => $student->id,
                 'course_id' => $course->id,
                 'term_id' => $term->id,
-                'score' => floatval($row['score']),
+                'grade' => $row['grade'] ?? null,
             ]
         );
     }

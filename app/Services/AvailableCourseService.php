@@ -24,43 +24,113 @@ use Yajra\DataTables\DataTables;
 class AvailableCourseService
 {
     /**
-     * Create a new available course.
+     * Create a new available course or multiple courses in bulk.
+     *
+     * @param array $data
+     * @return AvailableCourse|array
+     * @throws BusinessValidationException
+     */
+    public function createAvailableCourse(array $data)
+    {
+        // Bulk creation support
+        if (isset($data['courses']) && is_array($data['courses'])) {
+            $results = [];
+            foreach ($data['courses'] as $courseData) {
+                $results[] = $this->createAvailableCourseSingle($courseData);
+            }
+            return $results;
+        }
+        return $this->createAvailableCourseSingle($data);
+    }
+
+    /**
+     * Create a single available course with eligibility mode support.
      *
      * @param array $data
      * @return AvailableCourse
      * @throws BusinessValidationException
      */
-    public function createAvailableCourse(array $data): AvailableCourse
+    public function createAvailableCourseSingle(array $data): AvailableCourse
     {
         $this->validateAvailableCourseData($data);
         $this->ensureAvailableCourseDoesNotExist($data);
 
         return DB::transaction(function () use ($data) {
             $isUniversal = $data['is_universal'] ?? false;
+            $eligibilityMode = $data['eligibility_mode'] ?? 'individual';
             $availableCourse = $this->createAvailableCourseRecord($data);
-            if (!$isUniversal) {
+            if (!$isUniversal && $eligibilityMode !== 'universal') {
                 $eligibility = $data['eligibility'] ?? [];
-                $this->attachEligibilities($availableCourse, $eligibility);
+                if ($eligibilityMode === 'all_programs') {
+                    // All programs for a specific level
+                    $levelId = $eligibility[0]['level_id'] ?? null;
+                    $allPrograms = Program::pluck('id')->toArray();
+                    $bulkEligibility = [];
+                    foreach ($allPrograms as $pid) {
+                        $bulkEligibility[] = ['program_id' => $pid, 'level_id' => $levelId];
+                    }
+                    $this->attachEligibilities($availableCourse, $bulkEligibility);
+                } elseif ($eligibilityMode === 'all_levels') {
+                    // All levels for a specific program
+                    $programId = $eligibility[0]['program_id'] ?? null;
+                    $allLevels = Level::pluck('id')->toArray();
+                    $bulkEligibility = [];
+                    foreach ($allLevels as $lid) {
+                        $bulkEligibility[] = ['program_id' => $programId, 'level_id' => $lid];
+                    }
+                    $this->attachEligibilities($availableCourse, $bulkEligibility);
+                } else {
+                    // Individual mode (custom pairs)
+                    $this->attachEligibilities($availableCourse, $eligibility);
+                }
             }
             return $availableCourse->fresh(['programs', 'levels']);
         });
     }
 
     /**
-     * Update an existing available course.
+     * Update an existing available course or multiple courses in bulk.
+     *
+     * @param int|AvailableCourse $availableCourseOrId
+     * @param array $data
+     * @return AvailableCourse|array
+     * @throws BusinessValidationException
+     */
+    public function updateAvailableCourse($availableCourseOrId, array $data)
+    {
+        // Bulk update support
+        if (isset($data['courses']) && is_array($data['courses'])) {
+            $results = [];
+            foreach ($data['courses'] as $courseData) {
+                $id = $courseData['id'] ?? null;
+                if (!$id) continue;
+                $results[] = $this->updateAvailableCourseById($id, $courseData);
+            }
+            return $results;
+        }
+        if ($availableCourseOrId instanceof AvailableCourse) {
+            return $this->updateAvailableCourseSingle($availableCourseOrId, $data);
+        }
+        $availableCourse = AvailableCourse::findOrFail($availableCourseOrId);
+        return $this->updateAvailableCourseSingle($availableCourse, $data);
+    }
+
+    /**
+     * Update a single available course with eligibility mode support.
      *
      * @param AvailableCourse $availableCourse
      * @param array $data
      * @return AvailableCourse
      * @throws BusinessValidationException
      */
-    public function updateAvailableCourse(AvailableCourse $availableCourse, array $data): AvailableCourse
+    public function updateAvailableCourseSingle(AvailableCourse $availableCourse, array $data): AvailableCourse
     {
         $this->validateAvailableCourseData($data);
         $this->ensureAvailableCourseDoesNotExist($data, $availableCourse->id);
 
         return DB::transaction(function () use ($availableCourse, $data) {
             $isUniversal = $data['is_universal'] ?? false;
+            $eligibilityMode = $data['eligibility_mode'] ?? 'individual';
             $availableCourse->update([
                 'course_id' => $data['course_id'],
                 'term_id' => $data['term_id'],
@@ -68,9 +138,27 @@ class AvailableCourseService
                 'max_capacity' => $data['max_capacity'] ?? 30,
                 'is_universal' => $isUniversal,
             ]);
-            if (!$isUniversal) {
+            if (!$isUniversal && $eligibilityMode !== 'universal') {
                 $eligibility = $data['eligibility'] ?? [];
-                $this->attachEligibilities($availableCourse, $eligibility);
+                if ($eligibilityMode === 'all_programs') {
+                    $levelId = $eligibility[0]['level_id'] ?? null;
+                    $allPrograms = Program::pluck('id')->toArray();
+                    $bulkEligibility = [];
+                    foreach ($allPrograms as $pid) {
+                        $bulkEligibility[] = ['program_id' => $pid, 'level_id' => $levelId];
+                    }
+                    $this->attachEligibilities($availableCourse, $bulkEligibility);
+                } elseif ($eligibilityMode === 'all_levels') {
+                    $programId = $eligibility[0]['program_id'] ?? null;
+                    $allLevels = Level::pluck('id')->toArray();
+                    $bulkEligibility = [];
+                    foreach ($allLevels as $lid) {
+                        $bulkEligibility[] = ['program_id' => $programId, 'level_id' => $lid];
+                    }
+                    $this->attachEligibilities($availableCourse, $bulkEligibility);
+                } else {
+                    $this->attachEligibilities($availableCourse, $eligibility);
+                }
             } else {
                 $availableCourse->setProgramLevelPairs([]);
             }

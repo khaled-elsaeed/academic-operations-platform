@@ -4,6 +4,34 @@
 
 @section('page-content')
 <div class="container-xxl flex-grow-1 container-p-y">
+    {{-- ===== STATISTICS CARDS ===== --}}
+    <div class="row g-4 mb-4">
+        <div class="col-sm-6 col-xl-4">
+            <x-ui.card.stat2 
+                id="exceptions"
+                label="Total Exceptions"
+                color="primary"
+                icon="bx bx-error"
+            />
+        </div>
+        <div class="col-sm-6 col-xl-4">
+            <x-ui.card.stat2 
+                id="active-exceptions"
+                label="Active Exceptions"
+                color="success"
+                icon="bx bx-check-circle"
+            />
+        </div>
+        <div class="col-sm-6 col-xl-4">
+            <x-ui.card.stat2 
+                id="inactive-exceptions"
+                label="Inactive Exceptions"
+                color="danger"
+                icon="bx bx-x-circle"
+            />
+        </div>
+    </div>
+
     {{-- ===== PAGE HEADER & ACTION BUTTONS ===== --}}
     <x-ui.page-header 
         title="Credit Hours Exceptions"
@@ -78,7 +106,6 @@
     />
 
     {{-- ===== MODALS SECTION ===== --}}
-    {{-- Add/Edit Exception Modal --}}
     <x-ui.modal 
         id="exceptionModal"
         title="Add/Edit Credit Hours Exception"
@@ -140,435 +167,346 @@
 // ===========================
 // UTILITY FUNCTIONS
 // ===========================
-
-/**
- * Shows success notification
- * @param {string} message - Success message to display
- */
-function showSuccess(message) {
-  Swal.fire({
-    toast: true,
-    position: 'top-end',
-    icon: 'success',
-    title: message,
-    showConfirmButton: false,
-    timer: 2500,
-    timerProgressBar: true
-  });
-}
-
-/**
- * Shows error notification
- * @param {string} message - Error message to display
- */
-function showError(message) {
-  Swal.fire('Error', message, 'error');
-}
-
-/**
- * Shows/hides loading spinners and content for stat2 component
- * @param {string} elementId - Base element ID
- * @param {boolean} isLoading - Whether to show loading state
- */
-function toggleLoadingState(elementId, isLoading) {
-  const $value = $(`#${elementId}-value`);
-  const $loader = $(`#${elementId}-loader`);
-  const $updated = $(`#${elementId}-last-updated`);
-  const $updatedLoader = $(`#${elementId}-last-updated-loader`);
-
-  if (isLoading) {
-    $value.addClass('d-none');
-    $loader.removeClass('d-none');
-    $updated.addClass('d-none');
-    $updatedLoader.removeClass('d-none');
-  } else {
-    $value.removeClass('d-none');
-    $loader.addClass('d-none');
-    $updated.removeClass('d-none');
-    $updatedLoader.addClass('d-none');
+const Utils = {
+  showSuccess(message) {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: message,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true
+    });
+  },
+  showError(message) {
+    Swal.fire('Error', message, 'error');
+  },
+  toggleLoadingState(elementId, isLoading) {
+    const $value = $(`#${elementId}-value`);
+    const $loader = $(`#${elementId}-loader`);
+    const $updated = $(`#${elementId}-last-updated`);
+    const $updatedLoader = $(`#${elementId}-last-updated-loader`);
+    if (isLoading) {
+      $value.addClass('d-none');
+      $loader.removeClass('d-none');
+      $updated.addClass('d-none');
+      $updatedLoader.removeClass('d-none');
+    } else {
+      $value.removeClass('d-none');
+      $loader.addClass('d-none');
+      $updated.removeClass('d-none');
+      $updatedLoader.addClass('d-none');
+    }
   }
-}
+};
 
 // ===========================
-// STATISTICS MANAGEMENT
+// STATS MANAGER
 // ===========================
-
-/**
- * Loads exception statistics and updates stat cards
- */
-function loadExceptionStats() {
-  // Show loading state for all stats
-  toggleLoadingState('exceptions', true);
-  toggleLoadingState('active-exceptions', true);
-  toggleLoadingState('inactive-exceptions', true);
-  
-  $.ajax({
-    url: '{{ route("credit-hours-exceptions.stats") }}',
-    method: 'GET',
-    success: function (response) {
-      const data = response.data;
-      // Update exception statistics
-      $('#exceptions-value').text(data.total.total ?? '--');
-      $('#exceptions-last-updated').text(data.total.lastUpdateTime ?? '--');
-      $('#active-exceptions-value').text(data.active.total ?? '--');
-      $('#active-exceptions-last-updated').text(data.active.lastUpdateTime ?? '--');
-      $('#inactive-exceptions-value').text(data.inactive.total ?? '--');
-      $('#inactive-exceptions-last-updated').text(data.inactive.lastUpdateTime ?? '--');
-      // Hide loading state
-      toggleLoadingState('exceptions', false);
-      toggleLoadingState('active-exceptions', false);
-      toggleLoadingState('inactive-exceptions', false);
-    },
-    error: function() {
-      // Show error state
-      $('#exceptions-value, #active-exceptions-value, #inactive-exceptions-value').text('N/A');
-      $('#exceptions-last-updated, #active-exceptions-last-updated, #inactive-exceptions-last-updated').text('N/A');
-      toggleLoadingState('exceptions', false);
-      toggleLoadingState('active-exceptions', false);
-      toggleLoadingState('inactive-exceptions', false);
-      showError('Failed to load exception statistics');
-    }
-  });
-}
-
-// ===========================
-// DROPDOWN POPULATION
-// ===========================
-
-/**
- * Loads all students into the student select dropdown
- * @param {number|null} selectedId - The student ID to preselect (optional)
- * @returns {Promise} jQuery promise
- */
-function loadStudents(selectedId = null) {
-  return $.ajax({
-    url: '{{ route("credit-hours-exceptions.students") }}',
-    method: 'GET',
-    success: function (response) {
-      const data = response.data;
-      const $studentSelect = $('#student_id');
-      
-      // Clear existing options
-      $studentSelect.empty().append('<option value="">Select Student</option>');
-      
-      // Add student options
-      data.forEach(function (student) {
-        $studentSelect.append(
-          $('<option>', { value: student.id, text: student.text })
-        );
-      });
-      
-      // Set selected value if provided
-      if (selectedId) {
-        $studentSelect.val(selectedId).trigger('change');
-      }
-      
-      // Initialize Select2 if not already initialized
-      if (!$studentSelect.hasClass('select2-hidden-accessible')) {
-        $studentSelect.select2({
-          theme: 'bootstrap-5',
-          placeholder: 'Select Student',
-          allowClear: true,
-          width: '100%',
-          dropdownParent: $('#exceptionModal')
-        });
-      }
-    },
-    error: function() {
-      showError('Failed to load students');
-    }
-  });
-}
-
-/**
- * Loads all terms into the term select dropdown
- * @param {number|null} selectedId - The term ID to preselect (optional)
- * @returns {Promise} jQuery promise
- */
-function loadTerms(selectedId = null) {
-  return $.ajax({
-    url: '{{ route("credit-hours-exceptions.terms") }}',
-    method: 'GET',
-    success: function (response) {
-      const data = response.data;
-      const $termSelect = $('#term_id');
-      
-      // Clear existing options
-      $termSelect.empty().append('<option value="">Select Term</option>');
-      
-      // Add term options
-      data.forEach(function (term) {
-        $termSelect.append(
-          $('<option>', { value: term.id, text: term.text })
-        );
-      });
-      
-      // Set selected value if provided
-      if (selectedId) {
-        $termSelect.val(selectedId).trigger('change');
-      }
-      
-      // Initialize Select2 if not already initialized
-      if (!$termSelect.hasClass('select2-hidden-accessible')) {
-        $termSelect.select2({
-          theme: 'bootstrap-5',
-          placeholder: 'Select Term',
-          allowClear: true,
-          width: '100%',
-          dropdownParent: $('#exceptionModal')
-        });
-      }
-    },
-    error: function() {
-      showError('Failed to load terms');
-    }
-  });
-}
-
-// ===========================
-// EXCEPTION CRUD OPERATIONS
-// ===========================
-
-/**
- * Handles the Add Exception button click event
- */
-function handleAddExceptionBtn() {
-  $('#addExceptionBtn').on('click', function () {
-    $('#exceptionForm')[0].reset();
-    $('#exception_id').val('');
-    $('#exceptionModal .modal-title').text('Add Credit Hours Exception');
-    $('#saveExceptionBtn').text('Save');
-    $('#is_active').prop('checked', true);
-    
-    // Destroy existing Select2 if initialized
-    if ($('#student_id').hasClass('select2-hidden-accessible')) {
-      $('#student_id').select2('destroy');
-    }
-    if ($('#term_id').hasClass('select2-hidden-accessible')) {
-      $('#term_id').select2('destroy');
-    }
-    
-    // Load dropdown data
-    loadStudents();
-    loadTerms();
-    
-    $('#exceptionModal').modal('show');
-  });
-}
-
-/**
- * Handles the Edit Exception button click event
- */
-function handleEditExceptionBtn() {
-  $(document).on('click', '.editExceptionBtn', function () {
-    const exceptionId = $(this).data('id');
-    
+const StatsManager = {
+  loadExceptionStats() {
+    Utils.toggleLoadingState('exceptions', true);
+    Utils.toggleLoadingState('active-exceptions', true);
+    Utils.toggleLoadingState('inactive-exceptions', true);
     $.ajax({
-      url: `{{ route('credit-hours-exceptions.index') }}/${exceptionId}`,
+      url: '{{ route("credit-hours-exceptions.stats") }}',
       method: 'GET',
       success: function (response) {
-        if (response.success) {
-          const exception = response.data;
-          
-          // Populate form fields
-          $('#exception_id').val(exception.id);
-          $('#additional_hours').val(exception.additional_hours);
-          $('#reason').val(exception.reason);
-          $('#is_active').prop('checked', exception.is_active);
-          
-          // Destroy existing Select2 if initialized
-          if ($('#student_id').hasClass('select2-hidden-accessible')) {
-            $('#student_id').select2('destroy');
-          }
-          if ($('#term_id').hasClass('select2-hidden-accessible')) {
-            $('#term_id').select2('destroy');
-          }
-          
-          // Load dropdowns with preselected values
-          loadStudents(exception.student_id);
-          loadTerms(exception.term_id);
-          
-          $('#exceptionModal .modal-title').text('Edit Credit Hours Exception');
-          $('#saveExceptionBtn').text('Update');
-          $('#exceptionModal').modal('show');
-        } else {
-          showError(response.message || 'Failed to load exception details');
+        const data = response.data;
+        $('#exceptions-value').text(data.total.total ?? '--');
+        $('#exceptions-last-updated').text(data.total.lastUpdateTime ?? '--');
+        $('#active-exceptions-value').text(data.active.total ?? '--');
+        $('#active-exceptions-last-updated').text(data.active.lastUpdateTime ?? '--');
+        $('#inactive-exceptions-value').text(data.inactive.total ?? '--');
+        $('#inactive-exceptions-last-updated').text(data.inactive.lastUpdateTime ?? '--');
+        Utils.toggleLoadingState('exceptions', false);
+        Utils.toggleLoadingState('active-exceptions', false);
+        Utils.toggleLoadingState('inactive-exceptions', false);
+      },
+      error: function() {
+        $('#exceptions-value, #active-exceptions-value, #inactive-exceptions-value').text('N/A');
+        $('#exceptions-last-updated, #active-exceptions-last-updated, #inactive-exceptions-last-updated').text('N/A');
+        Utils.toggleLoadingState('exceptions', false);
+        Utils.toggleLoadingState('active-exceptions', false);
+        Utils.toggleLoadingState('inactive-exceptions', false);
+        Utils.showError('Failed to load exception statistics');
+      }
+    });
+  }
+};
+
+// ===========================
+// DROPDOWN MANAGER
+// ===========================
+const DropdownManager = {
+  loadStudents(selectedId = null) {
+    return $.ajax({
+      url: '{{ route("credit-hours-exceptions.students") }}',
+      method: 'GET',
+      success: function (response) {
+        const data = response.data;
+        const $studentSelect = $('#student_id');
+        $studentSelect.empty().append('<option value="">Select Student</option>');
+        data.forEach(function (student) {
+          $studentSelect.append(
+            $('<option>', { value: student.id, text: student.text })
+          );
+        });
+        if (selectedId) {
+          $studentSelect.val(selectedId).trigger('change');
+        }
+        if (!$studentSelect.hasClass('select2-hidden-accessible')) {
+          $studentSelect.select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Select Student',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $('#exceptionModal')
+          });
         }
       },
       error: function() {
-        showError('Failed to load exception details');
+        Utils.showError('Failed to load students');
       }
     });
-  });
-}
-
-/**
- * Handles the form submission for creating/updating exceptions
- */
-function handleExceptionFormSubmit() {
-  $('#exceptionForm').on('submit', function (e) {
-    e.preventDefault();
-    
-    const exceptionId = $('#exception_id').val();
-    const isEdit = exceptionId !== '';
-    const url = isEdit 
-      ? `{{ route('credit-hours-exceptions.index') }}/${exceptionId}`
-      : '{{ route("credit-hours-exceptions.store") }}';
-    const method = isEdit ? 'PUT' : 'POST';
-    
-    $.ajax({
-      url: url,
-      method: method,
-      data: $(this).serialize(),
-      headers: {
-        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-      },
+  },
+  loadTerms(selectedId = null) {
+    return $.ajax({
+      url: '{{ route("credit-hours-exceptions.terms") }}',
+      method: 'GET',
       success: function (response) {
-        if (response.success) {
-          $('#exceptionModal').modal('hide');
-          showSuccess(response.message);
-          // Reload datatable and stats
-          $('#exceptions-table').DataTable().ajax.reload();
-          loadExceptionStats();
-        } else {
-          showError(response.message || 'Operation failed');
+        const data = response.data;
+        const $termSelect = $('#term_id');
+        $termSelect.empty().append('<option value="">Select Term</option>');
+        data.forEach(function (term) {
+          $termSelect.append(
+            $('<option>', { value: term.id, text: term.text })
+          );
+        });
+        if (selectedId) {
+          $termSelect.val(selectedId).trigger('change');
+        }
+        if (!$termSelect.hasClass('select2-hidden-accessible')) {
+          $termSelect.select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Select Term',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $('#exceptionModal')
+          });
         }
       },
-      error: function (xhr) {
-        $('#exceptionModal').modal('hide');
-        const message = xhr.responseJSON?.message || 'An error occurred';
-        showError(message);
+      error: function() {
+        Utils.showError('Failed to load terms');
       }
     });
-  });
-}
-
-/**
- * Handles the Deactivate Exception button click event
- */
-function handleDeactivateExceptionBtn() {
-  $(document).on('click', '.deactivateExceptionBtn', function () {
-    const exceptionId = $(this).data('id');
-    
-    Swal.fire({
-      title: 'Deactivate Exception?',
-      text: 'Are you sure you want to deactivate this exception?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, deactivate it!'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        $.ajax({
-          url: `{{ route('credit-hours-exceptions.index') }}/${exceptionId}/deactivate`,
-          method: 'PATCH',
-          headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-          },
-          success: function (response) {
-            if (response.success) {
-              showSuccess(response.message);
-              $('#exceptions-table').DataTable().ajax.reload();
-              loadExceptionStats();
-            } else {
-              showError(response.message || 'Failed to deactivate exception');
-            }
-          },
-          error: function() {
-            showError('Failed to deactivate exception');
-          }
-        });
-      }
-    });
-  });
-}
-
-/**
- * Handles the Activate Exception button click event
- */
-function handleActivateExceptionBtn() {
-  $(document).on('click', '.activateExceptionBtn', function () {
-    const exceptionId = $(this).data('id');
-    
-    Swal.fire({
-      title: 'Activate Exception?',
-      text: 'Are you sure you want to activate this exception?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#28a745',
-      cancelButtonColor: '#6c757d',
-      confirmButtonText: 'Yes, activate it!'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        $.ajax({
-          url: `{{ route('credit-hours-exceptions.index') }}/${exceptionId}/activate`,
-          method: 'PATCH',
-          headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-          },
-          success: function (response) {
-            if (response.success) {
-              showSuccess(response.message);
-              $('#exceptions-table').DataTable().ajax.reload();
-              loadExceptionStats();
-            } else {
-              showError(response.message || 'Failed to activate exception');
-            }
-          },
-          error: function (xhr) {
-            const message = xhr.responseJSON?.message || 'Failed to activate exception';
-            showError(message);
-          }
-        });
-      }
-    });
-  });
-}
-
-/**
- * Handles the Delete Exception button click event
- */
-function handleDeleteExceptionBtn() {
-  $(document).on('click', '.deleteExceptionBtn', function () {
-    const exceptionId = $(this).data('id');
-    
-    Swal.fire({
-      title: 'Delete Exception?',
-      text: 'Are you sure you want to delete this exception? This action cannot be undone.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete it!'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        $.ajax({
-          url: `{{ route('credit-hours-exceptions.index') }}/${exceptionId}`,
-          method: 'DELETE',
-          headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-          },
-          success: function (response) {
-            if (response.success) {
-              showSuccess(response.message);
-              $('#exceptions-table').DataTable().ajax.reload();
-              loadExceptionStats();
-            } else {
-              showError(response.message || 'Failed to delete exception');
-            }
-          },
-          error: function() {
-            showError('Failed to delete exception');
-          }
-        });
-      }
-    });
-  });
-}
+  }
+};
 
 // ===========================
-// SEARCH FUNCTIONALITY
+// EXCEPTION MANAGER
+// ===========================
+const ExceptionManager = {
+  handleAddExceptionBtn() {
+    $('#addExceptionBtn').on('click', function () {
+      $('#exceptionForm')[0].reset();
+      $('#exception_id').val('');
+      $('#exceptionModal .modal-title').text('Add Credit Hours Exception');
+      $('#saveExceptionBtn').text('Save');
+      $('#is_active').prop('checked', true);
+      if ($('#student_id').hasClass('select2-hidden-accessible')) {
+        $('#student_id').select2('destroy');
+      }
+      if ($('#term_id').hasClass('select2-hidden-accessible')) {
+        $('#term_id').select2('destroy');
+      }
+      DropdownManager.loadStudents();
+      DropdownManager.loadTerms();
+      $('#exceptionModal').modal('show');
+    });
+  },
+  handleEditExceptionBtn() {
+    $(document).on('click', '.editExceptionBtn', function () {
+      const exceptionId = $(this).data('id');
+      $.ajax({
+        url: `{{ route('credit-hours-exceptions.index') }}/${exceptionId}`,
+        method: 'GET',
+        success: function (response) {
+          if (response.success) {
+            const exception = response.data;
+            $('#exception_id').val(exception.id);
+            $('#additional_hours').val(exception.additional_hours);
+            $('#reason').val(exception.reason);
+            $('#is_active').prop('checked', exception.is_active);
+            if ($('#student_id').hasClass('select2-hidden-accessible')) {
+              $('#student_id').select2('destroy');
+            }
+            if ($('#term_id').hasClass('select2-hidden-accessible')) {
+              $('#term_id').select2('destroy');
+            }
+            DropdownManager.loadStudents(exception.student_id);
+            DropdownManager.loadTerms(exception.term_id);
+            $('#exceptionModal .modal-title').text('Edit Credit Hours Exception');
+            $('#saveExceptionBtn').text('Update');
+            $('#exceptionModal').modal('show');
+          } else {
+            Utils.showError(response.message || 'Failed to load exception details');
+          }
+        },
+        error: function() {
+          Utils.showError('Failed to load exception details');
+        }
+      });
+    });
+  },
+  handleExceptionFormSubmit() {
+    $('#exceptionForm').on('submit', function (e) {
+      e.preventDefault();
+      const exceptionId = $('#exception_id').val();
+      const isEdit = exceptionId !== '';
+      const url = isEdit 
+        ? `{{ route('credit-hours-exceptions.index') }}/${exceptionId}`
+        : '{{ route("credit-hours-exceptions.store") }}';
+      const method = isEdit ? 'PUT' : 'POST';
+      $.ajax({
+        url: url,
+        method: method,
+        data: $(this).serialize(),
+        headers: {
+          'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function (response) {
+          if (response.success) {
+            $('#exceptionModal').modal('hide');
+            Utils.showSuccess(response.message);
+            $('#credit-hours-exceptions-table').DataTable().ajax.reload();
+            StatsManager.loadExceptionStats();
+          } else {
+            Utils.showError(response.message || 'Operation failed');
+          }
+        },
+        error: function (xhr) {
+          $('#exceptionModal').modal('hide');
+          const message = xhr.responseJSON?.message || 'An error occurred';
+          Utils.showError(message);
+        }
+      });
+    });
+  },
+  handleDeactivateExceptionBtn() {
+    $(document).on('click', '.deactivateExceptionBtn', function () {
+      const exceptionId = $(this).data('id');
+      Swal.fire({
+        title: 'Deactivate Exception?',
+        text: 'Are you sure you want to deactivate this exception?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, deactivate it!'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          $.ajax({
+            url: `{{ route('credit-hours-exceptions.index') }}/${exceptionId}/deactivate`,
+            method: 'PATCH',
+            headers: {
+              'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function (response) {
+              if (response.success) {
+                Utils.showSuccess(response.message);
+                $('#credit-hours-exceptions-table').DataTable().ajax.reload();
+                StatsManager.loadExceptionStats();
+              } else {
+                Utils.showError(response.message || 'Failed to deactivate exception');
+              }
+            },
+            error: function() {
+              Utils.showError('Failed to deactivate exception');
+            }
+          });
+        }
+      });
+    });
+  },
+  handleActivateExceptionBtn() {
+    $(document).on('click', '.activateExceptionBtn', function () {
+      const exceptionId = $(this).data('id');
+      Swal.fire({
+        title: 'Activate Exception?',
+        text: 'Are you sure you want to activate this exception?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, activate it!'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          $.ajax({
+            url: `{{ route('credit-hours-exceptions.index') }}/${exceptionId}/activate`,
+            method: 'PATCH',
+            headers: {
+              'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function (response) {
+              if (response.success) {
+                Utils.showSuccess(response.message);
+                $('#credit-hours-exceptions-table').DataTable().ajax.reload();
+                StatsManager.loadExceptionStats();
+              } else {
+                Utils.showError(response.message || 'Failed to activate exception');
+              }
+            },
+            error: function (xhr) {
+              const message = xhr.responseJSON?.message || 'Failed to activate exception';
+              Utils.showError(message);
+            }
+          });
+        }
+      });
+    });
+  },
+  handleDeleteExceptionBtn() {
+    $(document).on('click', '.deleteExceptionBtn', function () {
+      const exceptionId = $(this).data('id');
+      Swal.fire({
+        title: 'Delete Exception?',
+        text: 'Are you sure you want to delete this exception? This action cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          $.ajax({
+            url: `{{ route('credit-hours-exceptions.index') }}/${exceptionId}`,
+            method: 'DELETE',
+            headers: {
+              'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function (response) {
+              if (response.success) {
+                Utils.showSuccess(response.message);
+                $('#credit-hours-exceptions-table').DataTable().ajax.reload();
+                StatsManager.loadExceptionStats();
+              } else {
+                Utils.showError(response.message || 'Failed to delete exception');
+              }
+            },
+            error: function() {
+              Utils.showError('Failed to delete exception');
+            }
+          });
+        }
+      });
+    });
+  }
+};
+
+// ===========================
+// SEARCH MANAGER
 // ===========================
 const SearchManager = {
   initializeAdvancedSearch() {
@@ -583,32 +521,31 @@ const SearchManager = {
 };
 
 // ===========================
-// INITIALIZATION
+// MAIN APPLICATION
 // ===========================
+const CreditHoursExceptionApp = {
+  init() {
+    StatsManager.loadExceptionStats();
+    ExceptionManager.handleAddExceptionBtn();
+    ExceptionManager.handleEditExceptionBtn();
+    ExceptionManager.handleExceptionFormSubmit();
+    ExceptionManager.handleDeactivateExceptionBtn();
+    ExceptionManager.handleActivateExceptionBtn();
+    ExceptionManager.handleDeleteExceptionBtn();
+    SearchManager.initializeAdvancedSearch();
+    $('#exceptionModal').on('hidden.bs.modal', function () {
+      if ($('#student_id').hasClass('select2-hidden-accessible')) {
+        $('#student_id').select2('destroy');
+      }
+      if ($('#term_id').hasClass('select2-hidden-accessible')) {
+        $('#term_id').select2('destroy');
+      }
+    });
+  }
+};
 
 $(document).ready(function() {
-  // Load initial data
-  loadExceptionStats();
-  
-  // Initialize event handlers
-  handleAddExceptionBtn();
-  handleEditExceptionBtn();
-  handleExceptionFormSubmit();
-  handleDeactivateExceptionBtn();
-  handleActivateExceptionBtn();
-  handleDeleteExceptionBtn();
-  SearchManager.initializeAdvancedSearch();
-  
-  // Handle modal cleanup when closed
-  $('#exceptionModal').on('hidden.bs.modal', function () {
-    // Destroy Select2 when modal is closed to prevent conflicts
-    if ($('#student_id').hasClass('select2-hidden-accessible')) {
-      $('#student_id').select2('destroy');
-    }
-    if ($('#term_id').hasClass('select2-hidden-accessible')) {
-      $('#term_id').select2('destroy');
-    }
-  });
+  CreditHoursExceptionApp.init();
 });
 </script>
 @endpush 

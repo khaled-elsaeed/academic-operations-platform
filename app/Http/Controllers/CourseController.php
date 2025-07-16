@@ -2,16 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Models\Course;
-use App\Models\CoursePrerequisite;
-use App\Models\Enrollment;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\View\View;
 use App\Services\CourseService;
-use Exception;
+use App\Models\Course;
 use App\Exceptions\BusinessValidationException;
+use Exception;
 
 class CourseController extends Controller
 {
@@ -24,7 +20,9 @@ class CourseController extends Controller
     {}
 
     /**
-     * Display the course management page
+     * Display the course management page.
+     *
+     * @return View
      */
     public function index(): View
     {
@@ -32,7 +30,9 @@ class CourseController extends Controller
     }
 
     /**
-     * Get course statistics
+     * Get course statistics.
+     *
+     * @return JsonResponse
      */
     public function stats(): JsonResponse
     {
@@ -46,7 +46,9 @@ class CourseController extends Controller
     }
 
     /**
-     * Get course data for DataTables
+     * Get course data for DataTables.
+     *
+     * @return JsonResponse
      */
     public function datatable(): JsonResponse
     {
@@ -59,7 +61,10 @@ class CourseController extends Controller
     }
 
     /**
-     * Store a newly created course
+     * Store a newly created course.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function store(Request $request): JsonResponse
     {
@@ -81,7 +86,10 @@ class CourseController extends Controller
     }
 
     /**
-     * Display the specified course
+     * Display the specified course.
+     *
+     * @param Course $course
+     * @return JsonResponse
      */
     public function show(Course $course): JsonResponse
     {
@@ -95,7 +103,11 @@ class CourseController extends Controller
     }
 
     /**
-     * Update the specified course
+     * Update the specified course.
+     *
+     * @param Request $request
+     * @param Course $course
+     * @return JsonResponse
      */
     public function update(Request $request, Course $course): JsonResponse
     {
@@ -117,7 +129,10 @@ class CourseController extends Controller
     }
 
     /**
-     * Remove the specified course
+     * Remove the specified course.
+     *
+     * @param Course $course
+     * @return JsonResponse
      */
     public function destroy(Course $course): JsonResponse
     {
@@ -133,7 +148,9 @@ class CourseController extends Controller
     }
 
     /**
-     * Get all faculties for dropdown
+     * Get all faculties for dropdown.
+     *
+     * @return JsonResponse
      */
     public function getFaculties(): JsonResponse
     {
@@ -147,7 +164,9 @@ class CourseController extends Controller
     }
 
     /**
-     * Get all courses for prerequisite dropdown
+     * Get all courses for prerequisite dropdown.
+     *
+     * @return JsonResponse
      */
     public function getCourses(): JsonResponse
     {
@@ -161,7 +180,9 @@ class CourseController extends Controller
     }
 
     /**
-     * Get all courses (for dropdown and forms)
+     * Get all courses (for dropdown and forms).
+     *
+     * @return JsonResponse
      */
     public function all(): JsonResponse
     {
@@ -176,6 +197,9 @@ class CourseController extends Controller
 
     /**
      * Get prerequisites for selected courses and check enrollment status.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function getPrerequisites(Request $request): JsonResponse
     {
@@ -191,7 +215,7 @@ class CourseController extends Controller
 
             $prerequisites = $this->courseService->getPrerequisites($studentId, $courseIds);
             return successResponse('Prerequisites fetched successfully.', $prerequisites);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             logError('CourseController@getPrerequisites', $e, ['request' => $request->all()]);
             return errorResponse('Failed to fetch prerequisites.', [], 500);
         }

@@ -21,7 +21,6 @@ Route::middleware(['auth'])
         
         // ===== Import/Export Operations =====
         Route::post('import', 'import')->name('import')->middleware('can:course.create');
-        Route::post('remaining-credit-hours', 'getRemainingCreditHours')->name('remaining-credit-hours');
 
         // ===== CRUD Operations =====
         // List & View

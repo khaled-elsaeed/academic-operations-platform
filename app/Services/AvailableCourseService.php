@@ -194,11 +194,11 @@ class AvailableCourseService
         $universal = AvailableCourse::where('is_universal', true)->count();
         return [
             'available_courses' => [
-                'total' => $total,
+                'total' => formatNumber($total),
                 'lastUpdateTime' => formatDate($latest),
             ],
             'universal_courses' => [
-                'total' => $universal,
+                'total' => formatNumber($universal),
                 'lastUpdateTime' => formatDate($latest),
             ],
         ];
@@ -665,18 +665,29 @@ class AvailableCourseService
     private function renderActionButtons(AvailableCourse $availableCourse): string
     {
         $editUrl = route('available_courses.edit', $availableCourse->id);
-        return sprintf(
-            '<div class="d-flex gap-2">
-                <a href="%s" class="btn btn-sm btn-icon btn-primary rounded-circle" title="Edit">
-                    <i class="bx bx-edit"></i>
-                </a>
-                <button type="button" class="btn btn-sm btn-icon btn-danger rounded-circle deleteAvailableCourseBtn" 
-                        data-id="%d" title="Delete">
-                    <i class="bx bx-trash"></i>
+
+        return '
+            <div class="btn-group">
+                <button
+                    type="button"
+                    class="btn btn-primary btn-icon rounded-pill dropdown-toggle hide-arrow"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                >
+                    <i class="bx bx-dots-vertical-rounded"></i>
                 </button>
-            </div>',
-            e($editUrl),
-            $availableCourse->id
-        );
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item editAvailableCourseBtn" href="' . e($editUrl) . '" data-id="' . e($availableCourse->id) . '">
+                            <i class="bx bx-edit me-1"></i> Edit
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item deleteAvailableCourseBtn" href="javascript:void(0);" data-id="' . e($availableCourse->id) . '">
+                            <i class="bx bx-trash text-danger me-1"></i> Delete                        </a>
+                    </li>
+                </ul>
+            </div>
+        ';
     }
 }

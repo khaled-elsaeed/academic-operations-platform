@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use Spatie\Permission\Models\Role;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\View\View;
 use App\Services\RoleService;
-use Exception;
+use Spatie\Permission\Models\Role;
 use App\Exceptions\BusinessValidationException;
+use Exception;
 
 class RoleController extends Controller
 {
@@ -22,7 +20,9 @@ class RoleController extends Controller
     {}
 
     /**
-     * Display the role management page
+     * Display the role management page.
+     *
+     * @return View
      */
     public function index(): View
     {
@@ -30,7 +30,9 @@ class RoleController extends Controller
     }
 
     /**
-     * Get role statistics
+     * Get role statistics.
+     *
+     * @return JsonResponse
      */
     public function stats(): JsonResponse
     {
@@ -44,7 +46,9 @@ class RoleController extends Controller
     }
 
     /**
-     * Get role data for DataTables
+     * Get role data for DataTables.
+     *
+     * @return JsonResponse
      */
     public function datatable(): JsonResponse
     {
@@ -57,7 +61,10 @@ class RoleController extends Controller
     }
 
     /**
-     * Store a new role
+     * Store a new role.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function store(Request $request): JsonResponse
     {
@@ -77,7 +84,10 @@ class RoleController extends Controller
     }
 
     /**
-     * Show role details
+     * Show role details.
+     *
+     * @param Role $role
+     * @return JsonResponse
      */
     public function show(Role $role): JsonResponse
     {
@@ -91,7 +101,11 @@ class RoleController extends Controller
     }
 
     /**
-     * Update role
+     * Update role.
+     *
+     * @param Request $request
+     * @param Role $role
+     * @return JsonResponse
      */
     public function update(Request $request, Role $role): JsonResponse
     {
@@ -111,7 +125,10 @@ class RoleController extends Controller
     }
 
     /**
-     * Delete role
+     * Delete role.
+     *
+     * @param Role $role
+     * @return JsonResponse
      */
     public function destroy(Role $role): JsonResponse
     {
@@ -127,7 +144,9 @@ class RoleController extends Controller
     }
 
     /**
-     * Get all permissions for dropdown
+     * Get all permissions for dropdown.
+     *
+     * @return JsonResponse
      */
     public function getPermissions(): JsonResponse
     {

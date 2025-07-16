@@ -7,16 +7,6 @@ use App\Models\Level;
 class LevelService
 {
     /**
-     * Get all levels.
-     *
-     * @return array
-     */
-    public function getLevels(): array
-    {
-        return Level::all()->toArray();
-    }
-
-    /**
      * Get all levels (for dropdown and forms).
      *
      * @return array
@@ -30,5 +20,15 @@ class LevelService
                 'code' => $level->code ?? '',
             ];
         })->toArray();
+    }
+
+    /**
+     * Get levels for index.
+     *
+     * @return array
+     */
+    public function getLevels(): array
+    {
+        return Level::all()->toArray();
     }
 } 

@@ -2,15 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\View\View;
 use App\Services\UserService;
+use App\Models\User;
 use Illuminate\Validation\Rule;
-use Exception;
 use App\Exceptions\BusinessValidationException;
+use Exception;
 
 class UserController extends Controller
 {
@@ -23,7 +21,9 @@ class UserController extends Controller
     {}
 
     /**
-     * Display the user management page
+     * Display the user management page.
+     *
+     * @return View
      */
     public function index(): View
     {
@@ -31,7 +31,9 @@ class UserController extends Controller
     }
 
     /**
-     * Get user statistics
+     * Get user statistics.
+     *
+     * @return JsonResponse
      */
     public function stats(): JsonResponse
     {
@@ -45,7 +47,9 @@ class UserController extends Controller
     }
 
     /**
-     * Get user data for DataTables
+     * Get user data for DataTables.
+     *
+     * @return JsonResponse
      */
     public function datatable(): JsonResponse
     {
@@ -58,7 +62,10 @@ class UserController extends Controller
     }
 
     /**
-     * Store a new user
+     * Store a new user.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function store(Request $request): JsonResponse
     {
@@ -82,7 +89,10 @@ class UserController extends Controller
     }
 
     /**
-     * Show user details
+     * Show user details.
+     *
+     * @param User $user
+     * @return JsonResponse
      */
     public function show(User $user): JsonResponse
     {
@@ -96,7 +106,11 @@ class UserController extends Controller
     }
 
     /**
-     * Update user
+     * Update user.
+     *
+     * @param Request $request
+     * @param User $user
+     * @return JsonResponse
      */
     public function update(Request $request, User $user): JsonResponse
     {
@@ -120,7 +134,10 @@ class UserController extends Controller
     }
 
     /**
-     * Delete user
+     * Delete user.
+     *
+     * @param User $user
+     * @return JsonResponse
      */
     public function destroy(User $user): JsonResponse
     {
@@ -136,7 +153,9 @@ class UserController extends Controller
     }
 
     /**
-     * Get all roles for dropdown
+     * Get all roles for dropdown.
+     *
+     * @return JsonResponse
      */
     public function getRoles(): JsonResponse
     {

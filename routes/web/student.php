@@ -20,6 +20,7 @@ Route::middleware(['auth'])
 
         // ===== Import/Export Operations =====
         Route::post('import', 'import')->name('import')->middleware('can:student.create');
+        Route::get('export', 'export')->name('export')->middleware('can:student.view');
 
         // ===== CRUD Operations =====
         // List & View

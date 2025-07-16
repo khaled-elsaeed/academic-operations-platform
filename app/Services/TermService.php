@@ -19,23 +19,20 @@ class TermService
         $totalTerms = Term::count();
         $activeTerms = Term::where('is_active', true)->count();
         $inactiveTerms = Term::where('is_active', false)->count();
-
         $lastUpdateTime = formatDate(Term::max('updated_at'));
-
         return [
             'total' => [
-                'total' => $totalTerms,
+                'total' => formatNumber($totalTerms),
                 'lastUpdateTime' => $lastUpdateTime
             ],
             'active' => [
-                'total' => $activeTerms,
+                'total' => formatNumber($activeTerms),
                 'lastUpdateTime' => $lastUpdateTime
             ],
             'inactive' => [
-                'total' => $inactiveTerms,
+                'total' => formatNumber($inactiveTerms),
                 'lastUpdateTime' => $lastUpdateTime
             ],
-
         ];
     }
 
@@ -47,69 +44,19 @@ class TermService
     public function getDatatable(): JsonResponse
     {
         $terms = Term::with('enrollments');
-
-        // Apply search filters
         $terms = $this->applySearchFilters($terms);
-
         return DataTables::of($terms)
-            ->addColumn('name', function ($term) {
-                return $term->name;
-            })
-            ->addColumn('enrollments_count', function ($term) {
-                return $term->enrollments->count();
-            })
-            ->addColumn('status', function ($term) {
-                return $term->is_active 
-                    ? '<span class="badge bg-label-success">Active</span>'
-                    : '<span class="badge bg-label-secondary">Inactive</span>';
-            })
-            ->addColumn('action', function ($term) {
-                return $this->renderActionButtons($term);
-            })
+            ->addColumn('name', fn($term) => $term->name)
+            ->addColumn('enrollments_count', fn($term) => $term->enrollments->count())
+            ->addColumn('status', fn($term) => $term->is_active 
+                ? '<span class="badge bg-label-success">Active</span>'
+                : '<span class="badge bg-label-secondary">Inactive</span>')
+            ->addColumn('action', fn($term) => $this->renderActionButtons($term))
             ->rawColumns(['status', 'action'])
             ->make(true);
     }
 
-    /**
-     * Apply search filters to the query.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    protected function applySearchFilters($query)
-    {
-        // Season filter
-        if (request()->filled('search_season')) {
-            $query->where('season', request('search_season'));
-        }
 
-        // Year filter (supports academic year format like 2015-2016)
-        if (request()->filled('search_year')) {
-            $searchYear = request('search_year');
-            // Check if it's in academic year format (e.g., 2015-2016)
-            if (strpos($searchYear, '-') !== false) {
-                $years = explode('-', $searchYear);
-                if (count($years) == 2) {
-                    $query->where('year', $searchYear);
-                }
-            } else {
-                // Single year search
-                $query->where('year', 'LIKE', '%' . $searchYear . '%');
-            }
-        }
-
-        // Code filter
-        if (request()->filled('search_code')) {
-            $query->where('code', 'LIKE', '%' . request('search_code') . '%');
-        }
-
-        // Active status filter
-        if (request()->filled('search_active')) {
-            $query->where('is_active', request('search_active'));
-        }
-
-        return $query;
-    }
 
     /**
      * Render action buttons for datatable rows.
@@ -121,7 +68,7 @@ class TermService
     {
         return '
             <div class="dropdown">
-                <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                <button type="button" class="btn btn-primary btn-icon rounded-pill dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
                     <i class="bx bx-dots-vertical-rounded"></i>
                 </button>
                 <div class="dropdown-menu">
@@ -129,8 +76,7 @@ class TermService
                         <i class="bx bx-edit-alt me-1"></i> Edit
                     </a>
                     <a class="dropdown-item deleteTermBtn" href="javascript:void(0);" data-id="' . $term->id . '">
-                        <i class="bx bx-trash me-1"></i> Delete
-                    </a>
+                        <i class="bx bx-trash text-danger me-1"></i> Delete                    </a>
                 </div>
             </div>
         ';
@@ -178,7 +124,6 @@ class TermService
             'code' => $data['code'],
             'is_active' => $data['is_active'] ?? false
         ]);
-
         return $term;
     }
 
@@ -191,11 +136,9 @@ class TermService
      */
     public function deleteTerm(Term $term): void
     {
-        // Check if term has enrollments
         if ($term->enrollments()->count() > 0) {
             throw new BusinessValidationException('Cannot delete term that has enrollments assigned.');
         }
-
         $term->delete();
     }
 
@@ -220,5 +163,38 @@ class TermService
                     'is_active' => (bool) $term->is_active,
                 ];
             })->toArray();
+    }
+
+
+
+    /**
+     * Apply search filters to the query.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function applySearchFilters($query)
+    {
+        if (request()->filled('search_season')) {
+            $query->where('season', request('search_season'));
+        }
+        if (request()->filled('search_year')) {
+            $searchYear = request('search_year');
+            if (strpos($searchYear, '-') !== false) {
+                $years = explode('-', $searchYear);
+                if (count($years) == 2) {
+                    $query->where('year', $searchYear);
+                }
+            } else {
+                $query->where('year', 'LIKE', '%' . $searchYear . '%');
+            }
+        }
+        if (request()->filled('search_code')) {
+            $query->where('code', 'LIKE', '%' . request('search_code') . '%');
+        }
+        if (request()->filled('search_active')) {
+            $query->where('is_active', request('search_active'));
+        }
+        return $query;
     }
 } 

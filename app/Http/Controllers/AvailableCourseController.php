@@ -2,21 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use Illuminate\Http\{Request, JsonResponse};
+use Illuminate\View\View;
 use App\Services\AvailableCourseService;
-use App\Http\Requests\StoreAvailableCourseRequest;
-use App\Http\Requests\UpdateAvailableCourseRequest;
-use App\Exceptions\BusinessValidationException;
+use App\Exports\AvailableCoursesTemplateExport;
+use App\Http\Requests\{StoreAvailableCourseRequest, UpdateAvailableCourseRequest};
 use App\Models\AvailableCourse;
 use App\Models\Student;
-use App\Models\Enrollment;
 use App\Models\Term;
-use App\Models\CreditHoursException;
-use Illuminate\Http\JsonResponse;
-use Illuminate\View\View;
+use App\Exceptions\BusinessValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use App\Exports\AvailableCoursesTemplateExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Exception;
 
@@ -32,6 +27,8 @@ class AvailableCourseController extends Controller
 
     /**
      * Display the available courses page.
+     *
+     * @return View
      */
     public function index(): View
     {
@@ -40,6 +37,8 @@ class AvailableCourseController extends Controller
 
     /**
      * Return data for DataTable AJAX requests.
+     *
+     * @return JsonResponse
      */
     public function datatable(): JsonResponse
     {
@@ -53,6 +52,8 @@ class AvailableCourseController extends Controller
 
     /**
      * Show the form for creating a new available course.
+     *
+     * @return View
      */
     public function create(): View
     {
@@ -61,6 +62,9 @@ class AvailableCourseController extends Controller
 
     /**
      * Store a new available course.
+     *
+     * @param StoreAvailableCourseRequest $request
+     * @return JsonResponse
      */
     public function store(StoreAvailableCourseRequest $request): JsonResponse
     {
@@ -78,6 +82,9 @@ class AvailableCourseController extends Controller
 
     /**
      * Show the form for editing the specified available course.
+     *
+     * @param int $id
+     * @return View
      */
     public function edit($id): View
     {
@@ -87,6 +94,10 @@ class AvailableCourseController extends Controller
 
     /**
      * Update the specified available course in storage.
+     *
+     * @param UpdateAvailableCourseRequest $request
+     * @param int $id
+     * @return JsonResponse
      */
     public function update(UpdateAvailableCourseRequest $request, $id): JsonResponse
     {
@@ -104,6 +115,9 @@ class AvailableCourseController extends Controller
 
     /**
      * Delete an available course.
+     *
+     * @param int $id
+     * @return JsonResponse
      */
     public function destroy($id): JsonResponse
     {
@@ -120,6 +134,9 @@ class AvailableCourseController extends Controller
 
     /**
      * Display the specified available course.
+     *
+     * @param int $id
+     * @return JsonResponse
      */
     public function show($id): JsonResponse
     {
@@ -136,6 +153,9 @@ class AvailableCourseController extends Controller
 
     /**
      * Import available courses from an Excel file.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function import(Request $request): JsonResponse
     {
@@ -157,6 +177,8 @@ class AvailableCourseController extends Controller
 
     /**
      * Download the available courses import template as an Excel file.
+     *
+     * @return BinaryFileResponse
      */
     public function template(): BinaryFileResponse
     {
@@ -168,15 +190,18 @@ class AvailableCourseController extends Controller
         }
     }
 
+    /**
+     * Get all available courses (admin and legacy student-specific).
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
     public function all(Request $request): JsonResponse
     {
         try {
-            // Check if this is a legacy request (student-specific)
             if ($request->has('student_id') && $request->has('term_id')) {
                 return $this->getStudentAvailableCourses($request);
             }
-            
-            // Admin request - return all available courses
             $courses = $this->availableCourseService->getAll();
             return successResponse('Available courses retrieved successfully.', $courses);
         } catch (Exception $e) {
@@ -193,27 +218,19 @@ class AvailableCourseController extends Controller
      */
     private function getStudentAvailableCourses(Request $request): JsonResponse
     {
-        // Validate request input
         $validated = $request->validate([
             'student_id' => ['required', 'exists:students,id'],
             'term_id'    => ['required', 'exists:terms,id'],
         ]);
-
-        // Retrieve student and relevant IDs
         $student = Student::findOrFail($validated['student_id']);
         $programId = $student->program_id;
         $levelId   = $student->level_id;
         $termId    = $validated['term_id'];
         $studentId = $validated['student_id'];
-
-        // Query available courses for the student's program, level, and term
-        // Exclude courses the student is already enrolled in for this term
         $availableCourses = AvailableCourse::available($programId, $levelId, $termId)
             ->notEnrolled($studentId, $termId)
             ->with('course')
             ->get();
-
-        // Map to course data structure
         $courses = $availableCourses->map(function ($availableCourse) {
             return [
                 'id'                 => $availableCourse->course->id,
@@ -224,8 +241,6 @@ class AvailableCourseController extends Controller
                 'remaining_capacity' => $availableCourse->remaining_capacity,
             ];
         });
-
-        // Return JSON response
         return response()->json([
             'success' => true,
             'courses' => $courses,
@@ -234,132 +249,17 @@ class AvailableCourseController extends Controller
 
     /**
      * Get available course statistics for stat2 cards.
+     *
+     * @return JsonResponse
      */
     public function stats(): JsonResponse
     {
         try {
             $stats = $this->availableCourseService->getStats();
             return successResponse('Stats fetched successfully.', $stats);
-        } catch (\Exception $e) {
-            logError('AvailableCourseController@stats', $e);
-            return errorResponse('Internal server error.', 500);
-        }
-    }
-
-    /**
-     * Get remaining credit hours for a student in a specific term.
-     *
-     * @param  Request  $request
-     * @return JsonResponse
-     */
-    public function getRemainingCreditHours(Request $request): JsonResponse
-    {
-        try {
-            // Validate request input
-            $validated = $request->validate([
-                'student_id' => ['required', 'exists:students,id'],
-                'term_id'    => ['required', 'exists:terms,id'],
-            ]);
-
-            $studentId = $validated['student_id'];
-            $termId = $validated['term_id'];
-
-            // Get student and term data
-            $student = Student::findOrFail($studentId);
-            $term = Term::findOrFail($termId);
-
-            // Calculate current enrollment credit hours
-            $currentEnrollmentHours = $this->getCurrentEnrollmentHours($studentId, $termId);
-
-            // Calculate maximum allowed credit hours
-            $maxAllowedHours = $this->getMaxCreditHours($student, $term);
-
-            // Calculate remaining credit hours
-            $remainingHours = $maxAllowedHours - $currentEnrollmentHours;
-
-            // Get additional hours from admin exception
-            $exceptionHours = $this->getAdminExceptionHours($studentId, $termId);
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'current_enrollment_hours' => $currentEnrollmentHours,
-                    'max_allowed_hours' => $maxAllowedHours,
-                    'remaining_hours' => max(0, $remainingHours), // Ensure non-negative
-                    'exception_hours' => $exceptionHours,
-                    'student_cgpa' => $student->cgpa,
-                    'term_season' => $term->season,
-                    'term_year' => $term->year,
-                ],
-            ]);
         } catch (Exception $e) {
-            logError('AvailableCourseController@getRemainingCreditHours', $e);
-            return errorResponse('Failed to get remaining credit hours.', [], 500);
+            logError('AvailableCourseController@stats', $e);
+            return errorResponse('Internal server error.', [], 500);
         }
     }
-
-    /**
-     * Get current enrollment credit hours for the student in this term
-     */
-    private function getCurrentEnrollmentHours(int $studentId, int $termId): int
-    {
-        return Enrollment::where('student_id', $studentId)
-            ->where('term_id', $termId)
-            ->join('courses', 'enrollments.course_id', '=', 'courses.id')
-            ->sum('courses.credit_hours');
-    }
-
-    /**
-     * Get the maximum allowed credit hours based on CGPA and semester
-     */
-    private function getMaxCreditHours(Student $student, Term $term): int
-    {
-        $semester = strtolower($term->season);
-        $cgpa = $student->cgpa;
-        
-        $baseHours = $this->getBaseHours($semester, $cgpa);
-        $graduationBonus = 0; // TODO: Implement graduation check logic
-        $adminException = $this->getAdminExceptionHours($student->id, $term->id);
-
-        return $baseHours + $graduationBonus + $adminException;
-    }
-
-    /**
-     * Get base credit hours based on semester and CGPA
-     */
-    private function getBaseHours(string $semester, float $cgpa): int
-    {
-        // Summer semester has fixed 9 hours regardless of CGPA
-        if ($semester === 'summer') {
-            return 9;
-        }
-
-        // Fall and Spring semesters have CGPA-based limits
-        if (in_array($semester, ['fall', 'spring'])) {
-            if ($cgpa < 2.0) {
-                return 14;
-            } elseif ($cgpa >= 2.0 && $cgpa < 3.0) {
-                return 18;
-            } elseif ($cgpa >= 3.0) {
-                return 21;
-            }
-        }
-
-        // Default fallback (shouldn't reach here with valid semesters)
-        return 14;
-    }
-
-    /**
-     * Get additional hours from admin exception for this student and term
-     */
-    private function getAdminExceptionHours(int $studentId, int $termId): int
-    {
-        $exception = CreditHoursException::where('student_id', $studentId)
-            ->where('term_id', $termId)
-            ->active()
-            ->first();
-
-        return $exception ? $exception->getEffectiveAdditionalHours() : 0;
-    }
-
 } 

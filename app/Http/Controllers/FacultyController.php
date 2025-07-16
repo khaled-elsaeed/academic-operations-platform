@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Models\Faculty;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\View\View;
 use App\Services\FacultyService;
-use Exception;
+use App\Models\Faculty;
 use App\Exceptions\BusinessValidationException;
+use Exception;
 
 class FacultyController extends Controller
 {
@@ -22,7 +20,9 @@ class FacultyController extends Controller
     {}
 
     /**
-     * Display the faculty management page
+     * Display the faculty management page.
+     *
+     * @return View
      */
     public function index(): View
     {
@@ -30,7 +30,9 @@ class FacultyController extends Controller
     }
 
     /**
-     * Get faculty statistics
+     * Get faculty statistics.
+     *
+     * @return JsonResponse
      */
     public function stats(): JsonResponse
     {
@@ -44,7 +46,9 @@ class FacultyController extends Controller
     }
 
     /**
-     * Get faculty data for DataTables
+     * Get faculty data for DataTables.
+     *
+     * @return JsonResponse
      */
     public function datatable(): JsonResponse
     {
@@ -57,7 +61,10 @@ class FacultyController extends Controller
     }
 
     /**
-     * Store a newly created faculty
+     * Store a newly created faculty.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function store(Request $request): JsonResponse
     {
@@ -76,7 +83,10 @@ class FacultyController extends Controller
     }
 
     /**
-     * Display the specified faculty
+     * Display the specified faculty.
+     *
+     * @param Faculty $faculty
+     * @return JsonResponse
      */
     public function show(Faculty $faculty): JsonResponse
     {
@@ -90,7 +100,11 @@ class FacultyController extends Controller
     }
 
     /**
-     * Update the specified faculty
+     * Update the specified faculty.
+     *
+     * @param Request $request
+     * @param Faculty $faculty
+     * @return JsonResponse
      */
     public function update(Request $request, Faculty $faculty): JsonResponse
     {
@@ -109,7 +123,10 @@ class FacultyController extends Controller
     }
 
     /**
-     * Remove the specified faculty
+     * Remove the specified faculty.
+     *
+     * @param Faculty $faculty
+     * @return JsonResponse
      */
     public function destroy(Faculty $faculty): JsonResponse
     {
@@ -125,7 +142,9 @@ class FacultyController extends Controller
     }
 
     /**
-     * Get all faculties (for dropdown and forms)
+     * Get all faculties (for dropdown and forms).
+     *
+     * @return JsonResponse
      */
     public function all(): JsonResponse
     {

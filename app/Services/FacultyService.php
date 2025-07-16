@@ -24,15 +24,15 @@ class FacultyService
 
         return [
             'total' => [
-                'total' => $totalFaculties,
+                'total' => formatNumber($totalFaculties),
                 'lastUpdateTime' => $lastUpdateTime
             ],
             'withPrograms' => [
-                'total' => $facultiesWithPrograms,
+                'total' => formatNumber($facultiesWithPrograms),
                 'lastUpdateTime' => $lastUpdateTime
             ],
             'withoutPrograms' => [
-                'total' => $facultiesWithoutPrograms,
+                'total' => formatNumber($facultiesWithoutPrograms),
                 'lastUpdateTime' => $lastUpdateTime
             ]
         ];
@@ -87,7 +87,7 @@ class FacultyService
     {
         return '
             <div class="dropdown">
-                <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                <button type="button" class="btn btn-primary btn-icon rounded-pill dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
                     <i class="bx bx-dots-vertical-rounded"></i>
                 </button>
                 <div class="dropdown-menu">
@@ -95,8 +95,7 @@ class FacultyService
                         <i class="bx bx-edit-alt me-1"></i> Edit
                     </a>
                     <a class="dropdown-item deleteFacultyBtn" href="javascript:void(0);" data-id="' . $faculty->id . '">
-                        <i class="bx bx-trash me-1"></i> Delete
-                    </a>
+                        <i class="bx bx-trash text-danger me-1"></i> Delete                    </a>
                 </div>
             </div>
         ';

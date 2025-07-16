@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use App\Services\LevelService;
 use Exception;
@@ -17,19 +16,10 @@ class LevelController extends Controller
     public function __construct(protected LevelService $levelService)
     {}
 
-    public function index(): JsonResponse
-    {
-        try {
-            $levels = $this->levelService->getLevels();
-            return successResponse('Levels fetched successfully.', $levels);
-        } catch (Exception $e) {
-            logError('LevelController@index', $e);
-            return errorResponse('Internal server error.', [], 500);
-        }
-    }
-
     /**
-     * Get all levels (for dropdown and forms)
+     * Get all levels (for dropdown and forms).
+     *
+     * @return JsonResponse
      */
     public function all(): JsonResponse
     {
@@ -38,6 +28,22 @@ class LevelController extends Controller
             return successResponse('Levels fetched successfully.', $levels);
         } catch (Exception $e) {
             logError('LevelController@all', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
+     * Get levels for index.
+     *
+     * @return JsonResponse
+     */
+    public function index(): JsonResponse
+    {
+        try {
+            $levels = $this->levelService->getLevels();
+            return successResponse('Levels fetched successfully.', $levels);
+        } catch (Exception $e) {
+            logError('LevelController@index', $e);
             return errorResponse('Internal server error.', [], 500);
         }
     }

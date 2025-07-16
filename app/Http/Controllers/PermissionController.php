@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use Spatie\Permission\Models\Permission;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use App\Services\PermissionService;
+use Spatie\Permission\Models\Permission;
 use Exception;
 
 class PermissionController extends Controller
@@ -20,7 +19,9 @@ class PermissionController extends Controller
     {}
 
     /**
-     * Display the permission management page
+     * Display the permission management page.
+     *
+     * @return View
      */
     public function index(): View
     {
@@ -28,7 +29,9 @@ class PermissionController extends Controller
     }
 
     /**
-     * Get permission statistics
+     * Get permission statistics.
+     *
+     * @return JsonResponse
      */
     public function stats(): JsonResponse
     {
@@ -42,7 +45,9 @@ class PermissionController extends Controller
     }
 
     /**
-     * Get permission data for DataTables
+     * Get permission data for DataTables.
+     *
+     * @return JsonResponse
      */
     public function datatable(): JsonResponse
     {
@@ -55,7 +60,10 @@ class PermissionController extends Controller
     }
 
     /**
-     * Show permission details
+     * Show permission details.
+     *
+     * @param Permission $permission
+     * @return JsonResponse
      */
     public function show(Permission $permission): JsonResponse
     {
@@ -69,7 +77,9 @@ class PermissionController extends Controller
     }
 
     /**
-     * Get all roles for dropdown
+     * Get all roles for dropdown.
+     *
+     * @return JsonResponse
      */
     public function getRoles(): JsonResponse
     {

@@ -20,14 +20,13 @@ class RoleService
         $totalRoles = Role::count();
         $totalPermissions = Permission::count();
         $rolesWithUsers = Role::withCount('users')->get();
-
         return [
             'total' => [
-                'total' => $totalRoles,
+                'total' => formatNumber($totalRoles),
                 'lastUpdateTime' => formatDate(now(), 'Y-m-d H:i:s')
             ],
             'permissions' => [
-                'total' => $totalPermissions,
+                'total' => formatNumber($totalPermissions),
                 'lastUpdateTime' => formatDate(now(), 'Y-m-d H:i:s')
             ],
             'rolesWithUsers' => $rolesWithUsers
@@ -42,17 +41,10 @@ class RoleService
     public function getDatatable(): JsonResponse
     {
         $roles = Role::withCount(['permissions', 'users']);
-
         return DataTables::of($roles)
-            ->addColumn('permissions', function ($role) {
-                return '<button type="button" class="btn btn-sm btn-info show-permissions" data-role-id="' . $role->id . '" data-role="' . htmlspecialchars($role->name, ENT_QUOTES, 'UTF-8') . '"><i class="bx bx-key"></i> <span class="badge bg-light text-dark ms-1">' . $role->permissions_count . '</span></button>';
-            })
-            ->addColumn('users_count', function ($role) {
-                return $role->users_count;
-            })
-            ->addColumn('actions', function ($role) {
-                return $this->renderActionButtons($role);
-            })
+            ->addColumn('permissions', fn($role) => '<button type="button" class="btn btn-sm btn-info show-permissions" data-role-id="' . $role->id . '" data-role="' . htmlspecialchars($role->name, ENT_QUOTES, 'UTF-8') . '"><i class="bx bx-key"></i> <span class="badge bg-light text-dark ms-1">' . $role->permissions_count . '</span></button>')
+            ->addColumn('users_count', fn($role) => $role->users_count)
+            ->addColumn('actions', fn($role) => $this->renderActionButtons($role))
             ->rawColumns(['permissions', 'actions'])
             ->make(true);
     }
@@ -67,7 +59,7 @@ class RoleService
     {
         return '
             <div class="dropdown">
-                <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                <button type="button" class="btn btn-primary btn-icon rounded-pill dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
                     <i class="bx bx-dots-vertical-rounded"></i>
                 </button>
                 <div class="dropdown-menu">
@@ -78,8 +70,7 @@ class RoleService
                         <i class="bx bx-edit-alt me-1"></i> Edit
                     </a>
                     <a class="dropdown-item deleteRoleBtn" href="javascript:void(0);" data-id="' . $role->id . '">
-                        <i class="bx bx-trash me-1"></i> Delete
-                    </a>
+                        <i class="bx bx-trash text-danger me-1"></i> Delete                    </a>
                 </div>
             </div>';
     }
@@ -93,11 +84,9 @@ class RoleService
     public function createRole(array $data): Role
     {
         $role = Role::create(['name' => $data['name']]);
-
         if (isset($data['permissions'])) {
             $role->syncPermissions($data['permissions']);
         }
-
         return $role;
     }
 
@@ -122,11 +111,9 @@ class RoleService
     public function updateRole(Role $role, array $data): Role
     {
         $role->update(['name' => $data['name']]);
-
         if (isset($data['permissions'])) {
             $role->syncPermissions($data['permissions']);
         }
-
         return $role;
     }
 
@@ -142,11 +129,9 @@ class RoleService
         if ($role->name === 'admin') {
             throw new BusinessValidationException('Cannot delete admin role.');
         }
-
         if ($role->users()->count() > 0) {
             throw new BusinessValidationException('Cannot delete role that has assigned users.');
         }
-
         $role->delete();
     }
 

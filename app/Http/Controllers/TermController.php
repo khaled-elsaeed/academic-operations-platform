@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Models\Term;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\View\View;
 use App\Services\TermService;
-use Exception;
+use App\Models\Term;
 use App\Exceptions\BusinessValidationException;
+use Exception;
 
 class TermController extends Controller
 {
@@ -22,7 +20,9 @@ class TermController extends Controller
     {}
 
     /**
-     * Display the term management page
+     * Display the term management page.
+     *
+     * @return View
      */
     public function index(): View
     {
@@ -30,7 +30,9 @@ class TermController extends Controller
     }
 
     /**
-     * Get term statistics
+     * Get term statistics.
+     *
+     * @return JsonResponse
      */
     public function stats(): JsonResponse
     {
@@ -44,7 +46,9 @@ class TermController extends Controller
     }
 
     /**
-     * Get term data for DataTables
+     * Get term data for DataTables.
+     *
+     * @return JsonResponse
      */
     public function datatable(): JsonResponse
     {
@@ -57,7 +61,10 @@ class TermController extends Controller
     }
 
     /**
-     * Store a newly created term
+     * Store a newly created term.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function store(Request $request): JsonResponse
     {
@@ -79,7 +86,10 @@ class TermController extends Controller
     }
 
     /**
-     * Display the specified term
+     * Display the specified term.
+     *
+     * @param Term $term
+     * @return JsonResponse
      */
     public function show(Term $term): JsonResponse
     {
@@ -93,7 +103,11 @@ class TermController extends Controller
     }
 
     /**
-     * Update the specified term
+     * Update the specified term.
+     *
+     * @param Request $request
+     * @param Term $term
+     * @return JsonResponse
      */
     public function update(Request $request, Term $term): JsonResponse
     {
@@ -115,7 +129,10 @@ class TermController extends Controller
     }
 
     /**
-     * Remove the specified term
+     * Remove the specified term.
+     *
+     * @param Term $term
+     * @return JsonResponse
      */
     public function destroy(Term $term): JsonResponse
     {
@@ -131,7 +148,9 @@ class TermController extends Controller
     }
 
     /**
-     * Get all terms (for dropdown and forms)
+     * Get all terms (for dropdown and forms).
+     *
+     * @return JsonResponse
      */
     public function all(): JsonResponse
     {

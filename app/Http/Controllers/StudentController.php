@@ -2,20 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Student;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Yajra\DataTables\DataTables;
-use App\Services\StudentService;
-use App\Http\Requests\StoreStudentRequest;
-use App\Http\Requests\UpdateStudentRequest;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Imports\StudentsImport;
-use Illuminate\Support\Facades\Storage;
-use App\Exports\StudentsTemplateExport;
+use Illuminate\Http\{Request,JsonResponse};
 use Illuminate\View\View;
-use Exception;
+use App\Services\StudentService;
+use App\Models\Student;
+use App\Http\Requests\{StoreStudentRequest,UpdateStudentRequest};
 use App\Exceptions\BusinessValidationException;
+use Exception;
 
 class StudentController extends Controller
 {
@@ -29,6 +22,8 @@ class StudentController extends Controller
 
     /**
      * Display the students page.
+     *
+     * @return View
      */
     public function index(): View
     {
@@ -36,7 +31,41 @@ class StudentController extends Controller
     }
 
     /**
+     * Return data for DataTable AJAX requests.
+     *
+     * @return JsonResponse
+     */
+    public function datatable(): JsonResponse
+    {
+        try {
+            return $this->studentService->getDatatable();
+        } catch (Exception $e) {
+            logError('StudentController@datatable', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
+     * Get student statistics.
+     *
+     * @return JsonResponse
+     */
+    public function stats(): JsonResponse
+    {
+        try {
+            $stats = $this->studentService->getStats();
+            return successResponse('Stats fetched successfully.', $stats);
+        } catch (Exception $e) {
+            logError('StudentController@stats', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
      * Display the specified student.
+     *
+     * @param Student $student
+     * @return JsonResponse
      */
     public function show(Student $student): JsonResponse
     {
@@ -45,6 +74,9 @@ class StudentController extends Controller
 
     /**
      * Store a new student.
+     *
+     * @param StoreStudentRequest $request
+     * @return JsonResponse
      */
     public function store(StoreStudentRequest $request): JsonResponse
     {
@@ -53,7 +85,6 @@ class StudentController extends Controller
             $student = $this->studentService->createStudent($validated);
             return successResponse('Student created successfully.', $student);
         } catch (BusinessValidationException $e) {
-            // Catch business validation exception and return a 422 response with the error message
             return errorResponse($e->getMessage(), [], 422);
         } catch (Exception $e) {
             logError('StudentController@store', $e, ['request' => $request->all()]);
@@ -63,6 +94,10 @@ class StudentController extends Controller
 
     /**
      * Update the specified student.
+     *
+     * @param UpdateStudentRequest $request
+     * @param Student $student
+     * @return JsonResponse
      */
     public function update(UpdateStudentRequest $request, Student $student): JsonResponse
     {
@@ -71,7 +106,6 @@ class StudentController extends Controller
             $student = $this->studentService->updateStudent($student, $validated);
             return successResponse('Student updated successfully.', $student);
         } catch (BusinessValidationException $e) {
-            // Catch business validation exception and return a 422 response with the error message
             return errorResponse($e->getMessage(), [], 422);
         } catch (Exception $e) {
             logError('StudentController@update', $e, ['student_id' => $student->id, 'request' => $request->all()]);
@@ -81,6 +115,9 @@ class StudentController extends Controller
 
     /**
      * Delete a student.
+     *
+     * @param Student $student
+     * @return JsonResponse
      */
     public function destroy(Student $student): JsonResponse
     {
@@ -94,34 +131,10 @@ class StudentController extends Controller
     }
 
     /**
-     * Return data for DataTable AJAX requests.
-     */
-    public function datatable(): JsonResponse
-    {
-        try {
-            return $this->studentService->getDatatable();
-        } catch (Exception $e) {
-            logError('StudentController@datatable', $e);
-            return errorResponse('Internal server error.', 500);
-        }
-    }
-
-    /**
-     * Get student statistics.
-     */
-    public function stats(): JsonResponse
-    {
-        try {
-            $stats = $this->studentService->getStats();
-            return successResponse('Stats fetched successfully.', $stats);
-        } catch (Exception $e) {
-            logError('StudentController@stats', $e);
-            return errorResponse('Internal server error.', 500);
-        }
-    }
-
-    /**
      * Import students from an uploaded file.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function import(Request $request): JsonResponse
     {
@@ -130,7 +143,6 @@ class StudentController extends Controller
         ]);
         try {
             $result = $this->studentService->importStudents($request->file('students_file'));
-            
             return successResponse($result['message'], [
                 'imported_count' => $result['imported_count'],
                 'errors' => $result['errors']
@@ -139,12 +151,14 @@ class StudentController extends Controller
             return errorResponse($e->getMessage(), [], 422);
         } catch (Exception $e) {
             logError('StudentController@import', $e, ['request' => $request->all()]);
-            return errorResponse('Failed to import students.', 500);
+            return errorResponse('Failed to import students.', [], 500);
         }
     }
 
     /**
      * Download the students import template.
+     *
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|JsonResponse
      */
     public function downloadTemplate()
     {
@@ -152,19 +166,41 @@ class StudentController extends Controller
             return $this->studentService->downloadTemplate();
         } catch (Exception $e) {
             logError('StudentController@downloadTemplate', $e);
-            return errorResponse('Failed to download template.', 500);
+            return errorResponse('Failed to download template.', [], 500);
         }
     }
 
     /**
-     * Download enrollment document as PDF
+     * Export students for a selected program and level.
+     *
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|JsonResponse
      */
-    public function downloadPdf(Student $student)
+    public function export(Request $request)
+    {
+        $request->validate([
+            'program_id' => 'nullable|exists:programs,id',
+            'level_id' => 'nullable|exists:levels,id',
+        ]);
+
+        $programId = $request->input('program_id');
+        $levelId = $request->input('level_id');
+
+        return $this->studentService->exportStudents($programId, $levelId);
+    }
+
+    /**
+     * Download enrollment document as PDF.
+     *
+     * @param Student $student
+     * @return JsonResponse
+     */
+    public function downloadPdf(Student $student): JsonResponse
     {
         try {
             $termId = request()->query('term_id');
-            $serviceResponse = $this->studentService->downloadEnrollmentPdf($student, $termId);
-            $data = $serviceResponse instanceof \Illuminate\Http\JsonResponse ? $serviceResponse->getData(true) : $serviceResponse;
+            $serviceResponse = $this->studentService->downloadEnrollmentDocument($student, $termId,'pdf');
+            $data = $serviceResponse;
             return response()->json(['url' => $data['url'] ?? null]);
         } catch (BusinessValidationException $e) {
             return response()->json([
@@ -173,19 +209,22 @@ class StudentController extends Controller
             ], 422);
         } catch (Exception $e) {
             logError('StudentController@downloadPdf', $e, ['student_id' => $student->id]);
-            return errorResponse('Failed to generate PDF.', 500);
+            return errorResponse('Failed to generate PDF.', [], 500);
         }
     }
 
     /**
-     * Download enrollment document as Word
+     * Download enrollment document as Word.
+     *
+     * @param Student $student
+     * @return JsonResponse
      */
-    public function downloadWord(Student $student)
+    public function downloadWord(Student $student): JsonResponse
     {
         try {
             $termId = request()->query('term_id');
-            $serviceResponse = $this->studentService->downloadEnrollmentWord($student, $termId);
-            $data = $serviceResponse instanceof \Illuminate\Http\JsonResponse ? $serviceResponse->getData(true) : $serviceResponse;
+            $serviceResponse = $this->studentService->downloadEnrollmentDocument($student, $termId,'word');
+            $data = $serviceResponse;
             return response()->json(['url' => $data['url'] ?? null]);
         } catch (BusinessValidationException $e) {
             return response()->json([
@@ -194,9 +233,7 @@ class StudentController extends Controller
             ], 422);
         } catch (Exception $e) {
             logError('StudentController@downloadWord', $e, ['student_id' => $student->id]);
-            return errorResponse('Failed to generate Word document.', 500);
+            return errorResponse('Failed to generate Word document.', [], 500);
         }
     }
-
-
 } 

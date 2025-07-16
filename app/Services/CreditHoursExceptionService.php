@@ -212,15 +212,15 @@ class CreditHoursExceptionService
 
         return [
             'total' => [
-                'total' => $total,
+                'total' => formatNumber($total),
                 'lastUpdateTime' => $latest ? formatDate($latest) : 'Never',
             ],
             'active' => [
-                'total' => $active,
+                'total' => formatNumber($active),
                 'lastUpdateTime' => $latest ? formatDate($latest) : 'Never',
             ],
             'inactive' => [
-                'total' => $inactive,
+                'total' => formatNumber($inactive),
                 'lastUpdateTime' => $latest ? formatDate($latest) : 'Never',
             ],
         ];
@@ -234,35 +234,41 @@ class CreditHoursExceptionService
      */
     protected function renderActionButtons(CreditHoursException $exception): string
     {
-        $buttons = '<div class="d-flex gap-2">';
-        
-        // Edit button
-        $buttons .= '<button type="button" class="btn btn-sm btn-icon btn-primary rounded-circle editExceptionBtn" 
-                        data-id="' . e($exception->id) . '" title="Edit">
-                        <i class="bx bx-edit"></i>
-                    </button>';
-        
-        // Toggle active/inactive button
-        if ($exception->is_active) {
-            $buttons .= '<button type="button" class="btn btn-sm btn-icon btn-warning rounded-circle deactivateExceptionBtn" 
-                            data-id="' . e($exception->id) . '" title="Deactivate">
-                            <i class="bx bx-pause"></i>
-                        </button>';
-        } else {
-            $buttons .= '<button type="button" class="btn btn-sm btn-icon btn-success rounded-circle activateExceptionBtn" 
-                            data-id="' . e($exception->id) . '" title="Activate">
-                            <i class="bx bx-play"></i>
-                        </button>';
-        }
-        
-        // Delete button
-        $buttons .= '<button type="button" class="btn btn-sm btn-icon btn-danger rounded-circle deleteExceptionBtn" 
-                        data-id="' . e($exception->id) . '" title="Delete">
-                        <i class="bx bx-trash"></i>
-                    </button>';
-        
-        $buttons .= '</div>';
-        
-        return $buttons;
+        return '
+            <div class="btn-group">
+                <button
+                    type="button"
+                    class="btn btn-primary btn-icon rounded-pill dropdown-toggle hide-arrow"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                >
+                    <i class="bx bx-dots-vertical-rounded"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item editExceptionBtn" href="javascript:void(0);" data-id="' . e($exception->id) . '">
+                            <i class="bx bx-edit me-1"></i> Edit
+                        </a>
+                    </li>
+                    <li>
+                        ' . ($exception->is_active
+                            ? '<a class="dropdown-item deactivateExceptionBtn" href="javascript:void(0);" data-id="' . e($exception->id) . '">
+                                    <i class="bx bx-pause me-1"></i> Deactivate
+                                </a>'
+                            : '<a class="dropdown-item activateExceptionBtn" href="javascript:void(0);" data-id="' . e($exception->id) . '">
+                                    <i class="bx bx-play me-1"></i> Activate
+                                </a>'
+                        ) . '
+                    </li>
+                    <li>
+                        <hr class="dropdown-divider" />
+                    </li>
+                    <li>
+                        <a class="dropdown-item deleteExceptionBtn" href="javascript:void(0);" data-id="' . e($exception->id) . '">
+                            <i class="bx bx-trash text-danger me-1"></i> Delete                        </a>
+                    </li>
+                </ul>
+            </div>
+        ';
     }
 } 

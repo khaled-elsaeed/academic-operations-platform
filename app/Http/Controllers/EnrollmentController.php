@@ -2,16 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Models\Enrollment;
-use App\Models\Student;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\View\View;
 use App\Services\EnrollmentService;
+use App\Services\CreditHoursExceptionService;
+use App\Models\Enrollment;
 use App\Rules\AcademicAdvisorAccessRule;
-use Exception;
 use App\Exceptions\BusinessValidationException;
+use Exception;
 
 class EnrollmentController extends Controller
 {
@@ -20,11 +18,13 @@ class EnrollmentController extends Controller
      *
      * @param EnrollmentService $enrollmentService
      */
-    public function __construct(protected EnrollmentService $enrollmentService)
+    public function __construct(protected EnrollmentService $enrollmentService, protected CreditHoursExceptionService $creditHoursExceptionService)
     {}
 
     /**
      * Display the enrollment index page.
+     *
+     * @return View
      */
     public function index(): View
     {
@@ -32,7 +32,41 @@ class EnrollmentController extends Controller
     }
 
     /**
+     * Get datatable data for enrollments.
+     *
+     * @return JsonResponse
+     */
+    public function datatable(): JsonResponse
+    {
+        try {
+            return $this->enrollmentService->getDatatable();
+        } catch (Exception $e) {
+            logError('EnrollmentController@datatable', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
+     * Get enrollment statistics.
+     *
+     * @return JsonResponse
+     */
+    public function stats(): JsonResponse
+    {
+        try {
+            $stats = $this->enrollmentService->getStats();
+            return successResponse('Stats fetched successfully.', $stats);
+        } catch (Exception $e) {
+            logError('EnrollmentController@stats', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
      * Store new enrollments for a student.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function store(Request $request): JsonResponse
     {
@@ -57,6 +91,9 @@ class EnrollmentController extends Controller
 
     /**
      * Delete an enrollment.
+     *
+     * @param Enrollment $enrollment
+     * @return JsonResponse
      */
     public function destroy(Enrollment $enrollment): JsonResponse
     {
@@ -70,34 +107,9 @@ class EnrollmentController extends Controller
     }
 
     /**
-     * Get datatable data for enrollments.
-     */
-    public function datatable(): JsonResponse
-    {
-        try {
-            return $this->enrollmentService->getDatatable();
-        } catch (Exception $e) {
-            logError('EnrollmentController@datatable', $e);
-            return errorResponse('Internal server error.', [], 500);
-        }
-    }
-
-    /**
-     * Get enrollment statistics.
-     */
-    public function stats(): JsonResponse
-    {
-        try {
-            $stats = $this->enrollmentService->getStats();
-            return successResponse('Stats fetched successfully.', $stats);
-        } catch (Exception $e) {
-            logError('EnrollmentController@stats', $e);
-            return errorResponse('Internal server error.', [], 500);
-        }
-    }
-
-    /**
      * Show the add enrollment page.
+     *
+     * @return View
      */
     public function add(): View
     {
@@ -106,6 +118,9 @@ class EnrollmentController extends Controller
 
     /**
      * Find a student by national or academic ID.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function findStudent(Request $request): JsonResponse
     {
@@ -126,6 +141,9 @@ class EnrollmentController extends Controller
 
     /**
      * Get available courses for a student and term.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function availableCourses(Request $request): JsonResponse
     {
@@ -135,30 +153,7 @@ class EnrollmentController extends Controller
         ]);
 
         try {
-            $availableCourses = \App\Models\AvailableCourse::with(['course', 'eligibilities.program', 'eligibilities.level'])
-                ->whereHas('eligibilities', function ($query) use ($request) {
-                    $query->where('program_id', function ($subQuery) use ($request) {
-                        $subQuery->select('program_id')
-                            ->from('students')
-                            ->where('id', $request->student_id);
-                    })->where('level_id', function ($subQuery) use ($request) {
-                        $subQuery->select('level_id')
-                            ->from('students')
-                            ->where('id', $request->student_id);
-                    });
-                })
-                ->where('term_id', $request->term_id)
-                ->get()
-                ->map(function ($availableCourse) {
-                    return [
-                        'id' => $availableCourse->id,
-                        'name' => $availableCourse->course->name,
-                        'course_code' => $availableCourse->course->code,
-                        'min_capacity' => $availableCourse->min_capacity,
-                        'max_capacity' => $availableCourse->max_capacity,
-                    ];
-                });
-
+            $availableCourses = $this->enrollmentService->getAvailableCourses($request->student_id, $request->term_id);
             return successResponse('Available courses fetched successfully.', $availableCourses);
         } catch (Exception $e) {
             logError('EnrollmentController@availableCourses', $e, ['request' => $request->all()]);
@@ -168,6 +163,9 @@ class EnrollmentController extends Controller
 
     /**
      * Get all enrollments for a student.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function studentEnrollments(Request $request): JsonResponse
     {
@@ -186,16 +184,17 @@ class EnrollmentController extends Controller
 
     /**
      * Import enrollments from an uploaded file.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function import(Request $request): JsonResponse
     {
         $request->validate([
             'enrollments_file' => 'required|file|mimes:xlsx,xls'
         ]);
-        
         try {
             $result = $this->enrollmentService->importEnrollments($request->file('enrollments_file'));
-            
             return successResponse($result['message'], [
                 'imported_count' => $result['imported_count'],
                 'errors' => $result['errors']
@@ -204,12 +203,14 @@ class EnrollmentController extends Controller
             return errorResponse($e->getMessage(), [], 422);
         } catch (Exception $e) {
             logError('EnrollmentController@import', $e, ['request' => $request->all()]);
-            return errorResponse('Failed to import enrollments.', 500);
+            return errorResponse('Failed to import enrollments.', [], 500);
         }
     }
 
     /**
      * Download the enrollments import template.
+     *
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|JsonResponse
      */
     public function downloadTemplate()
     {
@@ -217,7 +218,57 @@ class EnrollmentController extends Controller
             return $this->enrollmentService->downloadTemplate();
         } catch (Exception $e) {
             logError('EnrollmentController@downloadTemplate', $e);
-            return errorResponse('Failed to download template.', 500);
+            return errorResponse('Failed to download template.', [], 500);
         }
     }
-} 
+
+    /**
+     * Export enrollments for a selected academic term.
+     *
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|JsonResponse
+     */
+    public function export(Request $request)
+    {
+        $request->validate([
+            'term_id' => 'nullable|exists:terms,id',
+            'program_id' => 'nullable|exists:programs,id',
+            'level_id' => 'nullable|exists:levels,id',
+        ]);
+
+        $termId = $request->input('term_id');
+        $programId = $request->input('program_id');
+        $levelId = $request->input('level_id');
+
+        return $this->enrollmentService->exportEnrollments($termId, $programId, $levelId);
+    }
+
+    /**
+    * Get remaining credit hours for a student in a specific term.
+    *
+    * @param  Request  $request
+    * @return JsonResponse
+    */
+    public function getRemainingCreditHours(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'student_id' => ['required', 'exists:students,id'],
+                'term_id'    => ['required', 'exists:terms,id'],
+            ]);
+
+            $result = $this->enrollmentService->getRemainingCreditHoursForStudent(
+                $validated['student_id'],
+                $validated['term_id']
+            );
+
+            return response()->json([
+                'success' => true,
+                'data' => $result,
+            ]);
+        } catch (Exception $e) {
+            logError('EnrollmentController@getRemainingCreditHours', $e);
+            return errorResponse('Failed to get remaining credit hours.', [], 500);
+        }
+    }
+}

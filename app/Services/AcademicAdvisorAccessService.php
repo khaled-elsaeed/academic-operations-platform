@@ -30,19 +30,19 @@ class AcademicAdvisorAccessService
 
         return [
             'total' => [
-                'total' => $total,
+                'total' => formatNumber($total),
                 'lastUpdateTime' => formatDate($lastCreatedAtTotal)
             ],
             'active' => [
-                'total' => $active,
+                'total' => formatNumber($active),
                 'lastUpdateTime' => formatDate($lastCreatedAtActive)
             ],
             'inactive' => [
-                'total' => $inactive,
+                'total' => formatNumber($inactive),
                 'lastUpdateTime' => formatDate($lastCreatedAtInactive)
             ],
             'uniqueAdvisors' => [
-                'total' => $uniqueAdvisors,
+                'total' => formatNumber($uniqueAdvisors),
                 'lastUpdateTime' => formatDate($lastCreatedAtTotal)
             ]
         ];
@@ -112,7 +112,7 @@ class AcademicAdvisorAccessService
     {
         return '
             <div class="dropdown">
-                <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                <button type="button" class="btn btn-primary btn-icon rounded-pill dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
                     <i class="bx bx-dots-vertical-rounded"></i>
                 </button>
                 <div class="dropdown-menu">
@@ -123,8 +123,7 @@ class AcademicAdvisorAccessService
                         <i class="bx bx-edit-alt me-1"></i> Edit
                     </a>
                     <a class="dropdown-item" href="javascript:void(0);" onclick="deleteAccess(' . $access->id . ')">
-                        <i class="bx bx-trash me-1"></i> Delete
-                    </a>
+                        <i class="bx bx-trash text-danger me-1"></i> Delete                    </a>
                 </div>
             </div>';
     }

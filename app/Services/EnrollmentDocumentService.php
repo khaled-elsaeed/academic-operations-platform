@@ -60,7 +60,7 @@ class EnrollmentDocumentService
     }
 
     // ============================================================================
-    // PUBLIC METHODS - Main API
+    // PUBLIC METHODS
     // ============================================================================
 
     /**
@@ -82,8 +82,9 @@ class EnrollmentDocumentService
             $this->validateEnrollments($enrollments, $student->id, $termId);
             
             $pdfData = $this->prepareDataForPdf($studentWithEnrollments, $enrollments);
-            // Add latest enrollment date as 'enrollment_date'
+
             $pdfData['enrollment_date'] = \Carbon\Carbon::now('Africa/Cairo')->translatedFormat('l d/m/Y h:i A');
+            
             $html = view('pdf.enrollment', $pdfData)->render();
             
             $filename = $this->generateFilename($student, 'pdf');

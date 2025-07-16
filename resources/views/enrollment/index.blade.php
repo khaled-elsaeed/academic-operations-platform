@@ -20,18 +20,39 @@
     {{-- ===== PAGE HEADER & ACTION BUTTONS ===== --}}
     <x-ui.page-header 
         title="Enrollments"
-        description="Manage all student enrollments and import in bulk using the options on the right."
+        description="Manage all student enrollments and import/export in bulk using the options on the right."
         icon="bx bx-book-open"
     >
-        @can('enrollment.import')
-            <button class="btn btn-success me-2" 
-                    id="importEnrollmentsBtn" 
-                    type="button" 
-                    data-bs-toggle="modal" 
-                    data-bs-target="#importEnrollmentsModal">
-                <i class="bx bx-upload me-1"></i> Import Enrollments
+        <div class="btn-group me-2">
+            <button
+                type="button"
+                class="btn btn-primary btn-icon rounded-pill dropdown-toggle hide-arrow"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+            >
+                <i class="bx bx-download"></i>
             </button>
-        @endcan
+            <ul class="dropdown-menu dropdown-menu-end">
+                @can('enrollment.import')
+                    <li>
+                        <a class="dropdown-item" href="javascript:void(0);" 
+                           id="importEnrollmentsBtn"
+                           data-bs-toggle="modal"
+                           data-bs-target="#importEnrollmentsModal">
+                            <i class="bx bx-upload me-1"></i> Import Enrollments
+                        </a>
+                    </li>
+                @endcan
+                <li>
+                    <a class="dropdown-item" href="javascript:void(0);"
+                       id="exportEnrollmentsBtn"
+                       data-bs-toggle="modal"
+                       data-bs-target="#exportEnrollmentsModal">
+                        <i class="bx bx-download me-1"></i> Export Enrollments
+                    </a>
+                </li>
+            </ul>
+        </div>
         
         <button class="btn btn-secondary"
                 type="button"
@@ -152,6 +173,59 @@
         </x-slot>
     </x-ui.modal>
     @endcan
+
+    {{-- Export Enrollments Modal --}}
+    <x-ui.modal 
+        id="exportEnrollmentsModal"
+        title="Export Enrollments"
+        size="md"
+        :scrollable="false"
+        class="export-enrollments-modal"
+    >
+        <x-slot name="slot">
+            <form id="exportEnrollmentsForm" method="GET" action="{{ route('enrollments.export') }}">
+                <div class="mb-3">
+                    <label for="export_term_id" class="form-label">
+                        Select Term
+                        <span class="text-muted">(Optional, leave blank for all terms)</span>
+                    </label>
+                    <select class="form-control" id="export_term_id" name="term_id">
+                        <option value="">All Terms</option>
+                        <!-- Options will be loaded via AJAX -->
+                    </select>
+                    <small class="form-text text-muted">
+                        You may leave this blank to export enrollments for all terms.
+                    </small>
+                </div>
+                <div class="mb-3">
+                    <label for="export_program_id" class="form-label">
+                        Select Program (Optional)
+                    </label>
+                    <select class="form-control" id="export_program_id" name="program_id">
+                        <option value="">All Programs</option>
+                        <!-- Options will be loaded via AJAX -->
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="export_level_id" class="form-label">
+                        Select Level (Optional)
+                    </label>
+                    <select class="form-control" id="export_level_id" name="level_id">
+                        <option value="">All Levels</option>
+                        <!-- Options will be loaded via AJAX -->
+                    </select>
+                </div>
+            </form>
+        </x-slot>
+        <x-slot name="footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                Close
+            </button>
+            <button type="submit" class="btn btn-primary" id="exportEnrollmentsSubmitBtn" form="exportEnrollmentsForm">
+                Export
+            </button>
+        </x-slot>
+    </x-ui.modal>
 </div>
 @endsection
 
@@ -160,7 +234,7 @@
 /**
  * Enrollment Management System JavaScript
  * Organized and structured for better maintainability
- * Handles CRUD operations and imports for enrollments
+ * Handles CRUD operations and imports/exports for enrollments
  */
 
 // ===========================
@@ -168,29 +242,39 @@
 // ===========================
 
 const ROUTES = {
+  terms: {
+    all: '{{ route('terms.all') }}'
+  },
+  programs: {
+    all: '{{ route('programs.all') }}'
+  },
+  levels: {
+    all: '{{ route('levels.all') }}'
+  },
   enrollments: {
     stats: '{{ route('enrollments.stats') }}',
     destroy: '{{ route('enrollments.destroy', ':id') }}',
     import: '{{ route('enrollments.import') }}',
-    template: '{{ route('enrollments.template') }}'
+    template: '{{ route('enrollments.template') }}',
+    export: '{{ route('enrollments.export') }}'
   }
 };
 
 const SELECTORS = {
   // Forms
   importForm: '#importEnrollmentsForm',
-  
+  exportForm: '#exportEnrollmentsForm',
   // Modals
   importModal: '#importEnrollmentsModal',
-  
+  exportModal: '#exportEnrollmentsModal',
   // Buttons
   importSubmitBtn: '#importEnrollmentsSubmitBtn',
   downloadTemplateBtn: '#downloadEnrollmentTemplateBtn',
   clearFiltersBtn: '#clearEnrollmentFiltersBtn',
-  
+  exportEnrollmentsBtn: '#exportEnrollmentsBtn',
+  exportSubmitBtn: '#exportEnrollmentsSubmitBtn',
   // Tables
   enrollmentsTable: '#enrollments-table',
-  
   // Search inputs
   searchStudent: '#search_student',
   searchCourse: '#search_course',
@@ -203,10 +287,6 @@ const SELECTORS = {
 // ===========================
 
 const Utils = {
-  /**
-   * Shows success notification
-   * @param {string} message - Success message to display
-   */
   showSuccess(message) {
     Swal.fire({
       toast: true,
@@ -219,10 +299,6 @@ const Utils = {
     });
   },
 
-  /**
-   * Shows error notification
-   * @param {string} message - Error message to display
-   */
   showError(message) {
     Swal.fire({
       title: 'Error',
@@ -231,11 +307,6 @@ const Utils = {
     });
   },
 
-  /**
-   * Shows/hides loading spinners and content for stat2 component
-   * @param {string} elementId - Base element ID
-   * @param {boolean} isLoading - Whether to show loading state
-   */
   toggleLoadingState(elementId, isLoading) {
     const $value = $(`#${elementId}-value`);
     const $loader = $(`#${elementId}-loader`);
@@ -255,12 +326,6 @@ const Utils = {
     }
   },
 
-  /**
-   * Replaces :id placeholder in route URLs
-   * @param {string} route - Route URL with :id placeholder
-   * @param {number} id - ID to replace placeholder with
-   * @returns {string} - Updated URL
-   */
   replaceRouteId(route, id) {
     return route.replace(':id', id);
   }
@@ -271,19 +336,10 @@ const Utils = {
 // ===========================
 
 const ApiService = {
-  /**
-   * Generic AJAX request wrapper
-   * @param {Object} options - jQuery AJAX options
-   * @returns {Promise} - jQuery promise
-   */
   request(options) {
     return $.ajax(options);
   },
 
-  /**
-   * Fetches enrollment statistics
-   * @returns {Promise}
-   */
   fetchEnrollmentStats() {
     return this.request({
       url: ROUTES.enrollments.stats,
@@ -291,11 +347,6 @@ const ApiService = {
     });
   },
 
-  /**
-   * Deletes an enrollment
-   * @param {number} id - Enrollment ID
-   * @returns {Promise}
-   */
   deleteEnrollment(id) {
     return this.request({
       url: Utils.replaceRouteId(ROUTES.enrollments.destroy, id),
@@ -303,11 +354,6 @@ const ApiService = {
     });
   },
 
-  /**
-   * Imports enrollments from file
-   * @param {FormData} formData - Form data containing file
-   * @returns {Promise}
-   */
   importEnrollments(formData) {
     return this.request({
       url: ROUTES.enrollments.import,
@@ -318,10 +364,37 @@ const ApiService = {
     });
   },
 
-  /**
-   * Downloads template file
-   * @returns {Promise}
-   */
+  exportEnrollments(queryParams) {
+    return this.request({
+      url: `${ROUTES.enrollments.export}?${queryParams}`,
+      method: 'GET',
+      xhrFields: {
+        responseType: 'blob'
+      }
+    });
+  },
+
+  fetchTerms() {
+    return this.request({
+      url: ROUTES.terms.all,
+      method: 'GET'
+    });
+  },
+
+  fetchPrograms() {
+    return this.request({
+      url: ROUTES.programs.all,
+      method: 'GET'
+    });
+  },
+
+  fetchLevels() {
+    return this.request({
+      url: ROUTES.levels.all,
+      method: 'GET'
+    });
+  },
+
   downloadTemplate() {
     return this.request({
       url: ROUTES.enrollments.template,
@@ -334,33 +407,92 @@ const ApiService = {
 };
 
 // ===========================
+// DROPDOWN MANAGEMENT
+// ===========================
+
+const DropdownManager = {
+  loadTerms(selector = '#export_term_id', selectedId = null) {
+    return ApiService.fetchTerms()
+      .done((response) => {
+        const terms = response.data || [];
+        const $select = $(selector);
+        
+        $select.empty().append('<option value="">All Terms</option>');
+        terms.forEach((term) => {
+          $select.append($('<option>', { value: term.id, text: term.name }));
+        });
+        
+        if (selectedId) {
+          $select.val(selectedId);
+        }
+        $select.trigger('change');
+      })
+      .fail(() => {
+        Utils.showError('Failed to load terms');
+      });
+  },
+
+  loadPrograms(selector = '#export_program_id', selectedId = null) {
+    return ApiService.fetchPrograms()
+      .done((response) => {
+        const programs = response.data || [];
+        const $select = $(selector);
+        
+        $select.empty().append('<option value="">All Programs</option>');
+        programs.forEach((program) => {
+          $select.append($('<option>', { value: program.id, text: program.name }));
+        });
+        
+        if (selectedId) {
+          $select.val(selectedId);
+        }
+        $select.trigger('change');
+      })
+      .fail(() => {
+        Utils.showError('Failed to load programs');
+      });
+  },
+
+  loadLevels(selector = '#export_level_id', selectedId = null) {
+    return ApiService.fetchLevels()
+      .done((response) => {
+        const levels = response.data || [];
+        const $select = $(selector);
+        
+        $select.empty().append('<option value="">All Levels</option>');
+        levels.forEach((level) => {
+          $select.append($('<option>', { value: level.id, text: level.name }));
+        });
+        
+        if (selectedId) {
+          $select.val(selectedId);
+        }
+        $select.trigger('change');
+      })
+      .fail(() => {
+        Utils.showError('Failed to load levels');
+      });
+  }
+};
+
+// ===========================
 // STATISTICS MANAGEMENT
 // ===========================
 
 const StatsManager = {
-  /**
-   * Loads and displays enrollment statistics
-   */
   loadEnrollmentStats() {
-    // Show loading state for stats
     Utils.toggleLoadingState('enrollments', true);
     
     ApiService.fetchEnrollmentStats()
       .done((response) => {
         const data = response.data;
-        
-        // Update enrollment statistics
         $('#enrollments-value').text(data.enrollments?.total ?? '--');
         $('#enrollments-last-updated').text(data.enrollments?.lastUpdateTime ?? '--');
-        
-        // Hide loading state
         Utils.toggleLoadingState('enrollments', false);
       })
       .fail(() => {
-        // Show error state
         $('#enrollments-value').text('N/A');
         $('#enrollments-last-updated').text('N/A');
-        
         Utils.toggleLoadingState('enrollments', false);
         Utils.showError('Failed to load enrollment statistics');
       });
@@ -372,9 +504,6 @@ const StatsManager = {
 // ===========================
 
 const EnrollmentManager = {
-  /**
-   * Handles Delete Enrollment button click (delegated)
-   */
   handleDeleteEnrollment() {
     $(document).on('click', '.deleteEnrollmentBtn', function () {
       const enrollmentId = $(this).data('id');
@@ -393,7 +522,7 @@ const EnrollmentManager = {
             .done(() => {
               $(SELECTORS.enrollmentsTable).DataTable().ajax.reload(null, false);
               Utils.showSuccess('Enrollment has been deleted.');
-              StatsManager.loadEnrollmentStats(); // Refresh stats
+              StatsManager.loadEnrollmentStats();
             })
             .fail(() => {
               Utils.showError('Failed to delete enrollment.');
@@ -409,9 +538,6 @@ const EnrollmentManager = {
 // ===========================
 
 const ImportManager = {
-  /**
-   * Handles import form submission
-   */
   handleImportEnrollments() {
     $(SELECTORS.importForm).on('submit', (e) => {
       e.preventDefault();
@@ -428,19 +554,17 @@ const ImportManager = {
           
           Utils.showSuccess(response.message);
           
-          // If there are errors, show them in a detailed modal
           if (response.data?.errors?.length > 0) {
             this.showImportErrors(response.data.errors, response.data.imported_count);
           }
           
-          StatsManager.loadEnrollmentStats(); // Refresh stats
+          StatsManager.loadEnrollmentStats();
         })
         .fail((xhr) => {
           $(SELECTORS.importModal).modal('hide');
           const response = xhr.responseJSON;
           
           if (response?.errors && Object.keys(response.errors).length > 0) {
-            // Handle validation errors
             const errorMessages = [];
             Object.keys(response.errors).forEach(field => {
               if (Array.isArray(response.errors[field])) {
@@ -461,17 +585,11 @@ const ImportManager = {
     });
   },
 
-  /**
-   * Shows import errors in a detailed modal
-   * @param {Array} errors - Array of error objects
-   * @param {number} importedCount - Number of successfully imported records
-   */
   showImportErrors(errors, importedCount) {
     let errorHtml = '<div class="text-start">';
     errorHtml += `<p class="mb-3"><strong>Successfully processed: ${importedCount} enrollments</strong></p>`;
     errorHtml += '<p class="mb-3"><strong>Failed rows:</strong></p>';
     
-    // Make the table scrollable with a fixed max height
     errorHtml += '<div class="table-responsive" style="max-height:400px; overflow-y:auto;">';
     errorHtml += '<table class="table table-sm table-bordered table-striped mb-0">';
     errorHtml += '<thead>';
@@ -484,7 +602,6 @@ const ImportManager = {
     errorHtml += '<tbody>';
     
     errors.forEach((error) => {
-      // Get error messages as a single string
       let errorMessages = '';
       if (Array.isArray(error.errors)) {
         errorMessages = error.errors.join('<br>');
@@ -503,7 +620,6 @@ const ImportManager = {
         errorMessages = String(error.errors);
       }
       
-      // Format original data as JSON-like display
       let originalDataHtml = '';
       if (error.original_data) {
         originalDataHtml = '<div class="small">';
@@ -540,24 +656,84 @@ const ImportManager = {
 };
 
 // ===========================
+// EXPORT FUNCTIONALITY
+// ===========================
+
+const ExportManager = {
+  handleExportEnrollments() {
+    $(SELECTORS.exportEnrollmentsBtn).on('click', () => {
+      this.setupExportModal();
+    });
+
+    $(SELECTORS.exportForm).on('submit', function (e) {
+      e.preventDefault();
+
+      const $form = $(this);
+      const termId = $form.find('#export_term_id').val();
+      const programId = $form.find('#export_program_id').val();
+      const levelId = $form.find('#export_level_id').val();
+      const $submitBtn = $(SELECTORS.exportSubmitBtn);
+
+      $submitBtn.prop('disabled', true).text('Exporting...');
+
+      const queryParams = new URLSearchParams({
+        term_id: termId,
+        ...(programId && { program_id: programId }),
+        ...(levelId && { level_id: levelId })
+      }).toString();
+
+      ApiService.exportEnrollments(queryParams)
+        .done((response) => {
+          const blob = new Blob([response], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'enrollments_export.xlsx';
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+
+          $(SELECTORS.exportModal).modal('hide');
+          Utils.showSuccess('Enrollments exported successfully!');
+        })
+        .fail((xhr) => {
+          $(SELECTORS.exportModal).modal('hide');
+          const response = xhr.responseJSON || {};
+          const message = response.message || 'Export failed. Please check your input.';
+          Utils.showError(message);
+        })
+        .always(() => {
+          $submitBtn.prop('disabled', false).text('Export');
+        });
+    });
+  },
+
+  setupExportModal() {
+    DropdownManager.loadTerms('#export_term_id');
+    DropdownManager.loadPrograms('#export_program_id');
+    DropdownManager.loadLevels('#export_level_id').done(() => {
+      $(SELECTORS.exportModal).modal('show');
+    });
+  }
+};
+
+// ===========================
 // TEMPLATE DOWNLOAD FUNCTIONALITY
 // ===========================
 
 const TemplateDownloadManager = {
-  /**
-   * Handles template download button click
-   */
   handleTemplateDownload() {
     $(SELECTORS.downloadTemplateBtn).on('click', () => {
       const $btn = $(SELECTORS.downloadTemplateBtn);
       const originalText = $btn.html();
       
-      // Show loading state
       $btn.prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i>Downloading...');
       
       ApiService.downloadTemplate()
         .done((response) => {
-          // Create blob and download
           const blob = new Blob([response], { 
             type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
           });
@@ -577,7 +753,6 @@ const TemplateDownloadManager = {
           Utils.showError(message);
         })
         .always(() => {
-          // Restore button state
           $btn.prop('disabled', false).html(originalText);
         });
     });
@@ -589,27 +764,41 @@ const TemplateDownloadManager = {
 // ===========================
 
 const SearchManager = {
-  /**
-   * Initializes advanced search functionality
-   */
   initializeAdvancedSearch() {
-    // Bind search events
     this.bindSearchEvents();
   },
 
-  /**
-   * Binds search events
-   */
   bindSearchEvents() {
-    // Clear filters button
     $(SELECTORS.clearFiltersBtn).on('click', () => {
       $(`${SELECTORS.searchStudent}, ${SELECTORS.searchCourse}, ${SELECTORS.searchTerm}`).val('');
+      $(SELECTORS.searchGrade).val('');
       $(SELECTORS.enrollmentsTable).DataTable().ajax.reload();
     });
 
-    // Search input events
-    $(`${SELECTORS.searchStudent}, ${SELECTORS.searchCourse}, ${SELECTORS.searchTerm}`).on('keyup change', () => {
+    $(`${SELECTORS.searchStudent}, ${SELECTORS.searchCourse}, ${SELECTORS.searchTerm}, ${SELECTORS.searchGrade}`).on('keyup change', () => {
       $(SELECTORS.enrollmentsTable).DataTable().ajax.reload();
+    });
+  }
+};
+
+// ===========================
+// SELECT2 INITIALIZATION
+// ===========================
+
+const Select2Manager = {
+  initExportModalSelect2() {
+    $(`${SELECTORS.exportModal} select`).select2({
+      theme: 'bootstrap-5',
+      placeholder: function() {
+        const id = $(this).attr('id');
+        if (id === 'export_term_id') return 'Select Term';
+        if (id === 'export_program_id') return 'Select Program';
+        if (id === 'export_level_id') return 'Select Level';
+        return '';
+      },
+      allowClear: true,
+      width: '100%',
+      dropdownParent: $(SELECTORS.exportModal)
     });
   }
 };
@@ -619,24 +808,14 @@ const SearchManager = {
 // ===========================
 
 const EnrollmentManagementApp = {
-  /**
-   * Initializes the entire application
-   */
   init() {
-    // Load initial data
     StatsManager.loadEnrollmentStats();
-    
-    // Initialize CRUD operations
     EnrollmentManager.handleDeleteEnrollment();
-    
-    // Initialize import functionality
     ImportManager.handleImportEnrollments();
-    
-    // Initialize template download functionality
+    ExportManager.handleExportEnrollments();
     TemplateDownloadManager.handleTemplateDownload();
-    
-    // Initialize search functionality
     SearchManager.initializeAdvancedSearch();
+    Select2Manager.initExportModalSelect2();
   }
 };
 
@@ -648,4 +827,4 @@ $(document).ready(() => {
   EnrollmentManagementApp.init();
 });
 </script>
-@endpush 
+@endpush

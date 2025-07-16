@@ -89,4 +89,21 @@ if (!function_exists('errorResponse')) {
             'code' => $code,
         ], $code);
     }
+}
+
+if (!function_exists('formatNumber')) {
+    /**
+     * Format a number with grouped thousands and optional decimals.
+     *
+     * @param float|int|null $number
+     * @param int $decimals
+     * @return string|null
+     */
+    function formatNumber($number, $decimals = 0)
+    {
+        if ($number === null) {
+            return null;
+        }
+        return number_format($number, $decimals, '.', ',');
+    }
 } 

@@ -19,14 +19,13 @@ class PermissionService
         $totalPermissions = Permission::count();
         $totalRoles = Role::count();
         $permissionsWithRoles = Permission::withCount('roles')->get();
-
         return [
             'total' => [
-                'total' => $totalPermissions,
+                'total' => formatNumber($totalPermissions),
                 'lastUpdateTime' => formatDate(now(), 'Y-m-d H:i:s')
             ],
             'roles' => [
-                'total' => $totalRoles,
+                'total' => formatNumber($totalRoles),
                 'lastUpdateTime' => formatDate(now(), 'Y-m-d H:i:s')
             ],
             'permissionsWithRoles' => $permissionsWithRoles
@@ -41,17 +40,10 @@ class PermissionService
     public function getDatatable(): JsonResponse
     {
         $permissions = Permission::with('roles');
-
         return DataTables::of($permissions)
-            ->addColumn('roles', function ($permission) {
-                return $permission->roles->pluck('name')->implode(', ');
-            })
-            ->addColumn('roles_count', function ($permission) {
-                return $permission->roles_count ?? $permission->roles->count();
-            })
-            ->addColumn('actions', function ($permission) {
-                return $this->renderActionButtons($permission);
-            })
+            ->addColumn('roles', fn($permission) => $permission->roles->pluck('name')->implode(', '))
+            ->addColumn('roles_count', fn($permission) => $permission->roles_count ?? $permission->roles->count())
+            ->addColumn('actions', fn($permission) => $this->renderActionButtons($permission))
             ->rawColumns(['actions'])
             ->make(true);
     }
@@ -66,7 +58,7 @@ class PermissionService
     {
         return '
             <div class="dropdown">
-                <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                <button type="button" class="btn btn-primary btn-icon rounded-pill dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
                     <i class="bx bx-dots-vertical-rounded"></i>
                 </button>
                 <div class="dropdown-menu">

@@ -762,7 +762,7 @@ function loadRemainingCreditHours(studentId, termId) {
   }
   
   $.ajax({
-    url: '{{ route('available_courses.remaining-credit-hours') }}',
+    url: '{{ route('enrollments.remainingCreditHours') }}',
     method: 'POST',
     data: { 
       student_id: studentId, 

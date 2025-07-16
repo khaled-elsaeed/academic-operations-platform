@@ -3,27 +3,30 @@
 namespace App\Services;
 
 use App\Models\Student;
-use Illuminate\Http\Request;
+use App\Models\Level;
+use App\Models\Program;
+use App\Models\Term;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
 use Yajra\DataTables\DataTables;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\StudentsImport;
 use App\Exports\StudentsTemplateExport;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Http\JsonResponse;
 use App\Validators\StudentImportValidator;
 use App\Services\EnrollmentDocumentService;
 use App\Exceptions\BusinessValidationException;
-use App\Models\Term;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
-use App\Models\Level;
-use App\Models\Program;
 
 class StudentService
 {
-
+    /**
+     * StudentService constructor.
+     *
+     * @param EnrollmentDocumentService $enrollmentDocumentService
+     */
     public function __construct(protected EnrollmentDocumentService $enrollmentDocumentService)
     {}
 
@@ -37,27 +40,10 @@ class StudentService
     public function createStudent(array $data): Student
     {
         $isExist = $this->isStudentExist($data);
-
         if ($isExist) {
             throw new BusinessValidationException('A student with the provided academic email, academic ID, or national ID already exists.');
         }
-
         return Student::create($data);
-    }
-
-    private function isStudentExist(array $data, $excludedStudentId = null)
-    {
-        $query = Student::where(function ($q) use ($data) {
-            $q->where('academic_email', $data['academic_email'])
-              ->orWhere('academic_id', $data['academic_id'])
-              ->orWhere('national_id', $data['national_id']);
-        });
-
-        if ($excludedStudentId !== null) {
-            $query->where('id', '!=', $excludedStudentId);
-        }
-
-        return $query->first();
     }
 
     /**
@@ -71,11 +57,9 @@ class StudentService
     public function updateStudent(Student $student, array $data): Student
     {
         $isExist = $this->isStudentExist($data, $student->id);
-
         if ($isExist) {
             throw new BusinessValidationException('A student with the provided academic email, academic ID, or national ID already exists.');
-        }       
-
+        }
         $student->update($data);
         return $student;
     }
@@ -101,18 +85,17 @@ class StudentService
         $latestStudent = Student::max('updated_at');
         $latestMale = Student::where('gender', 'male')->max('updated_at');
         $latestFemale = Student::where('gender', 'female')->max('updated_at');
-
         return [
             'students' => [
-                'total' => Student::count(),
+                'total' => formatNumber(Student::count()),
                 'lastUpdateTime' => formatDate($latestStudent),
             ],
             'maleStudents' => [
-                'total' => Student::where('gender', 'male')->count(),
+                'total' => formatNumber(Student::where('gender', 'male')->count()),
                 'lastUpdateTime' => formatDate($latestMale),
             ],
             'femaleStudents' => [
-                'total' => Student::where('gender', 'female')->count(),
+                'total' => formatNumber(Student::where('gender', 'female')->count()),
                 'lastUpdateTime' => formatDate($latestFemale),
             ],
         ];
@@ -126,23 +109,107 @@ class StudentService
     public function getDatatable(): JsonResponse
     {
         $query = Student::with(['program', 'level']);
-
         $request = request();
-
-        $this->applySearchFilters($query,$request);
-
+        $this->applySearchFilters($query, $request);
         return DataTables::of($query)
-            ->addColumn('program', function($student) {
-                return $student->program ? $student->program->name : '-';
-            })
-            ->addColumn('level', function($student) {
-                return $student->level ? $student->level->name : '-';
-            })
-            ->addColumn('action', function($student) {
-                return $this->renderActionButtons($student);
-            })
+            ->addColumn('program', fn($student) => $student->program ? $student->program->name : '-')
+            ->addColumn('level', fn($student) => $student->level ? $student->level->name : '-')
+            ->addColumn('action', fn($student) => $this->renderActionButtons($student))
             ->rawColumns(['action'])
             ->make(true);
+    }
+
+    /**
+     * Import students from an uploaded Excel file.
+     *
+     * @param UploadedFile $file
+     * @return array
+     */
+    public function importStudents(UploadedFile $file): array
+    {
+        return $this->importStudentsFromFile($file);
+    }
+
+    /**
+     * Download the students import template as an Excel file.
+     *
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function downloadTemplate()
+    {
+        return Excel::download(new StudentsTemplateExport, 'students_import_template.xlsx');
+    }
+
+    /**
+     * Export students for a selected program and level.
+     *
+     * @param int|null $programId
+     * @param int|null $levelId
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function exportStudents($programId = null, $levelId = null)
+    {
+        $export = new \App\Exports\StudentsExport($programId, $levelId);
+        $program = $programId ? \App\Models\Program::find($programId) : null;
+        $level = $levelId ? \App\Models\Level::find($levelId) : null;
+        $filename = 'students_'
+            . ($program ? str_replace(' ', '_', strtolower($program->name)) : 'all_programs')
+            . ($level ? '_level_' . str_replace(' ', '_', strtolower($level->name)) : '')
+            . '_' . now()->format('Ymd_His') . '.xlsx';
+        return \Maatwebsite\Excel\Facades\Excel::download($export, $filename, \Maatwebsite\Excel\Excel::XLSX, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
+     * Download enrollment document as PDF or Word.
+     *
+     * @param Student $student
+     * @param int|null $termId
+     * @param string $format 'pdf' or 'word'
+     * @return array
+     * @throws BusinessValidationException
+     */
+    public function downloadEnrollmentDocument(Student $student, ?int $termId = null, string $format = 'pdf'): array
+    {
+        if ($termId !== null) {
+            $term = Term::find($termId);
+            if (!$term) {
+                throw new BusinessValidationException('The selected term does not exist.');
+            }
+        }
+        if (!$this->enrollmentDocumentService->hasEnrollments($student, $termId)) {
+            $msg = 'No enrollments found for this student' . ($termId ? ' in the selected term' : '');
+            throw new BusinessValidationException($msg);
+        }
+
+        if ($format === 'pdf') {
+            return $this->enrollmentDocumentService->generatePdf($student, $termId);
+        } elseif ($format === 'word') {
+            return $this->enrollmentDocumentService->generateWord($student, $termId);
+        } else {
+            throw new BusinessValidationException('Invalid document format requested.');
+        }
+    }
+
+    /**
+     * Helper to check if a student exists by academic email, academic ID, or national ID.
+     *
+     * @param array $data
+     * @param int|null $excludedStudentId
+     * @return Student|null
+     */
+    private function isStudentExist(array $data, $excludedStudentId = null)
+    {
+        $query = Student::where(function ($q) use ($data) {
+            $q->where('academic_email', $data['academic_email'])
+              ->orWhere('academic_id', $data['academic_id'])
+              ->orWhere('national_id', $data['national_id']);
+        });
+        if ($excludedStudentId !== null) {
+            $query->where('id', '!=', $excludedStudentId);
+        }
+        return $query->first();
     }
 
     private function applySearchFilters($query,$request): void
@@ -188,26 +255,47 @@ class StudentService
     {
         $user = auth()->user();
         $buttons = '<div class="d-flex gap-2">';
-        if ($user && $user->can('student.edit')) {
-            $buttons .= '<button type="button"
-                class="btn btn-sm btn-icon btn-primary rounded-circle editStudentBtn"
-                data-id="' . e($student->id) . '"
-                title="Edit">
-                <i class="bx bx-edit"></i>
-              </button>';
+
+        // Dropdown for Edit and Delete
+        if (
+            ($user && $user->can('student.edit')) ||
+            ($user && $user->can('student.delete'))
+        ) {
+            $buttons .= '<div class="btn-group">
+                <button type="button"
+                  class="btn btn-primary btn-icon rounded-pill dropdown-toggle hide-arrow"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    title="Actions">
+                    <i class="bx bx-dots-vertical-rounded"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">';
+            if ($user && $user->can('student.edit')) {
+                $buttons .= '<li>
+                    <a href="javascript:void(0);" class="dropdown-item editStudentBtn"
+                        data-id="' . e($student->id) . '"
+                        title="Edit">
+                        <i class="bx bx-edit me-1"></i> Edit
+                    </a>
+                </li>';
+            }
+            if ($user && $user->can('student.delete')) {
+                $buttons .= '<li>
+                    <a href="javascript:void(0);" class="dropdown-item deleteStudentBtn"
+                        data-id="' . e($student->id) . '"
+                        title="Delete">
+                        <i class="bx bx-trash text-danger me-1"></i> Delete                    </a>
+                </li>';
+            }
+            $buttons .= '</ul>
+            </div>';
         }
-        if ($user && $user->can('student.delete')) {
-            $buttons .= '<button type="button"
-                class="btn btn-sm btn-icon btn-danger rounded-circle deleteStudentBtn"
-                data-id="' . e($student->id) . '"
-                title="Delete">
-                <i class="bx bx-trash"></i>
-              </button>';
-        }
+
+        // Download button with rounded style
         if ($user && $user->can('student.view')) {
             $buttons .= '<div class="dropdown">
                 <button type="button"
-                  class="btn btn-sm btn-info dropdown-toggle"
+                  class="btn btn-info btn-icon rounded-pill dropdown-toggle hide-arrow"
                   data-bs-toggle="dropdown"
                   title="Download Enrollment Document">
                   <i class="bx bx-download"></i>
@@ -217,10 +305,11 @@ class StudentService
                 </ul>
               </div>';
         }
+
         $buttons .= '</div>';
         return trim($buttons) === '<div class="d-flex gap-2"></div>' ? '' : $buttons;
     }
-
+           
     /**
      * Import students from an uploaded Excel file.
      *
@@ -395,77 +484,4 @@ class StudentService
         
         return $program;
     }
-
-
-    /**
-     * Import students from an uploaded Excel file. Collects all errors and continues processing valid rows.
-     *
-     * @param UploadedFile $file
-     * @return array [success => bool, message => string, errors => array, imported_count => int]
-     */
-    public function importStudents(UploadedFile $file): array
-    {
-        return $this->importStudentsFromFile($file);
-    }
-
-
-
-    /**
-     * Download the students import template as an Excel file.
-     *
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
-     */
-    public function downloadTemplate()
-    {
-        return Excel::download(new StudentsTemplateExport, 'students_import_template.xlsx');
-    }
-
-    /**
-     * Download enrollment document as PDF
-     *
-     * @param Student $student
-     * @param int|null $termId
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
-     * @throws BusinessValidationException
-     */
-    public function downloadEnrollmentPdf(Student $student, ?int $termId = null)
-    {
-        if ($termId !== null) {
-            $term = Term::find($termId);
-            if (!$term) {
-                throw new BusinessValidationException('The selected term does not exist.');
-            }
-        }
-        if (!$this->enrollmentDocumentService->hasEnrollments($student, $termId)) {
-            $msg = 'No enrollments found for this student' . ($termId ? ' in the selected term' : '');
-            throw new BusinessValidationException($msg);
-        }
-        // Return the JSON response from EnrollmentDocumentService
-        return $this->enrollmentDocumentService->generatePdf($student, $termId);
-    }
-
-    /**
-     * Download enrollment document as Word
-     *
-     * @param Student $student
-     * @param int|null $termId
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
-     * @throws BusinessValidationException
-     */
-    public function downloadEnrollmentWord(Student $student, ?int $termId = null)
-    {
-        if ($termId !== null) {
-            $term = Term::find($termId);
-            if (!$term) {
-                throw new BusinessValidationException('The selected term does not exist.');
-            }
-        }
-        if (!$this->enrollmentDocumentService->hasEnrollments($student, $termId)) {
-            $msg = 'No enrollments found for this student' . ($termId ? ' in the selected term' : '');
-            throw new BusinessValidationException($msg);
-        }
-        // Return the JSON response from EnrollmentDocumentService
-        return $this->enrollmentDocumentService->generateWord($student, $termId);
-    }
-
 } 

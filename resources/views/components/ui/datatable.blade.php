@@ -1,6 +1,47 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('vendor/libs/datatables/dataTables.bootstrap5.min.css') }}?v={{ config('app.version') }}">
 <link rel="stylesheet" href="{{ asset('vendor/libs/datatables/responsive.bootstrap5.min.css') }}?v={{ config('app.version') }}">
+<style>
+        table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control::before,
+        table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control::before {
+        top: 50% !important;
+        left: 5px !important;
+        height: 1em !important;
+        width: 1em !important;
+        margin-top: -9px !important;
+        display: inline-block !important;
+        color: white !important;
+        border: .15em solid white !important;
+        border-radius: 1em !important;
+        box-shadow: 0 0 .2em #444 !important;
+        box-sizing: content-box !important;
+        text-align: center !important;
+        text-indent: 0 !important;
+        line-height: 1em !important;
+        content: "+" !important;
+        background-color: #931a23 !important;
+        }
+ 
+        table.dataTable.dtr-inline.collapsed>tbody>tr.parent>td.dtr-control:before,
+         table.dataTable.dtr-inline.collapsed>tbody>tr.parent>th.dtr-control:before{
+        top: 50% !important;
+        left: 5px !important;
+        height: 1em !important;
+        width: 1em !important;
+        margin-top: -9px !important;
+        display: inline-block !important;
+        color: white !important;
+        border: .15em solid white !important;
+        border-radius: 1em !important;
+        box-shadow: 0 0 .2em #444 !important;
+        box-sizing: content-box !important;
+        text-align: center !important;
+        text-indent: 0 !important;
+        line-height: 1em !important;
+        content: "-" !important;
+        background-color: #8592a3 !important;
+        }
+</style>
 @endpush
 
 <div>
@@ -46,7 +87,7 @@ function initializeDataTable() {
             search: "",
             searchPlaceholder: "",
             lengthMenu: "Show _MENU_ entries"
-        }
+        },
     });
 
 }

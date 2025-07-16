@@ -1,6 +1,6 @@
 @extends('layouts.home')
 
-@section('title', 'Admin Home | AcadOps')
+@section('title', 'Admin Students | AcadOps')
 
 @section('page-content')
 <div class="container-xxl flex-grow-1 container-p-y">
@@ -36,18 +36,11 @@
     {{-- ===== PAGE HEADER & ACTION BUTTONS ===== --}}
     <x-ui.page-header 
         title="Students"
-        description="Manage all student records, add new students, or import in bulk using the options on the right."
+        description="Manage all student records, add new students, or import/export in bulk using the options on the right."
         icon="bx bx-group"
     >
+        
         @can('student.create')
-            <button class="btn btn-success" 
-                    id="importStudentsBtn" 
-                    type="button" 
-                    data-bs-toggle="modal" 
-                    data-bs-target="#importStudentsModal">
-                <i class="bx bx-upload me-1"></i> Import Students
-            </button>
-            
             <button class="btn btn-primary mx-2" 
                     id="addStudentBtn" 
                     type="button" 
@@ -65,6 +58,36 @@
                 aria-controls="studentSearchCollapse">
             <i class="bx bx-filter-alt me-1"></i> Search
         </button>
+        <div class="btn-group me-2">
+            <button
+                type="button"
+                class="btn btn-primary btn-icon rounded-pill dropdown-toggle hide-arrow"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+            >
+                <i class="bx bx-download"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                @can('student.create')
+                    <li>
+                        <a class="dropdown-item" href="javascript:void(0);" 
+                           id="importStudentsBtn"
+                           data-bs-toggle="modal"
+                           data-bs-target="#importStudentsModal">
+                            <i class="bx bx-upload me-1"></i> Import Students
+                        </a>
+                    </li>
+                @endcan
+                <li>
+                    <a class="dropdown-item" href="javascript:void(0);"
+                       id="exportStudentsBtn"
+                       data-bs-toggle="modal"
+                       data-bs-target="#exportStudentsModal">
+                        <i class="bx bx-download me-1"></i> Export Students
+                    </a>
+                </li>
+            </ul>
+        </div>
     </x-ui.page-header>
 
     {{-- ===== ADVANCED SEARCH SECTION ===== --}}
@@ -327,6 +350,59 @@
         </x-slot>
     </x-ui.modal>
 
+    {{-- Export Students Modal --}}
+    <x-ui.modal 
+        id="exportStudentsModal"
+        title="Export Students"
+        size="md"
+        :scrollable="false"
+        class="export-students-modal"
+    >
+        <x-slot name="slot">
+            <form id="exportStudentsForm" method="GET" action="{{ route('students.export') }}">
+                <div class="mb-3">
+                    <label for="export_program_id" class="form-label">
+                        Select Program
+                        <span class="text-muted">(Optional, leave blank for all programs)</span>
+                    </label>
+                    <select class="form-control" id="export_program_id" name="program_id">
+                        <option value="">All Programs</option>
+                        <!-- Options will be loaded via AJAX -->
+                    </select>
+                    <small class="form-text text-muted">
+                        You may leave this blank to export students for all programs.
+                    </small>
+                </div>
+                <div class="mb-3">
+                    <label for="export_level_id" class="form-label">
+                        Select Level
+                        <span class="text-muted">(Optional, leave blank for all levels)</span>
+                    </label>
+                    <select class="form-control" id="export_level_id" name="level_id">
+                        <option value="">All Levels</option>
+                        <!-- Options will be loaded via AJAX -->
+                    </select>
+                    <small class="form-text text-muted">
+                        You may leave this blank to export students for all levels.
+                    </small>
+                </div>
+                <div class="alert alert-info d-flex align-items-center justify-content-between p-3 mb-3">
+                    <div>
+                        <i class="bx bx-info-circle me-2"></i>
+                        <span class="small">Exported file will contain all student data based on your selected filters.</span>
+                    </div>
+                </div>
+            </form>
+        </x-slot>
+        <x-slot name="footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                Close
+            </button>
+            <button type="submit" class="btn btn-primary" id="exportStudentsSubmitBtn" form="exportStudentsForm">
+                Export
+            </button>
+        </x-slot>
+    </x-ui.modal>
 </div>
 @endsection
 @push('scripts')
@@ -334,7 +410,7 @@
 /**
  * Student Management System JavaScript
  * Organized and structured for better maintainability
- * Handles CRUD operations, imports, and document downloads for students
+ * Handles CRUD operations, imports, exports, and document downloads for students
  */
 
 // ===========================
@@ -357,6 +433,7 @@ const ROUTES = {
     show: '{{ route('students.show', ':id') }}',
     destroy: '{{ route('students.destroy', ':id') }}',
     import: '{{ route('students.import') }}',
+    export: '{{ route('students.export') }}',
     template: '{{ route('students.template') }}',
     downloadPdf: '{{ route('students.download.pdf', ':id') }}',
     downloadWord: '{{ route('students.download.word', ':id') }}'
@@ -367,23 +444,22 @@ const SELECTORS = {
   // Forms
   studentForm: '#studentForm',
   importForm: '#importStudentsForm',
-  
+  exportForm: '#exportStudentsForm',
   // Modals
   studentModal: '#studentModal',
   importModal: '#importStudentsModal',
   downloadModal: '#downloadEnrollmentModal',
-  
+  exportModal: '#exportStudentsModal',
   // Buttons
   addStudentBtn: '#addStudentBtn',
   saveStudentBtn: '#saveStudentBtn',
   importSubmitBtn: '#importStudentsSubmitBtn',
+  exportSubmitBtn: '#exportStudentsSubmitBtn',
   downloadBtn: '#downloadEnrollmentBtn',
   downloadTemplateBtn: '#downloadTemplateBtn',
   clearFiltersBtn: '#clearFiltersBtn',
-  
   // Tables
   studentsTable: '#students-table',
-  
   // Search inputs
   searchName: '#search_name',
   searchNationalId: '#search_national_id',
@@ -398,10 +474,6 @@ const SELECTORS = {
 // ===========================
 
 const Utils = {
-  /**
-   * Shows success notification
-   * @param {string} message - Success message to display
-   */
   showSuccess(message) {
     Swal.fire({
       toast: true,
@@ -414,10 +486,6 @@ const Utils = {
     });
   },
 
-  /**
-   * Shows error notification
-   * @param {string} message - Error message to display
-   */
   showError(message) {
     Swal.fire({
       title: 'Error',
@@ -426,11 +494,6 @@ const Utils = {
     });
   },
 
-  /**
-   * Shows/hides loading spinners and content for stat2 component
-   * @param {string} elementId - Base element ID
-   * @param {boolean} isLoading - Whether to show loading state
-   */
   toggleLoadingState(elementId, isLoading) {
     const $value = $(`#${elementId}-value`);
     const $loader = $(`#${elementId}-loader`);
@@ -450,12 +513,6 @@ const Utils = {
     }
   },
 
-  /**
-   * Replaces :id placeholder in route URLs
-   * @param {string} route - Route URL with :id placeholder
-   * @param {number} id - ID to replace placeholder with
-   * @returns {string} - Updated URL
-   */
   replaceRouteId(route, id) {
     return route.replace(':id', id);
   }
@@ -466,19 +523,10 @@ const Utils = {
 // ===========================
 
 const ApiService = {
-  /**
-   * Generic AJAX request wrapper
-   * @param {Object} options - jQuery AJAX options
-   * @returns {Promise} - jQuery promise
-   */
   request(options) {
     return $.ajax(options);
   },
 
-  /**
-   * Fetches all programs
-   * @returns {Promise}
-   */
   fetchPrograms() {
     return this.request({
       url: ROUTES.programs.all,
@@ -486,10 +534,6 @@ const ApiService = {
     });
   },
 
-  /**
-   * Fetches all levels
-   * @returns {Promise}
-   */
   fetchLevels() {
     return this.request({
       url: ROUTES.levels.all,
@@ -497,10 +541,6 @@ const ApiService = {
     });
   },
 
-  /**
-   * Fetches all terms
-   * @returns {Promise}
-   */
   fetchTerms() {
     return this.request({
       url: ROUTES.terms.all,
@@ -508,10 +548,6 @@ const ApiService = {
     });
   },
 
-  /**
-   * Fetches student statistics
-   * @returns {Promise}
-   */
   fetchStudentStats() {
     return this.request({
       url: ROUTES.students.stats,
@@ -519,11 +555,6 @@ const ApiService = {
     });
   },
 
-  /**
-   * Fetches a specific student
-   * @param {number} id - Student ID
-   * @returns {Promise}
-   */
   fetchStudent(id) {
     return this.request({
       url: Utils.replaceRouteId(ROUTES.students.show, id),
@@ -531,12 +562,6 @@ const ApiService = {
     });
   },
 
-  /**
-   * Saves a student (create or update)
-   * @param {Object} data - Student data
-   * @param {number|null} id - Student ID for update, null for create
-   * @returns {Promise}
-   */
   saveStudent(data, id = null) {
     const url = id ? Utils.replaceRouteId(ROUTES.students.show, id) : ROUTES.students.store;
     const method = id ? 'PUT' : 'POST';
@@ -548,11 +573,6 @@ const ApiService = {
     });
   },
 
-  /**
-   * Deletes a student
-   * @param {number} id - Student ID
-   * @returns {Promise}
-   */
   deleteStudent(id) {
     return this.request({
       url: Utils.replaceRouteId(ROUTES.students.destroy, id),
@@ -560,11 +580,6 @@ const ApiService = {
     });
   },
 
-  /**
-   * Imports students from file
-   * @param {FormData} formData - Form data containing file
-   * @returns {Promise}
-   */
   importStudents(formData) {
     return this.request({
       url: ROUTES.students.import,
@@ -575,13 +590,16 @@ const ApiService = {
     });
   },
 
-  /**
-   * Downloads student document
-   * @param {number} studentId - Student ID
-   * @param {string} type - Document type (pdf, word, legacy)
-   * @param {number} termId - Term ID
-   * @returns {Promise}
-   */
+  exportStudents(queryParams) {
+    return this.request({
+      url: `${ROUTES.students.export}?${queryParams}`,
+      method: 'GET',
+      xhrFields: {
+        responseType: 'blob'
+      }
+    });
+  },
+
   downloadDocument(studentId, type, termId) {
     let url;
     switch (type) {
@@ -606,10 +624,6 @@ const ApiService = {
     });
   },
 
-  /**
-   * Downloads template file
-   * @returns {Promise}
-   */
   downloadTemplate() {
     return this.request({
       url: ROUTES.students.template,
@@ -626,23 +640,15 @@ const ApiService = {
 // ===========================
 
 const DropdownManager = {
-  /**
-   * Loads programs into dropdown
-   * @param {string} selector - Dropdown selector
-   * @param {number|null} selectedId - Pre-selected ID
-   * @returns {Promise}
-   */
   loadPrograms(selector = '#program_id', selectedId = null) {
     return ApiService.fetchPrograms()
       .done((response) => {
-        const programs = response.data;
+        const programs = response.data || response || [];
         const $select = $(selector);
-        
         $select.empty().append('<option value="">Select Program</option>');
         programs.forEach((program) => {
           $select.append($('<option>', { value: program.id, text: program.name }));
         });
-        
         if (selectedId) {
           $select.val(selectedId);
         }
@@ -653,23 +659,15 @@ const DropdownManager = {
       });
   },
 
-  /**
-   * Loads levels into dropdown
-   * @param {string} selector - Dropdown selector
-   * @param {number|null} selectedId - Pre-selected ID
-   * @returns {Promise}
-   */
   loadLevels(selector = '#level_id', selectedId = null) {
     return ApiService.fetchLevels()
       .done((response) => {
-        const levels = response.data || response;
+        const levels = response.data || response || [];
         const $select = $(selector);
-        
         $select.empty().append('<option value="">Select Level</option>');
         levels.forEach((level) => {
           $select.append($('<option>', { value: level.id, text: level.name }));
         });
-        
         if (selectedId) {
           $select.val(selectedId);
         }
@@ -680,23 +678,15 @@ const DropdownManager = {
       });
   },
 
-  /**
-   * Loads terms into dropdown
-   * @param {string} selector - Dropdown selector
-   * @param {number|null} selectedId - Pre-selected ID
-   * @returns {Promise}
-   */
   loadTerms(selector = '#term_id', selectedId = null) {
     return ApiService.fetchTerms()
       .done((response) => {
-        const terms = response.data || [];
+        const terms = response.data || response || [];
         const $select = $(selector);
-        
-        $select.empty().append('<option value="">All Terms</option>');
+        $select.empty().append('<option value="">Select Term</option>');
         terms.forEach((term) => {
           $select.append($('<option>', { value: term.id, text: term.name }));
         });
-        
         if (selectedId) {
           $select.val(selectedId);
         }
@@ -709,15 +699,76 @@ const DropdownManager = {
 };
 
 // ===========================
+// EXPORT FUNCTIONALITY
+// ===========================
+
+const ExportManager = {
+  handleExportStudents() {
+    $(SELECTORS.exportModal).on('show.bs.modal', () => {
+      DropdownManager.loadPrograms('#export_program_id');
+      DropdownManager.loadLevels('#export_level_id');
+    });
+
+    $(SELECTORS.exportForm).on('submit', function (e) {
+      e.preventDefault();
+
+      const $form = $(this);
+      const programId = $form.find('#export_program_id').val();
+      const levelId = $form.find('#export_level_id').val();
+      const $submitBtn = $(SELECTORS.exportSubmitBtn);
+
+      $submitBtn.prop('disabled', true).text('Exporting...');
+
+      const queryParams = new URLSearchParams();
+      if (programId) queryParams.append('program_id', programId);
+      if (levelId) queryParams.append('level_id', levelId);
+
+      ApiService.exportStudents(queryParams.toString())
+        .done((response) => {
+          const blob = new Blob([response], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'students_' + new Date().toISOString().replace(/[-:T]/g, '').slice(0, 15) + '.xlsx';
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+
+          $(SELECTORS.exportModal).modal('hide');
+          Utils.showSuccess('Students exported successfully!');
+        })
+        .fail((xhr) => {
+          const response = xhr.responseJSON || {};
+          let message = response.message || 'Export failed. Please check your input.';
+          if (response.errors) {
+            const errorMessages = [];
+            Object.keys(response.errors).forEach(field => {
+              if (Array.isArray(response.errors[field])) {
+                errorMessages.push(...response.errors[field]);
+              } else {
+                errorMessages.push(response.errors[field]);
+              }
+            });
+            message = errorMessages.join('<br>');
+          }
+          Utils.showError(message);
+        })
+        .always(() => {
+          $submitBtn.prop('disabled', false).text('Export');
+        });
+    });
+  }
+};
+
+// ===========================
 // STATISTICS MANAGEMENT
 // ===========================
 
 const StatsManager = {
-  /**
-   * Loads and displays student statistics
-   */
   loadStudentStats() {
-    // Show loading state for all stats
     Utils.toggleLoadingState('students', true);
     Utils.toggleLoadingState('male-students', true);
     Utils.toggleLoadingState('female-students', true);
@@ -726,21 +777,18 @@ const StatsManager = {
       .done((response) => {
         const data = response.data;
         
-        // Update student statistics
-        $('#students-value').text(data.students.total ?? '--');
-        $('#students-last-updated').text(data.students.lastUpdateTime ?? '--');
-        $('#male-students-value').text(data.maleStudents.total ?? '--');
-        $('#male-students-last-updated').text(data.maleStudents.lastUpdateTime ?? '--');
-        $('#female-students-value').text(data.femaleStudents.total ?? '--');
-        $('#female-students-last-updated').text(data.femaleStudents.lastUpdateTime ?? '--');
+        $('#students-value').text(data.students?.total ?? '--');
+        $('#students-last-updated').text(data.students?.lastUpdateTime ?? '--');
+        $('#male-students-value').text(data.maleStudents?.total ?? '--');
+        $('#male-students-last-updated').text(data.maleStudents?.lastUpdateTime ?? '--');
+        $('#female-students-value').text(data.femaleStudents?.total ?? '--');
+        $('#female-students-last-updated').text(data.femaleStudents?.lastUpdateTime ?? '--');
         
-        // Hide loading state
         Utils.toggleLoadingState('students', false);
         Utils.toggleLoadingState('male-students', false);
         Utils.toggleLoadingState('female-students', false);
       })
       .fail(() => {
-        // Show error state
         $('#students-value, #male-students-value, #female-students-value').text('N/A');
         $('#students-last-updated, #male-students-last-updated, #female-students-last-updated').text('N/A');
         
@@ -758,9 +806,6 @@ const StatsManager = {
 // ===========================
 
 const StudentManager = {
-  /**
-   * Handles Add Student button click
-   */
   handleAddStudent() {
     $(SELECTORS.addStudentBtn).on('click', () => {
       $(SELECTORS.studentForm)[0].reset();
@@ -769,7 +814,6 @@ const StudentManager = {
       $(SELECTORS.studentModal + ' .modal-title').text('Add Student');
       $(SELECTORS.saveStudentBtn).text('Save');
       
-      // Load dropdown data
       DropdownManager.loadPrograms();
       DropdownManager.loadLevels();
       
@@ -777,9 +821,6 @@ const StudentManager = {
     });
   },
 
-  /**
-   * Handles student form submission
-   */
   handleStudentFormSubmit() {
     $(SELECTORS.studentForm).on('submit', (e) => {
       e.preventDefault();
@@ -787,7 +828,6 @@ const StudentManager = {
       const studentId = $('#student_id').val();
       const formData = $(SELECTORS.studentForm).serialize();
       
-      // Disable submit button during request
       const $submitBtn = $(SELECTORS.saveStudentBtn);
       const originalText = $submitBtn.text();
       $submitBtn.prop('disabled', true).text('Saving...');
@@ -797,10 +837,9 @@ const StudentManager = {
           $(SELECTORS.studentModal).modal('hide');
           $(SELECTORS.studentsTable).DataTable().ajax.reload(null, false);
           Utils.showSuccess('Student has been saved successfully.');
-          StatsManager.loadStudentStats(); // Refresh stats
+          StatsManager.loadStudentStats();
         })
         .fail((xhr) => {
-          $(SELECTORS.studentModal).modal('hide');
           const message = xhr.responseJSON?.message || 'An error occurred. Please check your input.';
           Utils.showError(message);
         })
@@ -810,16 +849,12 @@ const StudentManager = {
     });
   },
 
-  /**
-   * Handles Edit Student button click
-   */
   handleEditStudent() {
     $(document).on('click', '.editStudentBtn', function () {
       const studentId = $(this).data('id');
       
       ApiService.fetchStudent(studentId)
         .done((student) => {
-          // Populate form fields
           $('#student_id').val(student.id);
           $('#name_en').val(student.name_en);
           $('#name_ar').val(student.name_ar);
@@ -829,11 +864,9 @@ const StudentManager = {
           $('#cgpa').val(student.cgpa);
           $('#gender').val(student.gender).trigger('change');
           
-          // Load dropdowns with preselected values
           DropdownManager.loadPrograms('#program_id', student.program_id);
           DropdownManager.loadLevels('#level_id', student.level_id);
           
-          // Update modal
           $(SELECTORS.studentModal + ' .modal-title').text('Edit Student');
           $(SELECTORS.saveStudentBtn).text('Update');
           $(SELECTORS.studentModal).modal('show');
@@ -844,9 +877,6 @@ const StudentManager = {
     });
   },
 
-  /**
-   * Handles Delete Student button click (delegated)
-   */
   handleDeleteStudent() {
     $(document).on('click', '.deleteStudentBtn', function () {
       const studentId = $(this).data('id');
@@ -865,7 +895,7 @@ const StudentManager = {
             .done(() => {
               $(SELECTORS.studentsTable).DataTable().ajax.reload(null, false);
               Utils.showSuccess('Student has been deleted.');
-              StatsManager.loadStudentStats(); // Refresh stats
+              StatsManager.loadStudentStats();
             })
             .fail(() => {
               Utils.showError('Failed to delete student.');
@@ -881,9 +911,6 @@ const StudentManager = {
 // ===========================
 
 const ImportManager = {
-  /**
-   * Handles import form submission
-   */
   handleImportStudents() {
     $(SELECTORS.importForm).on('submit', (e) => {
       e.preventDefault();
@@ -900,19 +927,16 @@ const ImportManager = {
           
           Utils.showSuccess(response.message);
           
-          // If there are errors, show them in a detailed modal
           if (response.data?.errors?.length > 0) {
             this.showImportErrors(response.data.errors, response.data.imported_count);
           }
           
-          StatsManager.loadStudentStats(); // Refresh stats
+          StatsManager.loadStudentStats();
         })
         .fail((xhr) => {
-          $(SELECTORS.importModal).modal('hide');
           const response = xhr.responseJSON;
           
           if (response?.errors && Object.keys(response.errors).length > 0) {
-            // Handle validation errors
             const errorMessages = [];
             Object.keys(response.errors).forEach(field => {
               if (Array.isArray(response.errors[field])) {
@@ -933,17 +957,11 @@ const ImportManager = {
     });
   },
 
-  /**
-   * Shows import errors in a detailed modal
-   * @param {Array} errors - Array of error objects
-   * @param {number} importedCount - Number of successfully imported records
-   */
   showImportErrors(errors, importedCount) {
     let errorHtml = '<div class="text-start">';
     errorHtml += `<p class="mb-3"><strong>Successfully imported: ${importedCount} students</strong></p>`;
     errorHtml += '<p class="mb-3"><strong>Errors found:</strong></p>';
     
-    // Make the table scrollable with a fixed max height
     errorHtml += '<div class="table-responsive" style="max-height:400px; overflow-y:auto;">';
     errorHtml += '<table class="table table-sm table-bordered table-striped mb-0">';
     errorHtml += '<thead>';
@@ -955,7 +973,6 @@ const ImportManager = {
     errorHtml += '</thead>';
     errorHtml += '<tbody>';
     errors.forEach((error) => {
-      // Get error messages as a single string
       let errorMessages = '';
       if (Array.isArray(error.errors)) {
         errorMessages = error.errors.join('<br>');
@@ -974,7 +991,6 @@ const ImportManager = {
         errorMessages = String(error.errors);
       }
       
-      // Format original data as JSON-like display
       let originalDataHtml = '';
       if (error.original_data) {
         originalDataHtml = '<div class="small">';
@@ -1015,20 +1031,15 @@ const ImportManager = {
 // ===========================
 
 const TemplateDownloadManager = {
-  /**
-   * Handles template download button click
-   */
   handleTemplateDownload() {
     $(SELECTORS.downloadTemplateBtn).on('click', () => {
       const $btn = $(SELECTORS.downloadTemplateBtn);
       const originalText = $btn.html();
       
-      // Show loading state
       $btn.prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i>Downloading...');
       
       ApiService.downloadTemplate()
         .done((response) => {
-          // Create blob and download
           const blob = new Blob([response], { 
             type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
           });
@@ -1048,7 +1059,6 @@ const TemplateDownloadManager = {
           Utils.showError(message);
         })
         .always(() => {
-          // Restore button state
           $btn.prop('disabled', false).html(originalText);
         });
     });
@@ -1060,9 +1070,6 @@ const TemplateDownloadManager = {
 // ===========================
 
 const DownloadManager = {
-  /**
-   * Handles download enrollment button click (legacy)
-   */
   handleDownloadEnrollment() {
     $(document).on('click', '.downloadEnrollmentBtn', function() {
       const studentId = $(this).data('id');
@@ -1070,9 +1077,6 @@ const DownloadManager = {
     });
   },
 
-  /**
-   * Handles PDF download button click
-   */
   handleDownloadPdf() {
     $(document).on('click', '.downloadPdfBtn', function(e) {
       e.preventDefault();
@@ -1081,9 +1085,6 @@ const DownloadManager = {
     });
   },
 
-  /**
-   * Handles Word download button click
-   */
   handleDownloadWord() {
     $(document).on('click', '.downloadWordBtn', function(e) {
       e.preventDefault();
@@ -1092,12 +1093,6 @@ const DownloadManager = {
     });
   },
 
-  /**
-   * Sets up the download modal
-   * @param {number} studentId - Student ID
-   * @param {string} downloadType - Type of download
-   * @param {string} modalTitle - Modal title
-   */
   setupDownloadModal(studentId, downloadType, modalTitle) {
     $('#modal_student_id').val(studentId);
     $('#download_type').val(downloadType);
@@ -1108,16 +1103,12 @@ const DownloadManager = {
     });
   },
 
-  /**
-   * Handles the download process
-   */
   handleDownloadProcess() {
     $(SELECTORS.downloadBtn).on('click', () => {
       const studentId = $('#modal_student_id').val();
       const termId = $('#term_id').val();
       const downloadType = $('#download_type').val();
 
-      // Validation
       if (!downloadType) {
         Utils.showError('Please select a download type.');
         return;
@@ -1128,10 +1119,8 @@ const DownloadManager = {
         return;
       }
 
-      // Close modal first
       $(SELECTORS.downloadModal).modal('hide');
 
-      // Show loading
       Swal.fire({
         title: 'Generating Document...',
         text: 'Please wait while we prepare your document.',
@@ -1146,7 +1135,7 @@ const DownloadManager = {
         .done((response) => {
           if (response.url) {
             window.open(response.url, '_blank');
-            Swal.close();
+          Swal.close();
           } else {
             Utils.showError('Invalid response from server.');
           }
@@ -1165,24 +1154,15 @@ const DownloadManager = {
 // ===========================
 
 const SearchManager = {
-  /**
-   * Initializes advanced search functionality
-   */
   initializeAdvancedSearch() {
-    // Initialize Select2 for search dropdowns
     this.initSearchSelect2();
     
-    // Load dropdown data
     DropdownManager.loadPrograms(SELECTORS.searchProgram);
     DropdownManager.loadLevels(SELECTORS.searchLevel);
     
-    // Bind search events
     this.bindSearchEvents();
   },
 
-  /**
-   * Initializes Select2 for search dropdowns
-   */
   initSearchSelect2() {
     $(`${SELECTORS.searchGender}, ${SELECTORS.searchProgram}, ${SELECTORS.searchLevel}`).select2({
       theme: 'bootstrap-5',
@@ -1199,18 +1179,13 @@ const SearchManager = {
     });
   },
 
-  /**
-   * Binds search events
-   */
   bindSearchEvents() {
-    // Clear filters button
     $(SELECTORS.clearFiltersBtn).on('click', () => {
       $(`${SELECTORS.searchName}, ${SELECTORS.searchNationalId}, ${SELECTORS.searchAcademicId}`).val('');
       $(`${SELECTORS.searchGender}, ${SELECTORS.searchProgram}, ${SELECTORS.searchLevel}`).val('').trigger('change');
       $(SELECTORS.studentsTable).DataTable().ajax.reload();
     });
 
-    // Search input events
     $(`${SELECTORS.searchName}, ${SELECTORS.searchNationalId}, ${SELECTORS.searchAcademicId}, ${SELECTORS.searchGender}, ${SELECTORS.searchProgram}, ${SELECTORS.searchLevel}`).on('keyup change', () => {
       $(SELECTORS.studentsTable).DataTable().ajax.reload();
     });
@@ -1222,9 +1197,6 @@ const SearchManager = {
 // ===========================
 
 const Select2Manager = {
-  /**
-   * Initializes Select2 for student modal
-   */
   initStudentModalSelect2() {
     $(`${SELECTORS.studentModal} select`).select2({
       theme: 'bootstrap-5',
@@ -1241,9 +1213,6 @@ const Select2Manager = {
     });
   },
 
-  /**
-   * Initializes Select2 for download modal
-   */
   initDownloadModalSelect2() {
     $(`${SELECTORS.downloadModal} #term_id`).select2({
       theme: 'bootstrap-5',
@@ -1251,6 +1220,21 @@ const Select2Manager = {
       allowClear: true,
       width: '100%',
       dropdownParent: $(SELECTORS.downloadModal)
+    });
+  },
+
+  initExportModalSelect2() {
+    $(`${SELECTORS.exportModal} select`).select2({
+      theme: 'bootstrap-5',
+      placeholder: function() {
+        const id = $(this).attr('id');
+        if (id === 'export_program_id') return 'Select Program';
+        if (id === 'export_level_id') return 'Select Level';
+        return '';
+      },
+      allowClear: true,
+      width: '100%',
+      dropdownParent: $(SELECTORS.exportModal)
     });
   }
 };
@@ -1260,36 +1244,29 @@ const Select2Manager = {
 // ===========================
 
 const StudentManagementApp = {
-  /**
-   * Initializes the entire application
-   */
   init() {
-    // Load initial data
     StatsManager.loadStudentStats();
     
-    // Initialize CRUD operations
     StudentManager.handleAddStudent();
     StudentManager.handleStudentFormSubmit();
     StudentManager.handleEditStudent();
     StudentManager.handleDeleteStudent();
     
-    // Initialize import functionality
     ImportManager.handleImportStudents();
     
-    // Initialize download functionality
+    ExportManager.handleExportStudents();
+    
     DownloadManager.handleDownloadEnrollment();
     DownloadManager.handleDownloadPdf();
     DownloadManager.handleDownloadWord();
     DownloadManager.handleDownloadProcess();
     
-    // Initialize template download functionality
     TemplateDownloadManager.handleTemplateDownload();
     
-    // Initialize Select2 components
     Select2Manager.initStudentModalSelect2();
     Select2Manager.initDownloadModalSelect2();
+    Select2Manager.initExportModalSelect2();
     
-    // Initialize search functionality
     SearchManager.initializeAdvancedSearch();
   }
 };

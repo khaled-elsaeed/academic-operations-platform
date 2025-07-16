@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Models\Program;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\View\View;
 use App\Services\ProgramService;
-use Exception;
+use App\Models\Program;
 use App\Exceptions\BusinessValidationException;
+use Exception;
 
 class ProgramController extends Controller
 {
@@ -22,7 +20,9 @@ class ProgramController extends Controller
     {}
 
     /**
-     * Display the program management page
+     * Display the program management page.
+     *
+     * @return View
      */
     public function index(): View
     {
@@ -30,7 +30,9 @@ class ProgramController extends Controller
     }
 
     /**
-     * Get program statistics
+     * Get program statistics.
+     *
+     * @return JsonResponse
      */
     public function stats(): JsonResponse
     {
@@ -44,7 +46,9 @@ class ProgramController extends Controller
     }
 
     /**
-     * Get program data for DataTables
+     * Get program data for DataTables.
+     *
+     * @return JsonResponse
      */
     public function datatable(): JsonResponse
     {
@@ -57,7 +61,10 @@ class ProgramController extends Controller
     }
 
     /**
-     * Store a newly created program
+     * Store a newly created program.
+     *
+     * @param Request $request
+     * @return JsonResponse
      */
     public function store(Request $request): JsonResponse
     {
@@ -78,7 +85,10 @@ class ProgramController extends Controller
     }
 
     /**
-     * Display the specified program
+     * Display the specified program.
+     *
+     * @param Program $program
+     * @return JsonResponse
      */
     public function show(Program $program): JsonResponse
     {
@@ -92,7 +102,11 @@ class ProgramController extends Controller
     }
 
     /**
-     * Update the specified program
+     * Update the specified program.
+     *
+     * @param Request $request
+     * @param Program $program
+     * @return JsonResponse
      */
     public function update(Request $request, Program $program): JsonResponse
     {
@@ -113,7 +127,10 @@ class ProgramController extends Controller
     }
 
     /**
-     * Remove the specified program
+     * Remove the specified program.
+     *
+     * @param Program $program
+     * @return JsonResponse
      */
     public function destroy(Program $program): JsonResponse
     {
@@ -129,7 +146,9 @@ class ProgramController extends Controller
     }
 
     /**
-     * Get all faculties for dropdown
+     * Get all faculties for dropdown.
+     *
+     * @return JsonResponse
      */
     public function getFaculties(): JsonResponse
     {
@@ -143,7 +162,9 @@ class ProgramController extends Controller
     }
 
     /**
-     * Get all programs (for dropdown and forms)
+     * Get all programs (for dropdown and forms).
+     *
+     * @return JsonResponse
      */
     public function all(): JsonResponse
     {

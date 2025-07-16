@@ -50,19 +50,19 @@ class HomeService
         // ===== RETURN ORGANIZED DASHBOARD DATA =====
         return [
             'students' => [
-                'total' => $studentsCount,
+                'total' => formatNumber($studentsCount),
                 'lastUpdatedTime' => $studentsLastUpdated,
             ],
             'faculty' => [
-                'total' => $facultyCount,
+                'total' => formatNumber($facultyCount),
                 'lastUpdatedTime' => $facultyLastUpdated,
             ],
             'programs' => [
-                'total' => $programsCount,
+                'total' => formatNumber($programsCount),
                 'lastUpdatedTime' => $programsLastUpdated,
             ],
             'courses' => [
-                'total' => $coursesCount,
+                'total' => formatNumber($coursesCount),
                 'lastUpdatedTime' => $coursesLastUpdated,
             ],
             'levelDistribution' => $this->getAdminLevelDistribution(),
@@ -178,14 +178,14 @@ class HomeService
 
         return [
             'advisees' => [
-                'total' => $advisees->count(),
+                'total' => formatNumber($advisees->count()),
                 'avgCgpa' => number_format($advisees->avg('cgpa'), 3),
                 'lastUpdatedTime' => formatDate($advisees->max('updated_at')),
             ],
             'courses' => [
-                'total' => Course::whereIn('id',
+                'total' => formatNumber(Course::whereIn('id',
                     Enrollment::query()->pluck('course_id')->unique()
-                )->count(),
+                )->count()),
                 'lastUpdatedTime' => formatDate(now()), // Or use latest enrollment update
             ],
             'levelDistribution' => $this->getAdvisorLevelDistribution(),

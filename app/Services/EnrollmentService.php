@@ -7,23 +7,34 @@ use App\Models\Student;
 use App\Models\Course;
 use App\Models\Term;
 use App\Models\AvailableCourse;
-use Yajra\DataTables\DataTables;
-use App\Exceptions\BusinessValidationException;
-use App\Rules\AcademicAdvisorAccessRule;
-use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Facades\Excel;
+use App\Models\CreditHoursException;
 use App\Imports\EnrollmentsImport;
 use App\Exports\EnrollmentsTemplateExport;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Http\JsonResponse;
+use App\Exceptions\BusinessValidationException;
+use App\Rules\AcademicAdvisorAccessRule;
+use App\Rules\EnrollmentCreditHoursLimit;
 use App\Validators\EnrollmentImportValidator;
+use App\Services\CreditHoursExceptionService;
+
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
-use App\Rules\EnrollmentCreditHoursLimit;
+
+use Yajra\DataTables\DataTables;
+use Maatwebsite\Excel\Facades\Excel;
 
 class EnrollmentService
 {
+    protected CreditHoursExceptionService $creditHoursExceptionService;
+
+    public function __construct(CreditHoursExceptionService $creditHoursExceptionService)
+    {
+        $this->creditHoursExceptionService = $creditHoursExceptionService;
+    }
+
     public function createEnrollment(array $data): Enrollment
     {
         // Prevent duplicate enrollment for the same student, course, and term
@@ -101,12 +112,12 @@ class EnrollmentService
         
         return [
             'enrollments' => [
-                'total' => $totalEnrollments,
+                'total' => formatNumber($totalEnrollments),
                 'lastUpdateTime' => formatDate($latest),
             ],
             'students' => [
-                'total' => $totalStudents,
-                'enrolled' => $uniqueEnrolledStudents,
+                'total' => formatNumber($totalStudents),
+                'enrolled' => formatNumber($uniqueEnrolledStudents),
                 'lastUpdateTime' => formatDate($latest),
             ],
         ];
@@ -462,6 +473,24 @@ class EnrollmentService
     }
 
     /**
+     * Export enrollments for a selected academic term, program, and level.
+     *
+     * @param int|null $termId
+     * @param int|null $programId
+     * @param int|null $levelId
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function exportEnrollments($termId = null, $programId = null, $levelId = null)
+    {
+        $export = new \App\Exports\EnrollmentsExport($termId, $programId, $levelId);
+        $term = $termId ? \App\Models\Term::find($termId) : null;
+        $filename = 'enrollments_' . ($term ? str_replace(' ', '_', strtolower($term->name)) : 'all_terms') . '_' . now()->format('Ymd_His') . '.xlsx';
+        return \Maatwebsite\Excel\Facades\Excel::download($export, $filename, \Maatwebsite\Excel\Excel::XLSX, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
      * Validate credit hours limit for a student in a term.
      *
      * @param Student $student
@@ -498,4 +527,143 @@ class EnrollmentService
             throw new BusinessValidationException($validator->errors()->first('credit_hours'));
         }
     }
+
+    /**
+     * Get available courses for a student and term.
+     *
+     * @param int $studentId
+     * @param int $termId
+     * @return array
+     */
+    public function getAvailableCourses(int $studentId, int $termId): array
+    {
+        $availableCourses = \App\Models\AvailableCourse::with(['course', 'eligibilities.program', 'eligibilities.level'])
+            ->whereHas('eligibilities', function ($query) use ($studentId) {
+                $query->where('program_id', function ($subQuery) use ($studentId) {
+                    $subQuery->select('program_id')
+                        ->from('students')
+                        ->where('id', $studentId);
+                })->where('level_id', function ($subQuery) use ($studentId) {
+                    $subQuery->select('level_id')
+                        ->from('students')
+                        ->where('id', $studentId);
+                });
+            })
+            ->where('term_id', $termId)
+            ->get()
+            ->map(function ($availableCourse) {
+                return [
+                    'id' => $availableCourse->id,
+                    'name' => $availableCourse->course->name,
+                    'course_code' => $availableCourse->course->code,
+                    'min_capacity' => $availableCourse->min_capacity,
+                    'max_capacity' => $availableCourse->max_capacity,
+                ];
+            });
+
+        return $availableCourses->toArray();
+    }
+
+    /**
+     * Get remaining credit hours for a student in a specific term.
+     *
+     * @param int $studentId
+     * @param int $termId
+     * @return array
+     * @throws \Exception
+     */
+    public function getRemainingCreditHoursForStudent(int $studentId, int $termId): array
+    {
+        $student = Student::findOrFail($studentId);
+        $term = Term::findOrFail($termId);
+
+        // Calculate current enrollment credit hours
+        $currentEnrollmentHours = $this->getCurrentEnrollmentHours($studentId, $termId);
+
+        $maxAllowedHours = $this->getMaxCreditHours($student, $term);
+
+        // Calculate remaining credit hours
+        $remainingHours = $maxAllowedHours - $currentEnrollmentHours;
+
+        // Get additional hours from admin exception
+        $exceptionHours = $this->creditHoursExceptionService->getAdditionalHoursAllowed($studentId, $termId);
+
+        return [
+            'current_enrollment_hours' => $currentEnrollmentHours,
+            'max_allowed_hours' => $maxAllowedHours,
+            'remaining_hours' => max(0, $remainingHours),
+            'exception_hours' => $exceptionHours,
+            'student_cgpa' => $student->cgpa,
+            'term_season' => $term->season,
+            'term_year' => $term->year,
+        ];
+    }
+
+
+
+    /**
+     * Get current enrollment credit hours for the student in this term
+     */
+    private function getCurrentEnrollmentHours(int $studentId, int $termId): int
+    {
+        return Enrollment::where('student_id', $studentId)
+            ->where('term_id', $termId)
+            ->join('courses', 'enrollments.course_id', '=', 'courses.id')
+            ->sum('courses.credit_hours');
+    }
+
+    /**
+     * Get the maximum allowed credit hours based on CGPA and semester
+     */
+    private function getMaxCreditHours(Student $student, Term $term): int
+    {
+        $semester = strtolower($term->season);
+        $cgpa = $student->cgpa;
+        
+        $baseHours = $this->getBaseHours($semester, $cgpa);
+        $graduationBonus = 0; // TODO: Implement graduation check logic
+        $adminException = $this->getAdminExceptionHours($student->id, $term->id);
+
+        return $baseHours + $graduationBonus + $adminException;
+    }
+
+    /**
+     * Get base credit hours based on semester and CGPA
+     */
+    private function getBaseHours(string $semester, float $cgpa): int
+    {
+        // Summer semester has fixed 9 hours regardless of CGPA
+        if ($semester === 'summer') {
+            return 9;
+        }
+
+        // Fall and Spring semesters have CGPA-based limits
+        if (in_array($semester, ['fall', 'spring'])) {
+            if ($cgpa < 2.0) {
+                return 14;
+            } elseif ($cgpa >= 2.0 && $cgpa < 3.0) {
+                return 18;
+            } elseif ($cgpa >= 3.0) {
+                return 21;
+            }
+        }
+
+        // Default fallback (shouldn't reach here with valid semesters)
+        return 14;
+    }
+
+    /**
+     * Get additional hours from admin exception for this student and term
+     */
+    private function getAdminExceptionHours(int $studentId, int $termId): int
+    {
+        $exception = CreditHoursException::where('student_id', $studentId)
+            ->where('term_id', $termId)
+            ->active()
+            ->first();
+
+        return $exception ? $exception->getEffectiveAdditionalHours() : 0;
+    }
+
+
 } 

@@ -68,7 +68,7 @@
                 <i class="bx bx-download"></i>
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
-                @can('student.create')
+                @can('student.import')
                     <li>
                         <a class="dropdown-item" href="javascript:void(0);" 
                            id="importStudentsBtn"
@@ -78,6 +78,7 @@
                         </a>
                     </li>
                 @endcan
+                @can('student.export')
                 <li>
                     <a class="dropdown-item" href="javascript:void(0);"
                        id="exportStudentsBtn"
@@ -86,6 +87,7 @@
                         <i class="bx bx-download me-1"></i> Export Students
                     </a>
                 </li>
+                @endcan
             </ul>
         </div>
     </x-ui.page-header>
@@ -269,6 +271,7 @@
     </x-ui.modal>
 
     {{-- Import Students Modal --}}
+    @can('student.import')
     <x-ui.modal 
         id="importStudentsModal"
         title="Import Students"
@@ -311,6 +314,7 @@
             </button>
         </x-slot>
     </x-ui.modal>
+    @endcan
 
     {{-- Download Enrollment Document Modal --}}
     <x-ui.modal 
@@ -351,6 +355,7 @@
     </x-ui.modal>
 
     {{-- Export Students Modal --}}
+    @can('student.export')
     <x-ui.modal 
         id="exportStudentsModal"
         title="Export Students"
@@ -403,6 +408,7 @@
             </button>
         </x-slot>
     </x-ui.modal>
+    @endcan
 </div>
 @endsection
 @push('scripts')

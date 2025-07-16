@@ -29,6 +29,7 @@
       description="List of all available courses for enrollment"
       icon="bx bx-book"
     >
+        @can('available_course.import')
         <button class="btn btn-success me-2" 
                 id="importAvailableCoursesBtn" 
                 type="button" 
@@ -36,6 +37,7 @@
                 data-bs-target="#importAvailableCoursesModal">
             <i class="bx bx-upload me-1"></i> Import Available Courses
         </button>
+        @endcan
         <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#availableCourseSearchCollapse" aria-expanded="false" aria-controls="availableCourseSearchCollapse">
             <i class="bx bx-filter-alt me-1"></i> Search
         </button>
@@ -91,6 +93,7 @@
       </x-slot>
     </x-ui.modal>
 
+    @can('available_course.import')
     {{-- Import Available Courses Modal --}}
     <x-ui.modal 
         id="importAvailableCoursesModal"
@@ -135,6 +138,7 @@
             </button>
         </x-slot>
     </x-ui.modal>
+    @endcan
 </div>
 @endsection
 

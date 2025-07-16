@@ -20,7 +20,7 @@ Route::middleware(['auth'])
         Route::get('all', 'all')->name('all');
         
         // ===== Import/Export Operations =====
-        Route::post('import', 'import')->name('import')->middleware('can:course.create');
+        Route::post('import', 'import')->name('import')->middleware('can:available_course.import');
 
         // ===== CRUD Operations =====
         // List & View

@@ -21,28 +21,39 @@ class RolesAndPermissionsSeeder extends Seeder
             'role.edit',
             'role.delete',
             'permission.view',
+            // Student Permissions
             'student.view',
             'student.create',
             'student.edit',
             'student.delete',
             'student.download',
+            'student.import',
+            'student.export', 
+            // Faculty Permissions
             'faculty.view',
             'faculty.create',
             'faculty.edit',
             'faculty.delete',
+            // Program Permissions
             'program.view',
             'program.create',
             'program.edit',
             'program.delete',
+            // Course Permissions
             'course.view',
             'course.create',
             'course.edit',
             'course.delete',
+            // Available
+            'available_course.import', 
+            // Enrollment Permissions
             'enrollment.view',
             'enrollment.create',
             'enrollment.edit',
             'enrollment.delete',
-            'enrollment.import',
+            'enrollment.import', 
+            'enrollment.export',
+            // Term Permissions
             'term.view',
             'term.create',
             'term.edit',

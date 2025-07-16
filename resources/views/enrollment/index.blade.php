@@ -43,6 +43,7 @@
                         </a>
                     </li>
                 @endcan
+                @can('enrollment.export')
                 <li>
                     <a class="dropdown-item" href="javascript:void(0);"
                        id="exportEnrollmentsBtn"
@@ -51,6 +52,7 @@
                         <i class="bx bx-download me-1"></i> Export Enrollments
                     </a>
                 </li>
+                @endcan
             </ul>
         </div>
         
@@ -174,6 +176,7 @@
     </x-ui.modal>
     @endcan
 
+    @can('enrollment.export')
     {{-- Export Enrollments Modal --}}
     <x-ui.modal 
         id="exportEnrollmentsModal"
@@ -226,6 +229,7 @@
             </button>
         </x-slot>
     </x-ui.modal>
+    @endcan
 </div>
 @endsection
 

@@ -24,8 +24,8 @@ Route::middleware(['auth'])
         Route::post('student-enrollments', 'studentEnrollments')->name('studentEnrollments')->middleware('can:enrollment.view');
 
         // ===== Import/Export Operations =====
-        Route::post('import', 'import')->name('import')->middleware('can:enrollment.create');
-        Route::get('export', 'export')->name('export')->middleware('can:enrollment.view');
+        Route::post('import', 'import')->name('import')->middleware('can:enrollment.import');
+        Route::get('export', 'export')->name('export')->middleware('can:enrollment.export');
         Route::post('remaining-credit-hours', 'getRemainingCreditHours')->name('remainingCreditHours')->middleware('can:enrollment.view');
 
         // ===== CRUD Operations =====

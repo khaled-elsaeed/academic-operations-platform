@@ -123,34 +123,4 @@ require __DIR__.'/web/academic_advisor_access.php';
 
 require __DIR__.'/web/account-settings.php';
 
-// ====================
-// Admin Routes
-// ====================
 
-Route::middleware(['auth'])
-    ->prefix('admin')
-    ->name('admin.')
-    ->group(function () {
-
-
-
-
-
-
-
-
-
-
-    });
-
-
-
-
-
-// ====================
-// Miscellaneous Routes
-// ====================
-
-
-Route::get('/enrollment/download/{student}', [EnrollmentDocumentController::class, 'downloadEnrollmentDocument'])->name('enrollment.download');
-Route::get('/pdf/invoice', [\App\Http\Controllers\PdfController::class, 'invoice'])->name('pdf.invoice');

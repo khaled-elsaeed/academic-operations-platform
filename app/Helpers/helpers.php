@@ -106,4 +106,54 @@ if (!function_exists('formatNumber')) {
         }
         return number_format($number, $decimals, '.', ',');
     }
-} 
+}
+
+if (!function_exists('filterSensitive')) {
+    /**
+     * Remove sensitive fields from attributes before logging.
+     *
+     * @param array $attributes
+     * @return array
+     */
+    function filterSensitive($attributes)
+    {
+        $sensitive = ['password', 'remember_token'];
+        return collect($attributes)->except($sensitive)->toArray();
+    }
+}
+
+if (!function_exists('logAction')) {
+    /**
+     * Log a user action for auditing purposes.
+     *
+     * @param string $action
+     * @param mixed $model
+     * @param array $details
+     * @return void
+     */
+    function logAction($action, $model, $details = [])
+    {
+        $userId = auth()->id() ?? 'system';
+        $modelType = is_object($model) ? get_class($model) : $model;
+        $modelId = is_object($model) && isset($model->id) ? $model->id : null;
+        $table = is_object($model) && method_exists($model, 'getTable') ? $model->getTable() : null;
+        $primaryKey = is_object($model) && method_exists($model, 'getKeyName') ? $model->getKeyName() : 'id';
+        $ip = request()->ip() ?? null;
+        $userAgent = request()->header('User-Agent') ?? null;
+
+        $log = [
+            'user_id' => $userId,
+            'action' => $action,
+            'model' => $modelType,
+            'table' => $table,
+            'primary_key' => $primaryKey,
+            'model_id' => $modelId,
+            'details' => $details,
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'timestamp' => now()->toDateTimeString(),
+        ];
+
+        \Log::channel('action')->info('Action Log:', $log);
+    }
+}

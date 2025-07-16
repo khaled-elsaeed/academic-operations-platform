@@ -175,6 +175,21 @@ class UserService
      */
     protected function renderActionButtons(User $user): string
     {
-        return '<div class="dropdown">...'; // unchanged for brevity
+        return '
+            <div class="dropdown">
+                <button type="button" class="btn btn-primary btn-icon rounded-pill dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                    <i class="bx bx-dots-vertical-rounded"></i>
+                </button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item viewUserBtn" href="javascript:void(0);" data-id="' . $user->id . '">
+                        <i class="bx bx-show me-1"></i> View
+                    </a>
+                    <a class="dropdown-item editUserBtn" href="javascript:void(0);" data-id="' . $user->id . '">
+                        <i class="bx bx-edit-alt me-1"></i> Edit
+                    </a>
+                    <a class="dropdown-item deleteUserBtn" href="javascript:void(0);" data-id="' . $user->id . '">
+                        <i class="bx bx-trash text-danger me-1"></i> Delete                    </a>
+                </div>
+            </div>';
     }
 } 

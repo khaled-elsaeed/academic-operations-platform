@@ -173,7 +173,7 @@
 // ===========================
 const ROUTES = {
   courses: { all: "{{ route('courses.all') }}" },
-  terms: { all: "{{ route('terms.all') }}" },
+  terms: { all: "{{ route('terms.all.with_inactive') }}" },
   programs: { all: "{{ route('programs.all') }}" },
   levels: { all: "{{ route('levels.all') }}" },
   availableCourses: { store: "{{ route('available_courses.store') }}", index: "{{ route('available_courses.index') }}" }

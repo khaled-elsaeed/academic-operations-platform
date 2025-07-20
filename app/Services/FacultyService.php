@@ -51,6 +51,7 @@ class FacultyService
         $this->applySearchFilters($query, $request);
 
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('programs_count', function ($faculty) {
                 return $faculty->programs_count;
             })

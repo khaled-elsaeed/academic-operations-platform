@@ -17,6 +17,7 @@ Route::middleware(['auth'])
         Route::get('stats', 'stats')->name('stats')->middleware('can:term.view');
         // No middleware: not sensitive, for dropdown
         Route::get('all', 'all')->name('all');
+        Route::get('all-with-inactive', 'allWithInactive')->name('all.with_inactive');
 
         // ===== CRUD Operations =====
         // List & View

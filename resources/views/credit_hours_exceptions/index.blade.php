@@ -88,9 +88,8 @@
 
     {{-- ===== DATA TABLE ===== --}}
     <x-ui.datatable
-        :headers="['ID', 'Student', 'Academic ID', 'National ID', 'Term', 'Additional Hours', 'Status', 'Reason', 'Action']"
+        :headers="['Student', 'Academic ID', 'National ID', 'Term', 'Additional Hours', 'Status', 'Reason', 'Action']"
         :columns="[
-            ['data' => 'id', 'name' => 'id'],
             ['data' => 'student', 'name' => 'student'],
             ['data' => 'academic_id', 'name' => 'academic_id'],
             ['data' => 'national_id', 'name' => 'national_id'],
@@ -273,7 +272,7 @@ const DropdownManager = {
   },
   loadTerms(selectedId = null) {
     return $.ajax({
-      url: '{{ route("credit-hours-exceptions.terms") }}',
+      url: '{{ route("terms.all.with_inactive") }}',
       method: 'GET',
       success: function (response) {
         const data = response.data;
@@ -281,7 +280,7 @@ const DropdownManager = {
         $termSelect.empty().append('<option value="">Select Term</option>');
         data.forEach(function (term) {
           $termSelect.append(
-            $('<option>', { value: term.id, text: term.text })
+            $('<option>', { value: term.id, text: term.name })
           );
         });
         if (selectedId) {

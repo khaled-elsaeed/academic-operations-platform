@@ -77,10 +77,6 @@
             <input type="text" class="form-control" id="search_year" placeholder="e.g., 2015-2016">
         </div>
         <div class="col-md-3">
-            <label for="search_code" class="form-label">Term Code:</label>
-            <input type="text" class="form-control" id="search_code" placeholder="e.g., 251, 252, 253">
-        </div>
-        <div class="col-md-3">
             <label for="search_active" class="form-label">Status:</label>
             <select class="form-control" id="search_active">
                 <option value="">All Status</option>
@@ -92,18 +88,18 @@
 
     {{-- ===== DATA TABLE ===== --}}
     <x-ui.datatable
-        :headers="['ID', 'Season', 'Year', 'Code', 'Active', 'Action']"
+        :headers="['Season', 'Year', 'Code', 'Enrollments Count', 'Active', 'Action']"
         :columns="[
-            ['data' => 'id', 'name' => 'id'],
             ['data' => 'season', 'name' => 'season'],
             ['data' => 'year', 'name' => 'year'],
             ['data' => 'code', 'name' => 'code'],
+            ['data' => 'enrollments_count', 'name' => 'enrollments_count'],
             ['data' => 'is_active', 'name' => 'is_active'],
             ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
         ]"
         :ajax-url="route('terms.datatable')"
         table-id="terms-table"
-        :filter-fields="['search_season','search_year','search_code','search_active']"
+        :filter-fields="['search_season','search_year','search_active']"
     />
 
     {{-- ===== MODALS SECTION ===== --}}
@@ -134,11 +130,6 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-md-8 mb-3">
-                        <label for="code" class="form-label">Term Code <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="code" name="code" maxlength="10" required>
-                        <small class="form-text text-muted">e.g., 2252 for Fall 2025</small>
-                    </div>
                     <div class="col-md-4 mb-3">
                         <div class="form-check mt-4">
                             <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1">
@@ -198,7 +189,6 @@ const SELECTORS = {
   // Search inputs
   searchSeason: '#search_season',
   searchYear: '#search_year',
-  searchCode: '#search_code',
   searchActive: '#search_active'
 };
 
@@ -475,7 +465,6 @@ const TermManager = {
           $('#term_id').val(term.id);
           $('#season').val(term.season);
           $('#year').val(term.year);
-          $('#code').val(term.code);
           $('#is_active').prop('checked', term.is_active);
           
           // Update modal
@@ -572,7 +561,7 @@ const SearchManager = {
     let searchTimeout;
     
     // Real-time search for text inputs with debouncing
-    $(SELECTORS.searchYear + ', ' + SELECTORS.searchCode).on('keyup', function() {
+    $(SELECTORS.searchYear).on('keyup', function() {
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(() => {
         $(SELECTORS.termsTable).DataTable().ajax.reload();
@@ -586,7 +575,7 @@ const SearchManager = {
     
     // Clear filters button
     $(SELECTORS.clearTermFiltersBtn).on('click', function() {
-      $(SELECTORS.searchSeason + ', ' + SELECTORS.searchYear + ', ' + SELECTORS.searchCode + ', ' + SELECTORS.searchActive).val('');
+      $(SELECTORS.searchSeason + ', ' + SELECTORS.searchYear + ', ' + SELECTORS.searchActive).val('');
       $(SELECTORS.termsTable).DataTable().ajax.reload();
     });
   }

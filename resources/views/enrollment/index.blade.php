@@ -115,9 +115,8 @@
 
     {{-- ===== DATA TABLE ===== --}}
     <x-ui.datatable
-        :headers="['ID', 'Student', 'Course', 'Term', 'Grade', 'Action']"
+        :headers="['Student', 'Course', 'Term', 'Grade', 'Action']"
         :columns="[
-            ['data' => 'id', 'name' => 'id'],
             ['data' => 'student', 'name' => 'student'],
             ['data' => 'course', 'name' => 'course'],
             ['data' => 'term', 'name' => 'term'],
@@ -247,7 +246,7 @@
 
 const ROUTES = {
   terms: {
-    all: '{{ route('terms.all') }}'
+    all: '{{ route('terms.all.with_inactive') }}'
   },
   programs: {
     all: '{{ route('programs.all') }}'

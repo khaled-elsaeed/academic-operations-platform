@@ -1098,7 +1098,7 @@ $(document).ready(function () {
   // Load terms for the dropdown
   function loadTerms() {
     $.ajax({
-      url: '{{ route('terms.all') }}',
+      url: @json(auth()->user() && auth()->user()->hasRole('admin') ? route('terms.all.with_inactive') : route('terms.all')),
       method: 'GET',
       success: function (response) {
         let $termSelect = $('#term_id');

@@ -66,9 +66,8 @@
 
     {{-- ===== DATA TABLE ===== --}}
     <x-ui.datatable
-        :headers="['ID', 'Advisor', 'Level', 'Program', 'Status', 'Created At', 'Actions']"
+        :headers="['Advisor', 'Level', 'Program', 'Status', 'Created At', 'Actions']"
         :columns="[
-            ['data' => 'id', 'name' => 'id'],
             ['data' => 'advisor', 'name' => 'advisor'],
             ['data' => 'level', 'name' => 'level'],
             ['data' => 'program', 'name' => 'program'],

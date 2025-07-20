@@ -149,7 +149,6 @@
     {{-- ===== DATA TABLE ===== --}}
     <x-ui.datatable
         :headers="[
-            'ID', 
             'Name (EN)', 
             'Name (AR)', 
             'Academic ID', 
@@ -162,7 +161,6 @@
             'Action'
         ]"
         :columns="[
-            ['data' => 'id', 'name' => 'id'],
             ['data' => 'name_en', 'name' => 'name_en'],
             ['data' => 'name_ar', 'name' => 'name_ar'],
             ['data' => 'academic_id', 'name' => 'academic_id'],

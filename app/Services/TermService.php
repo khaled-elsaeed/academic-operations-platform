@@ -46,6 +46,7 @@ class TermService
         $terms = Term::with('enrollments');
         $terms = $this->applySearchFilters($terms);
         return DataTables::of($terms)
+            ->addIndexColumn()
             ->addColumn('name', fn($term) => $term->name)
             ->addColumn('enrollments_count', fn($term) => $term->enrollments->count())
             ->addColumn('status', fn($term) => $term->is_active 
@@ -90,10 +91,11 @@ class TermService
      */
     public function createTerm(array $data): Term
     {
+        $code = $this->generateTermCode($data['season'], $data['year']);
         return Term::create([
             'season' => $data['season'],
             'year' => $data['year'],
-            'code' => $data['code'],
+            'code' => $code,
             'is_active' => $data['is_active'] ?? false
         ]);
     }
@@ -118,10 +120,11 @@ class TermService
      */
     public function updateTerm(Term $term, array $data): Term
     {
+        $code = $this->generateTermCode($data['season'], $data['year']);
         $term->update([
             'season' => $data['season'],
             'year' => $data['year'],
-            'code' => $data['code'],
+            'code' => $code,
             'is_active' => $data['is_active'] ?? false
         ]);
         return $term;
@@ -151,6 +154,28 @@ class TermService
     {
         return Term::where('is_active', true)
             ->orderBy('year', 'desc')
+            ->orderBy('season')
+            ->get()
+            ->map(function ($term) {
+                return [
+                    'id' => $term->id,
+                    'name' => $term->name,
+                    'season' => $term->season,
+                    'year' => $term->year,
+                    'code' => $term->code,
+                    'is_active' => (bool) $term->is_active,
+                ];
+            })->toArray();
+    }
+
+    /**
+     * Get all terms (for dropdown and forms).
+     *
+     * @return array
+     */
+    public function getAllWithInactive(): array
+    {
+        return Term::orderBy('year', 'desc')
             ->orderBy('season')
             ->get()
             ->map(function ($term) {
@@ -197,4 +222,21 @@ class TermService
         }
         return $query;
     }
+
+    private function generateTermCode(string $season, string $academicYear): string
+{
+    $seasonCode = match(strtolower($season)) {
+        'fall' => '1',
+        'spring' => '2',
+        'summer' => '3',
+        default => '0',
+    };
+
+    // Extract the first year from "2025-2026"
+    [$startYear, $endYear] = explode('-', $academicYear);
+    $shortYear = substr($startYear, -2);  // '25' from '2025'
+
+    return $shortYear . $seasonCode;
+}
+
 } 

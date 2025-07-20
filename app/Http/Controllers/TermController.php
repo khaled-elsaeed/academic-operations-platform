@@ -162,4 +162,20 @@ class TermController extends Controller
             return errorResponse('Internal server error.', [], 500);
         }
     }
+
+    /**
+     * Get all terms (for dropdown and forms).
+     *
+     * @return JsonResponse
+     */
+    public function allWithInactive(): JsonResponse
+    {
+        try {
+            $terms = $this->termService->getAllWithInactive();
+            return successResponse('Terms fetched successfully.', $terms);
+        } catch (Exception $e) {
+            logError('TermController@all', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
 } 

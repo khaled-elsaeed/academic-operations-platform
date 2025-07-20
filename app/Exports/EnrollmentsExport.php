@@ -58,6 +58,8 @@ class EnrollmentsExport implements FromCollection, WithMapping, WithHeadings
             isset($enrollment->grade) ? $enrollment->grade : 'N/A',
             isset($enrollment->course->credit_hours) ? $enrollment->course->credit_hours : 'N/A',
             isset($enrollment->term->name) ? $enrollment->term->name : 'N/A',
+            isset($enrollment->created_at) ? $enrollment->created_at->format('Y-m-d H:i:s') : 'N/A',
+
         ];
     }
 
@@ -74,6 +76,7 @@ class EnrollmentsExport implements FromCollection, WithMapping, WithHeadings
             'Grade',
             'Credit Hours',
             'Term',
+            'Created At'
         ];
     }
 }

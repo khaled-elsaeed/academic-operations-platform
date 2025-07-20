@@ -112,6 +112,7 @@ class StudentService
         $request = request();
         $this->applySearchFilters($query, $request);
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('program', fn($student) => $student->program ? $student->program->name : '-')
             ->addColumn('level', fn($student) => $student->level ? $student->level->name : '-')
             ->addColumn('action', fn($student) => $this->renderActionButtons($student))

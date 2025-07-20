@@ -58,13 +58,14 @@ class AcademicAdvisorAccessService
         $query = AcademicAdvisorAccess::with(['advisor', 'level', 'program']);
 
         return DataTables::of($query)
-            ->addColumn('advisor_name', function ($access) {
-                return $access->advisor ? $access->advisor->name : 'N/A';
+            ->addIndexColumn()
+            ->addColumn('advisor', function ($access) {
+                return $access->advisor ? e($access->advisor->name) : 'N/A';
             })
-            ->addColumn('level_name', function ($access) {
+            ->addColumn('level', function ($access) {
                 return $access->level ? $access->level->name : 'N/A';
             })
-            ->addColumn('program_name', function ($access) {
+            ->addColumn('program', function ($access) {
                 return $access->program ? $access->program->name : 'N/A';
             })
             ->addColumn('status', function ($access) {

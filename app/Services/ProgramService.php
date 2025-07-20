@@ -110,6 +110,7 @@ class ProgramService
         $request = request();
         $this->applySearchFilters($query, $request);
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('faculty_name', fn($program) => $program->faculty ? $program->faculty->name : 'N/A')
             ->addColumn('students_count', fn($program) => $program->students->count())
             ->addColumn('action', fn($program) => $this->renderActionButtons($program))

@@ -49,6 +49,7 @@
         <table class="table table-bordered table-hover dt-responsive nowrap" id="{{ $tableId }}" style="width:100%">
             <thead>
                 <tr>
+                    <th>#</th>
                     @foreach($headers as $header)
                         <th>{{ $header }}</th>
                     @endforeach
@@ -69,6 +70,11 @@
 <script>
 function initializeDataTable() {
     var filterFields = @json($filterFields);
+    // Prepend index column config to columns array
+    var columns = [
+        { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+        ...@json($columns)
+    ];
     var table = $('#{{ $tableId }}').DataTable({
         processing: true,
         serverSide: true,
@@ -82,7 +88,7 @@ function initializeDataTable() {
                 });
             }
         },
-        columns: @json($columns),
+        columns: columns,
         language: {
             search: "",
             searchPlaceholder: "",

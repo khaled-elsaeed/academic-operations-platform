@@ -41,6 +41,7 @@ class PermissionService
     {
         $permissions = Permission::with('roles');
         return DataTables::of($permissions)
+            ->addIndexColumn()
             ->addColumn('roles', fn($permission) => $permission->roles->pluck('name')->implode(', '))
             ->addColumn('roles_count', fn($permission) => $permission->roles_count ?? $permission->roles->count())
             ->addColumn('actions', fn($permission) => $this->renderActionButtons($permission))

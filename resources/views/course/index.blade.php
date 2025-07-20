@@ -76,9 +76,8 @@
 
     {{-- ===== DATA TABLE ===== --}}
     <x-ui.datatable
-        :headers="['ID', 'Code', 'Title', 'Credit Hours', 'Faculty', 'Prerequisites Count', 'Prerequisites', 'Action']"
+        :headers="['Code', 'Title', 'Credit Hours', 'Faculty', 'Prerequisites Count', 'Prerequisites', 'Action']"
         :columns="[
-            ['data' => 'id', 'name' => 'id'],
             ['data' => 'code', 'name' => 'code'],
             ['data' => 'title', 'name' => 'title'],
             ['data' => 'credit_hours', 'name' => 'credit_hours'],

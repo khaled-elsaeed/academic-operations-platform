@@ -40,6 +40,7 @@ class UserService
         $request = request();
         $this->applySearchFilters($query, $request);
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('name', fn($user) => $user->name)
             ->addColumn('roles', fn($user) => $user->roles->pluck('name')->implode(', '))
             ->addColumn('created_at', fn($user) => formatDate($user->created_at))

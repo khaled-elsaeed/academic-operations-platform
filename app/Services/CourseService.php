@@ -140,6 +140,7 @@ class CourseService
         $request = request();
         $this->applySearchFilters($query, $request);
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('faculty_name', fn($course) => $course->faculty ? $course->faculty->name : 'N/A')
             ->addColumn('prerequisites_count', fn($course) => $course->prerequisites_count ?? 0)
             ->addColumn('prerequisites_list', fn($course) => $course->prerequisites->pluck('title')->join(', ') ?: 'None')

@@ -216,6 +216,7 @@ class AvailableCourseService
         $this->applySearchFilters($query, $request);
 
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('course', function ($availableCourse) {
                 return $availableCourse->course?->name ?? '-';
             })

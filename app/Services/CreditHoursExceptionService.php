@@ -168,6 +168,7 @@ class CreditHoursExceptionService
         }
 
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('student', function($exception) {
                 return $exception->student ? $exception->student->name_en : '-';
             })

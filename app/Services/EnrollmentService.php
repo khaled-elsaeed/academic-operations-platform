@@ -143,6 +143,7 @@ class EnrollmentService
         $this->applySearchFilters($query, $request);
 
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('student', function($enrollment) {
                 return $enrollment->student_name ?? '-';
             })

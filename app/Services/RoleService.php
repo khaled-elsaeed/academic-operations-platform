@@ -42,6 +42,7 @@ class RoleService
     {
         $roles = Role::withCount(['permissions', 'users']);
         return DataTables::of($roles)
+            ->addIndexColumn()
             ->addColumn('permissions', fn($role) => '<button type="button" class="btn btn-sm btn-info show-permissions" data-role-id="' . $role->id . '" data-role="' . htmlspecialchars($role->name, ENT_QUOTES, 'UTF-8') . '"><i class="bx bx-key"></i> <span class="badge bg-light text-dark ms-1">' . $role->permissions_count . '</span></button>')
             ->addColumn('users_count', fn($role) => $role->users_count)
             ->addColumn('actions', fn($role) => $this->renderActionButtons($role))

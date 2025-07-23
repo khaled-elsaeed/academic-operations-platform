@@ -15,10 +15,9 @@ return new class extends Migration
             $table->time('start_time');
             $table->time('end_time');
             $table->integer('duration_minutes');
-            $table->date('specific_date')->nullable(); // For non-repetitive schedules
+            $table->date('specific_date')->nullable();
             $table->enum('day_of_week', ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])->nullable(); // For repetitive schedules
             $table->integer('slot_order')->default(1); 
-            $table->boolean('is_break')->default(false); 
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             

@@ -223,20 +223,37 @@ class TermService
         return $query;
     }
 
+    /**
+     * Generate a term code based on season and academic year.
+     *   etc.
+     */
     private function generateTermCode(string $season, string $academicYear): string
-{
-    $seasonCode = match(strtolower($season)) {
-        'fall' => '1',
-        'spring' => '2',
-        'summer' => '3',
-        default => '0',
-    };
+    {
+        // Normalize season
+        $season = strtolower(trim($season));
+        $seasonCode = match($season) {
+            'fall' => '1',
+            'spring' => '2',
+            'summer' => '3',
+            default => '0',
+        };
 
-    // Extract the first year from "2025-2026"
-    [$startYear, $endYear] = explode('-', $academicYear);
-    $shortYear = substr($startYear, -2);  // '25' from '2025'
+        // Extract years (handles "2024-2025", "2024 - 2025", etc.)
+        $yearParts = preg_split('/\s*-\s*/', trim($academicYear));
+        if (count($yearParts) !== 2) {
+            // fallback: try to extract 2 years from string
+            preg_match_all('/\d{4}/', $academicYear, $matches);
+            $yearParts = $matches[0] ?? [];
+        }
+        if (count($yearParts) !== 2) {
+            throw new \InvalidArgumentException("Invalid academic year format: $academicYear");
+        }
+        $startYear = (int) $yearParts[0];
+        $shortYear = substr((string)$startYear, -2); // e.g. '24' from 2024
 
-    return $shortYear . $seasonCode;
-}
+        $code = '2' . $shortYear . $seasonCode;
+
+        return $code;
+    }
 
 } 

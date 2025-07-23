@@ -123,4 +123,20 @@ require __DIR__.'/web/academic_advisor_access.php';
 
 require __DIR__.'/web/account-settings.php';
 
+// ====================
+// Include Schedule Routes
+// ====================
 
+require __DIR__.'/web/schedule/schedule.php';
+
+// ====================
+// Include Schedule Type Routes
+// ====================
+
+require __DIR__.'/web/schedule/schedule-type.php';
+
+// ====================
+// Include Schedule Slot Routes
+// ====================
+
+require __DIR__.'/web/schedule/schedule-slot.php';

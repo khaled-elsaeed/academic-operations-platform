@@ -20,7 +20,6 @@ class ScheduleSlot extends Model
         'specific_date',
         'day_of_week',
         'slot_order',
-        'is_break',
         'is_active'
     ];
 
@@ -30,7 +29,6 @@ class ScheduleSlot extends Model
         'duration_minutes' => 'integer',
         'specific_date' => 'date',
         'slot_order' => 'integer',
-        'is_break' => 'boolean',
         'is_active' => 'boolean'
     ];
 

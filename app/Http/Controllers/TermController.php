@@ -71,7 +71,6 @@ class TermController extends Controller
         $request->validate([
             'season' => 'required|string|in:Fall,Spring,Summer',
             'year' => 'required|string',
-            'code' => 'required|string|max:10|unique:terms,code',
             'is_active' => 'boolean'
         ]);
 
@@ -114,7 +113,6 @@ class TermController extends Controller
         $request->validate([
             'season' => 'required|string|in:Fall,Spring,Summer',
             'year' => 'required|string',
-            'code' => 'required|string|max:10|unique:terms,code,' . $term->id,
             'is_active' => 'boolean'
         ]);
 

@@ -28,8 +28,7 @@ Route::middleware(['auth'])
         Route::post('/', 'store')->name('store')->middleware('can:term.create');
         
         // Update
-        Route::put('{term}', 'update')->name('update')->middleware('can:term.edit');
-        Route::patch('{term}', 'update')->middleware('can:term.edit');
+        Route::post('{term}', 'update')->name('update')->middleware('can:term.edit');
         
         // Delete
         Route::delete('{term}', 'destroy')->name('destroy')->middleware('can:term.delete');

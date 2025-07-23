@@ -17,6 +17,23 @@ if (!function_exists('formatDate')) {
     }
 }
 
+if (!function_exists('formatTime')) {
+    /**
+     * Format a time using Carbon.
+     *
+     * @param string|\DateTimeInterface|null $time
+     * @param string $format
+     * @return string|null
+     */
+    function formatTime($time, $format = 'h:i A')
+    {
+        if (!$time) {
+            return null;
+        }
+        return \Carbon\Carbon::parse($time)->format($format);
+    }
+}
+
 if (!function_exists('logError')) {
     /**
      * Log an error in a professional, monitorable format.

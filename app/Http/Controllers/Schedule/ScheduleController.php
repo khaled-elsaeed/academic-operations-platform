@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Schedule;
 
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\View\View;
-use App\Services\ScheduleService;
+use App\Services\Schedule\ScheduleService;
 use App\Models\Schedule\Schedule;
+use App\Models\Schedule\ScheduleType;
+use App\Http\Requests\StoreScheduleRequest;
 use Exception;
 
 class ScheduleController extends \App\Http\Controllers\Controller
@@ -15,6 +17,22 @@ class ScheduleController extends \App\Http\Controllers\Controller
     public function index(): View
     {
         return view('schedule.index');
+    }
+
+    public function create()
+    {
+        return view('schedule.create');
+    }
+
+    public function show($id): JsonResponse
+    {
+        try {
+            $data = $this->scheduleService->getScheduleDetails($id);
+            return successResponse('Schedule fetched successfully.', $data);
+        } catch (Exception $e) {
+            logError('ScheduleController@show', $e, ['schedule_id' => $id]);
+            return errorResponse('Failed to fetch schedule details.', [], 500);
+        }
     }
 
     public function datatable(): JsonResponse
@@ -38,18 +56,10 @@ class ScheduleController extends \App\Http\Controllers\Controller
         }
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreScheduleRequest $request): JsonResponse
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'code' => 'required|string|max:50',
-            'schedule_type_id' => 'required|exists:schedule_types,id',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'status' => 'required|string',
-        ]);
         try {
-            $validated = $request->all();
+            $validated = $request->validated();
             $schedule = $this->scheduleService->createSchedule($validated);
             return successResponse('Schedule created successfully.', $schedule);
         } catch (Exception $e) {

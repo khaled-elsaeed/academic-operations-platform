@@ -26,9 +26,10 @@ return new class extends Migration
             $table->string('title');
             $table->string('code')->unique();
             $table->foreignId('schedule_type_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('term_id')->constrained()->cascadeOnDelete();
             $table->text('description')->nullable();
-            $table->date('start_date');
-            $table->date('end_date');
+            $table->date('start_date')->nullable();
+            $table->date('end_date')->nullable();
             $table->time('day_starts_at')->default('09:00:00');
             $table->time('day_ends_at')->default('15:40:00'); 
             $table->integer('slot_duration_minutes')->default(50);
@@ -36,7 +37,6 @@ return new class extends Migration
             $table->json('settings')->nullable();
             $table->enum('status', ['draft', 'active', 'finalized', 'archived'])->default('draft');
             $table->timestamp('finalized_at')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }

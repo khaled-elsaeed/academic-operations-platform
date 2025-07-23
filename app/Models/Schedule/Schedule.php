@@ -2,7 +2,7 @@
 
 namespace App\Models\Schedule;
 
-use App\Models\User;
+use App\Models\Term;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +16,7 @@ class Schedule extends Model
         'title',
         'code',
         'schedule_type_id',
+        'term_id',
         'description',
         'start_date',
         'end_date',
@@ -26,7 +27,6 @@ class Schedule extends Model
         'settings',
         'status',
         'finalized_at',
-        'created_by'
     ];
 
     protected $casts = [
@@ -46,13 +46,14 @@ class Schedule extends Model
         return $this->belongsTo(ScheduleType::class);
     }
 
+    public function term(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Term::class, 'term_id');
+    }
+
     public function slots(): HasMany
     {
         return $this->hasMany(ScheduleSlot::class);
     }
 
-    public function creator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
 }

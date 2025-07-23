@@ -22,44 +22,9 @@ class Sidebar extends Component
             $groups = $this->getGroupedMenu();
 
             foreach ($groups as $group) {
-                // Check if it's a single item (like Dashboard)
-                if (isset($group['permission'])) {
-                    if ($user->can($group['permission'])) {
-                        $this->menuItems[] = $group;
-                    }
-                } elseif (isset($group['children'])) {
-                    $children = [];
-                    
-                    // Filter children based on permissions
-                    foreach ($group['children'] as $child) {
-                        if (isset($child['children'])) {
-                            // Handle nested children (like existing enrollments submenu)
-                            $nestedChildren = [];
-                            foreach ($child['children'] as $nestedChild) {
-                                if (!isset($nestedChild['permission']) || $user->can($nestedChild['permission'])) {
-                                    $nestedChildren[] = $nestedChild;
-                                }
-                            }
-                            if (count($nestedChildren)) {
-                                $child['children'] = $nestedChildren;
-                                $children[] = $child;
-                            }
-                        } else {
-                            // Handle direct children
-                            if (!isset($child['permission']) || $user->can($child['permission'])) {
-                                $children[] = $child;
-                            }
-                        }
-                    }
-                    
-                    // Only add the group if it has accessible children
-                    if (count($children)) {
-                        $group['children'] = $children;
-                        $this->menuItems[] = $group;
-                    }
-                } else {
-                    // Items without permissions or children (like Dashboard)
-                    $this->menuItems[] = $group;
+                $filteredGroup = $this->filterMenuItem($group, $user);
+                if ($filteredGroup !== null) {
+                    $this->menuItems[] = $filteredGroup;
                 }
             }
         }
@@ -70,6 +35,38 @@ class Sidebar extends Component
         return view('components.navigation.sidebar');
     }
 
+    /**
+     * Recursively filter menu items and their children by permissions.
+     */
+    private function filterMenuItem(array $item, $user)
+    {
+        // If the item has a permission, check it
+        if (isset($item['permission']) && !$user->can($item['permission'])) {
+            return null;
+        }
+
+        // If the item has children, filter them recursively
+        if (isset($item['children'])) {
+            $filteredChildren = [];
+            foreach ($item['children'] as $child) {
+                $filteredChild = $this->filterMenuItem($child, $user);
+                if ($filteredChild !== null) {
+                    $filteredChildren[] = $filteredChild;
+                }
+            }
+            if (count($filteredChildren)) {
+                $item['children'] = $filteredChildren;
+                return $item;
+            } else {
+                // If no children left, don't show this group
+                return null;
+            }
+        }
+
+        // Otherwise, return the item
+        return $item;
+    }
+
     private function getGroupedMenu(): array
     {
         return array_merge(
@@ -78,32 +75,23 @@ class Sidebar extends Component
                 [
                     'title' => 'Schedules',
                     'icon' => 'bx bx-calendar',
-                    'route' => route('schedules.index'),
-                    'active' => request()->routeIs('schedules.*'),
-                    'permission' => 'schedule.view',
-                ],
-                [
-                    'title' => 'User Management',
-                    'icon' => 'bx bx-group',
                     'route' => '#',
                     'type' => 'group',
-                    'active' => request()->routeIs('students.*') || request()->routeIs('users.*'),
+                    'active' => request()->routeIs('schedules.*') || request()->routeIs('schedule-slots.*'),
                     'children' => [
                         [
-                            'title' => 'Students',
-                            'icon' => 'bx bx-user',
-                            'route' => route('students.index'),
-                            'active' => request()->routeIs('students.*'),
-                            'permission' => 'student.view',
+                            'title' => 'View Schedules',
+                            'icon' => 'bx bx-calendar',
+                            'route' => route('schedules.index'),
+                            'active' => request()->routeIs('schedules.index'),
                         ],
                         [
-                            'title' => 'Users',
-                            'icon' => 'bx bx-user-circle',
-                            'route' => route('users.index'),
-                            'active' => request()->routeIs('users.*'),
-                            'permission' => 'user.view',
+                            'title' => 'View Slots',
+                            'icon' => 'bx bx-time-five',
+                            'route' => route('schedule-slots.index'),
+                            'active' => request()->routeIs('schedule-slots.index'),
                         ],
-                    ]
+                    ],
                 ],
                 [
                     'title' => 'Academic Structure',
@@ -143,7 +131,7 @@ class Sidebar extends Component
                     ]
                 ],
                 [
-                    'title' => 'Course Management',
+                    'title' => 'Enrollment Management',
                     'icon' => 'bx bx-library',
                     'route' => '#',
                     'type' => 'group',
@@ -203,40 +191,55 @@ class Sidebar extends Component
                     ]
                 ],
                 [
+                    'title' => 'User Management',
+                    'icon' => 'bx bx-group',
+                    'route' => '#',
+                    'type' => 'group',
+                    'active' => request()->routeIs('students.*') || request()->routeIs('users.*'),
+                    'children' => [
+                        [
+                            'title' => 'Students',
+                            'icon' => 'bx bx-user',
+                            'route' => route('students.index'),
+                            'active' => request()->routeIs('students.*'),
+                            'permission' => 'student.view',
+                        ],
+                        [
+                            'title' => 'Users',
+                            'icon' => 'bx bx-user-circle',
+                            'route' => route('users.index'),
+                            'active' => request()->routeIs('users.*'),
+                            'permission' => 'user.view',
+                        ],
+                    ]
+                ],
+                [
                     'title' => 'System Administration',
-                    'icon' => 'bx bx-cog',
+                    'icon' => 'bx bx-shield',
                     'route' => '#',
                     'type' => 'group',
                     'active' => request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('academic_advisor_access.*'),
                     'children' => [
                         [
-                            'title' => 'Roles & Permissions',
-                            'icon' => 'bx bx-shield',
-                            'route' => '#',
-                            'active' => request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('academic_advisor_access.*'),
-                            'children' => [
-                                [
-                                    'title' => 'Roles',
-                                    'icon' => 'bx bx-shield-quarter',
-                                    'route' => route('roles.index'),
-                                    'active' => request()->routeIs('roles.*'),
-                                    'permission' => 'role.view',
-                                ],
-                                [
-                                    'title' => 'Permissions',
-                                    'icon' => 'bx bx-key',
-                                    'route' => route('permissions.index'),
-                                    'active' => request()->routeIs('permissions.*'),
-                                    'permission' => 'permission.view',
-                                ],
-                                [
-                                    'title' => 'Advisor Access',
-                                    'icon' => 'bx bx-user-check',
-                                    'route' => route('academic_advisor_access.index'),
-                                    'active' => request()->routeIs('academic_advisor_access.*'),
-                                    'permission' => 'user.view',
-                                ],
-                            ],
+                            'title' => 'Roles',
+                            'icon' => 'bx bx-shield-quarter',
+                            'route' => route('roles.index'),
+                            'active' => request()->routeIs('roles.*'),
+                            'permission' => 'role.view',
+                        ],
+                        [
+                            'title' => 'Permissions',
+                            'icon' => 'bx bx-key',
+                            'route' => route('permissions.index'),
+                            'active' => request()->routeIs('permissions.*'),
+                            'permission' => 'permission.view',
+                        ],
+                        [
+                            'title' => 'Advisor Access',
+                            'icon' => 'bx bx-user-check',
+                            'route' => route('academic_advisor_access.index'),
+                            'active' => request()->routeIs('academic_advisor_access.*'),
+                            'permission' => 'user.view',
                         ],
                     ]
                 ],

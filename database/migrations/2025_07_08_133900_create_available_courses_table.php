@@ -11,12 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Create available_courses table
         Schema::create('available_courses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('course_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
             $table->foreignId('term_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
-            $table->integer('min_capacity')->default(1);
-            $table->integer('max_capacity')->default(30);
             $table->boolean('is_universal')->default(false);
             $table->timestamps();
         });

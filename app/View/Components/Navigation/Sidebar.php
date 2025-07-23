@@ -76,6 +76,13 @@ class Sidebar extends Component
             $this->getDashboardMenu(),
             [
                 [
+                    'title' => 'Schedules',
+                    'icon' => 'bx bx-calendar',
+                    'route' => route('schedules.index'),
+                    'active' => request()->routeIs('schedules.*'),
+                    'permission' => 'schedule.view',
+                ],
+                [
                     'title' => 'User Management',
                     'icon' => 'bx bx-group',
                     'route' => '#',

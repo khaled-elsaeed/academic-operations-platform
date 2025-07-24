@@ -19,6 +19,22 @@ class ScheduleController extends \App\Http\Controllers\Controller
         return view('schedule.index');
     }
 
+    /**
+     * Get all active schedules
+     *
+     * @return JsonResponse
+     */
+    public function all(): JsonResponse
+    {
+        try {
+            $schedules = $this->scheduleService->getAllActive();
+            return successResponse('Schedules fetched successfully.', $schedules);
+        } catch (Exception $e) {
+            logError('ScheduleController@all', $e);
+            return errorResponse('Failed to fetch schedules.', [], 500);
+        }
+    }
+
     public function create()
     {
         return view('schedule.create');
@@ -62,6 +78,8 @@ class ScheduleController extends \App\Http\Controllers\Controller
             $validated = $request->validated();
             $schedule = $this->scheduleService->createSchedule($validated);
             return successResponse('Schedule created successfully.', $schedule);
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
         } catch (Exception $e) {
             logError('ScheduleController@store', $e, ['request' => $request->all()]);
             return errorResponse('Internal server error.', [], 500);
@@ -77,23 +95,5 @@ class ScheduleController extends \App\Http\Controllers\Controller
             logError('ScheduleController@destroy', $e, ['schedule_id' => $schedule->id]);
             return errorResponse('Internal server error.', [], 500);
         }
-    }
-
-    public function import(Request $request): JsonResponse
-    {
-        // Implement import logic similar to enrollments
-        return errorResponse('Not implemented yet.', [], 501);
-    }
-
-    public function export(Request $request): JsonResponse
-    {
-        // Implement export logic similar to enrollments
-        return errorResponse('Not implemented yet.', [], 501);
-    }
-
-    public function downloadTemplate(): JsonResponse
-    {
-        // Implement template download logic similar to enrollments
-        return errorResponse('Not implemented yet.', [], 501);
     }
 }

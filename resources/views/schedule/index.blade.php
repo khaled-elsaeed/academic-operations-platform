@@ -5,9 +5,7 @@
 
 @section('page-content')
 <div class="container-xxl flex-grow-1 container-p-y">
-    
-
-    {{-- ===== STATISTICS CARDS ===== --}}
+    {{-- Statistics Cards --}}
     <div class="row g-4 mb-4">
         <div class="col-sm-6 col-xl-3">
             <x-ui.card.stat2 
@@ -19,7 +17,7 @@
         </div>
     </div>
 
-    {{-- ===== PAGE HEADER & ACTION BUTTONS ===== --}}
+    {{-- Page Header & Action Buttons --}}
     <x-ui.page-header 
         title="Schedules"
         description="Manage all schedules and export in bulk using the options on the right."
@@ -34,22 +32,32 @@
     </x-ui.page-header>
 
 
-    {{-- ===== DATA TABLE ===== --}}
+    {{-- Data Table --}}
     <x-ui.datatable
-        :headers="['Title', 'Type', 'Status', 'Start Date', 'End Date', 'Term', 'Slots', 'Action']"
+        :headers="[
+            'Title',
+            'Type',
+            'Code',
+            'Start Date',
+            'End Date',
+            'Term',
+            'Slots',
+            'Status',
+            'Action'
+        ]"
         :columns="[
             ['data' => 'title', 'name' => 'title'],
             ['data' => 'type', 'name' => 'type'],
-            ['data' => 'status', 'name' => 'status'],
-            ['data' => 'day_starts_at', 'name' => 'day_starts_at'],
-            ['data' => 'day_ends_at', 'name' => 'day_ends_at'],
+            ['data' => 'code', 'name' => 'code'],
+            ['data' => 'formatted_day_starts_at', 'name' => 'formatted_day_starts_at'],
+            ['data' => 'formatted_day_ends_at', 'name' => 'formatted_day_ends_at'],
             ['data' => 'term', 'name' => 'term'],
             ['data' => 'slots_count', 'name' => 'slots_count'],
-            ['data' => 'actions', 'name' => 'actions', 'orderable' => false, 'searchable' => false],
+            ['data' => 'status', 'name' => 'status'],
+            ['data' => 'actions', 'name' => 'actions', 'orderable' => false, 'searchable' => false]
         ]"
         :ajax-url="route('schedules.datatable')"
         table-id="schedules-table"
-        {{-- filter-fields removed --}}
     />
 
 
@@ -126,46 +134,40 @@
 @push('scripts')
 <script>
 /**
- * Schedule Management System JavaScript
- * Handles CRUD operations for schedules and viewing in modal
+ * Constants and Configuration
  */
-
-// ===========================
-// CONSTANTS AND CONFIGURATION
-// ===========================
-
 const ROUTES = {
-  schedules: {
-    stats: '{{ route('schedules.stats') }}',
-    show: '{{ route('schedules.show', ':id') }}',
-    destroy: '{{ route('schedules.destroy', ':id') }}'
-  }
+    schedules: {
+        stats: '{{ route('schedules.stats') }}',
+        show: '{{ route('schedules.show', ':id') }}',
+        destroy: '{{ route('schedules.destroy', ':id') }}'
+    }
 };
 
-// ===========================
-// UTILITY FUNCTIONS
-// ===========================
+/**
+ * Utility Functions
+ */
 
 const Utils = {
-  showSuccess(message) {
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: message,
-      showConfirmButton: false,
-      timer: 2500,
-      timerProgressBar: true
-    });
-  },
+    showSuccess(message) {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: message,
+            showConfirmButton: false,
+            timer: 2500,
+            timerProgressBar: true
+        });
+    },
 
-  showError(message) {
-    Swal.fire({
-      title: 'Error',
-      html: message,
-      icon: 'error'
-    });
-  },
+    showError(message) {
+        Swal.fire({
+            title: 'Error',
+            html: message,
+            icon: 'error'
+        });
+    },
 
   toggleLoadingState(elementId, isLoading) {
     const $value = $(`#${elementId}-value`);
@@ -192,21 +194,20 @@ const Utils = {
 
 };
 
-// ===========================
-// API SERVICE LAYER
-// ===========================
-
+/**
+ * API Service Layer
+ */
 const ApiService = {
-  request(options) {
-    return $.ajax(options);
-  },
+    request(options) {
+        return $.ajax(options);
+    },
 
-  fetchScheduleStats() {
-    return this.request({
-      url: ROUTES.schedules.stats,
-      method: 'GET'
-    });
-  },
+    fetchScheduleStats() {
+        return this.request({
+            url: ROUTES.schedules.stats,
+            method: 'GET'
+        });
+    },
 
   fetchSchedule(id){
     return this.request({
@@ -246,20 +247,18 @@ const StatsManager = {
   }
 };
 
-// ===========================
-// SCHEDULE CRUD & VIEW OPERATIONS
-// ===========================
-
+/**
+ * Schedule CRUD & View Operations
+ */
 const ScheduleManager = {
-  handleViewSchedule() {
-    $(document).on('click', '.viewScheduleBtn', function () {
-      const scheduleId = $(this).data('id');
-      ScheduleManager.clearScheduleModal();
-      $('#viewScheduleModal').modal('show');
+    handleViewSchedule() {
+        $(document).on('click', '.viewScheduleBtn', function() {
+            const scheduleId = $(this).data('id');
+            ScheduleManager.clearScheduleModal();
+            $('#viewScheduleModal').modal('show');
 
       ApiService.fetchSchedule(scheduleId)
         .done((response) => {
-          // The API returns { success, message, data, code }
           const schedule = response.data;
           ScheduleManager.populateScheduleModal(schedule);
         })
@@ -294,33 +293,23 @@ const ScheduleManager = {
   },
 
   populateScheduleModal(schedule) {
-    // Title
     $('#viewScheduleTitle').text(schedule.title || 'N/A');
 
-    // Schedule Type (prefer schedule_type.name, fallback to type)
     let scheduleType = 'N/A';
     scheduleType = schedule.schedule_type.name;
-   
     $('#viewScheduleType').text(scheduleType);
 
-    // Status
     $('#viewScheduleStatus').text(schedule.status ? schedule.status : 'N/A');
 
-    // Term (object or fallback)
     let termName = 'N/A';
     if (schedule.term && schedule.term.name) {
       termName = schedule.term.name;
     }
     $('#viewScheduleTerm').text(termName);
 
-    // Start/End Dates
-    $('#viewScheduleStart').text(schedule.start_date ? schedule.start_date : '--');
-    $('#viewScheduleEnd').text(schedule.end_date ? schedule.end_date : '--');
-
-    // Description
+    $('#viewScheduleStart').text(schedule.formatted_start_date ? schedule.formatted_start_date : '--');
+    $('#viewScheduleEnd').text(schedule.formatted_end_date ? schedule.formatted_end_date : '--');
     $('#viewScheduleDescription').text(schedule.description || '');
-
-    // Handle slots
     ScheduleManager.populateSlotsTable(schedule);
   },
 
@@ -337,23 +326,12 @@ const ScheduleManager = {
 
     let slotIndex = 1;
     slots.forEach(function(slot) {
-      // Day of week display
       let dayDisplay = slot.day_of_week ? slot.day_of_week : '-';
-
-      // Time
-      const startTime = slot.start_time ? slot.start_time : '--';
-      const endTime = slot.end_time ? slot.end_time : '--';
-
-      // Duration
+      const startTime = slot.formatted_start_time ? slot.formatted_start_time : '--';
+      const endTime = slot.formatted_end_time ? slot.formatted_end_time : '--';
       const duration = slot.duration_minutes ? `${slot.duration_minutes} min` : '--';
-
-      // Slot order
       const slotOrder = slot.slot_order || '';
-
-      // Specific date (for range slots)
-      let specificDate = slot.specific_date ? `<br><small class="text-muted">${slot.specific_date}</small>` : '';
-
-      // Active status
+      let specificDate = slot.formatted_specific_date ? `<br><small class="text-muted">${slot.formatted_specific_date}</small>` : '';
       let isActive = slot.is_active ? 'Yes' : 'No';
 
       $tbody.append(
@@ -402,21 +380,20 @@ const ScheduleManager = {
 };
 
 
-// ===========================
-// MAIN APPLICATION
-// ===========================
-
+/**
+ * Main Application
+ */
 const ScheduleManagementApp = {
-  init() {
-    StatsManager.loadScheduleStats();
-    ScheduleManager.handleDeleteSchedule();
-    ScheduleManager.handleViewSchedule();
-  }
+    init() {
+        StatsManager.loadScheduleStats();
+        ScheduleManager.handleDeleteSchedule();
+        ScheduleManager.handleViewSchedule();
+    }
 };
 
-// ===========================
-// DOCUMENT READY
-// ===========================
+/**
+ * Document Ready
+ */
 
 $(document).ready(() => {
   ScheduleManagementApp.init();

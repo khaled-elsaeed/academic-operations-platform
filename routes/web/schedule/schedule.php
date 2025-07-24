@@ -12,11 +12,9 @@ Route::middleware(['auth'])
     ->name('schedules.')
     ->controller(ScheduleController::class)
     ->group(function () {
+        Route::get('all', 'all')->name('all');
         Route::get('datatable', 'datatable')->name('datatable');
         Route::get('stats', 'stats')->name('stats');
-        Route::get('template', 'downloadTemplate')->name('template');
-        Route::post('import', 'import')->name('import');
-        Route::get('export', 'export')->name('export');
         Route::get('create', 'create')->name('create');
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');

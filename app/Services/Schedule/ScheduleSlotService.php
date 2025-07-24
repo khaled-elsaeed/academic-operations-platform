@@ -6,6 +6,7 @@ use App\Models\Schedule\ScheduleSlot;
 use App\Models\Schedule\Schedule;
 use App\Models\Schedule\ScheduleType;
 use App\Models\Term;
+use App\Services\Schedule\Create\CreateScheduleSlotService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\JsonResponse;
@@ -16,14 +17,72 @@ use App\Exceptions\BusinessValidationException;
 
 class ScheduleSlotService
 {
+    protected CreateScheduleSlotService $createService;
+
+    public function __construct(CreateScheduleSlotService $createService)
+    {
+        $this->createService = $createService;
+    }
+
+    /**
+     * Create a new schedule slot.
+     *
+     * @param array $data The slot data
+     * @return ScheduleSlot
+     * @throws BusinessValidationException
+     */
+    public function createSlot(array $data): ScheduleSlot
+    {
+        return $this->createService->execute($data);
+    }
+
+    /**
+     * Get slot details.
+     *
+     * @param int $id The slot ID
+     * @return ScheduleSlot
+     */
+    public function getSlotDetails(int $id): ScheduleSlot
+    {
+        return ScheduleSlot::findOrFail($id);
+    }
+
+
+
+    /**
+     * Update a schedule slot.
+     *
+     * @param int $id
+     * @param array $data
+     * @return ScheduleSlot
+     * @throws BusinessValidationException
+     */
+    public function updateSlot(int $id, array $data): ScheduleSlot
+    {
+        return DB::transaction(function () use ($id, $data) {
+            $slot = ScheduleSlot::findOrFail($id);
+            $schedule = Schedule::with('scheduleType')->findOrFail($slot->schedule_id);
+            
+            // Validate time range and conflicts
+            $this->validateSlotTimeRange($schedule, $data['start_time'], $data['end_time']);
+            $this->validateSlotConflicts($schedule, array_merge($data, ['id' => $id]));
+            
+            // Update the slot
+            $slot->update($data);
+            
+            return $slot->fresh();
+        });
+    }
+
     /**
      * Delete a schedule slot.
      *
-     * @param ScheduleSlot $slot ScheduleSlot to delete
+     * @param int $id The slot ID
      */
-    public function deleteSchedule(ScheduleSlot $slot): void
+    public function deleteSlot(int $id): void
     {
-        DB::transaction(function () use ($slot) {
+        DB::transaction(function () use ($id) {
+            $slot = ScheduleSlot::findOrFail($id);
             $slot->delete();
         });
     }
@@ -35,17 +94,24 @@ class ScheduleSlotService
      */
     public function getDatatable(): JsonResponse
     {
-        $query = ScheduleSlot::with(['schedule', 'schedule.scheduleType', 'schedule.term']);
+        $query = ScheduleSlot::with(['schedule']);
 
         return DataTables::of($query)
             ->addIndexColumn()
-            ->addColumn('schedule', fn($slot) => $slot->schedule?->name ?? '-')
-            ->addColumn('type', fn($slot) => $slot->schedule?->scheduleType?->name ?? '-')
-            ->addColumn('term', fn($slot) => $slot->schedule?->term?->name ?? '-')
-            ->addColumn('status', fn($slot) => ucfirst($slot->status ?? '-'))
-            ->editColumn('starts_at', fn($slot) => formatTime($slot->starts_at))
-            ->editColumn('ends_at', fn($slot) => formatTime($slot->ends_at))
+            ->addcolumn('status', fn($slot) => $slot->is_active ? 'Active' : 'Inactive')
             ->addColumn('actions', fn($slot) => $this->renderActionButtons($slot))
+            ->ordercolumn('stats', function ($query, $order) {
+                return $query->orderBy('is_active', $order);
+            })
+            ->orderColumn('formatted_specific_date', function ($query, $order) {
+                return $query->orderBy('specific_date', $order);
+            })
+            ->orderColumn('formatted_start_time', function ($query, $order) {
+                return $query->orderBy('start_time', $order);
+            })
+            ->orderColumn('formatted_ends_time', function ($query, $order) {
+                return $query->orderBy('end_time', $order);
+            })
             ->rawColumns(['actions'])
             ->make(true);
     }
@@ -58,25 +124,61 @@ class ScheduleSlotService
      */
     private function renderActionButtons(ScheduleSlot $slot): string
     {
-        $buttons = '<div class="d-flex gap-2">';
+        $buttons = '<div class="dropdown">
+            <button type="button" class="btn btn-primary btn-icon rounded-pill dropdown-toggle hide-arrow" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bx bx-dots-vertical-rounded"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">';
 
-        // View button
-        $buttons .= sprintf(
-            '<button type="button" class="btn btn-sm btn-icon btn-info rounded-circle viewScheduleSlotBtn" data-id="%d" title="View">
-                <i class="bx bx-show"></i>
-            </button>',
+        // View option
+        $buttons .= sprintf('
+            <li>
+                <a class="dropdown-item viewSlotBtn" href="javascript:void(0);" data-id="%d">
+                    <i class="bx bx-show me-1"></i> View
+                </a>
+            </li>',
             $slot->id
         );
 
-        // Delete button
-        $buttons .= sprintf(
-            '<button type="button" class="btn btn-sm btn-icon btn-danger rounded-circle deleteScheduleSlotBtn" data-id="%d" title="Delete">
-                <i class="bx bx-trash"></i>
-            </button>',
+        // Edit option
+        $buttons .= sprintf('
+            <li>
+                <a class="dropdown-item editSlotBtn" href="javascript:void(0);" data-id="%d">
+                    <i class="bx bx-edit-alt me-1"></i> Edit
+                </a>
+            </li>',
             $slot->id
         );
+
+        // Delete option
+        $buttons .= sprintf('
+            <li>
+                <a class="dropdown-item deleteSlotBtn" href="javascript:void(0);" data-id="%d">
+                    <i class="bx bx-trash text-danger me-1"></i> Delete
+                </a>
+            </li>',
+            $slot->id
+        );
+
+        $buttons .= '</ul>
+        </div>';
 
         return $buttons . '</div>';
+    }
+
+    /**
+     * Toggle the status of a schedule slot.
+     *
+     * @param int $id The slot ID
+     * @return ScheduleSlot
+     */
+    public function toggleStatus(int $id): ScheduleSlot
+    {
+        return DB::transaction(function () use ($id) {
+            $slot = ScheduleSlot::findOrFail($id);
+            $slot->update(['is_active' => !$slot->is_active]);
+            return $slot->fresh();
+        });
     }
 
     /**

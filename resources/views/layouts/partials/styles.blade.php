@@ -18,6 +18,7 @@
 <!-- Vendor CSS -->
 <link rel="stylesheet" href="{{ asset('vendor/libs/perfect-scrollbar/perfect-scrollbar.css') }}?v={{ config('app.version') }}" />
 <link rel="stylesheet" href="{{ asset('vendor/libs/apex-charts/apex-charts.css') }}?v={{ config('app.version') }}" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.10.0/css/bootstrap-datepicker.min.css" />
 
 <!-- Config (Mandatory theme config file: global vars & default theme options) -->
 <script src="{{ asset('js/config.js') }}?v={{ config('app.version') }}"></script>

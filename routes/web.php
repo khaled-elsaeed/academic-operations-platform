@@ -96,8 +96,6 @@ require __DIR__.'/web/user.php';
 
 require __DIR__.'/web/enrollment.php';
 
-
-
 // ====================
 // Include Student Routes
 // ====================

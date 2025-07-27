@@ -11,12 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-         // Create available_course_details table
          Schema::create('available_course_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('available_course_id')->constrained('available_courses')->cascadeOnDelete()->cascadeOnUpdate();
             $table->integer('group')->default(1);
             $table->enum('activity_type', ['lecture', 'lab', 'tutorial'])->default('lecture');
+            $table->unsignedInteger('min_capacity')->default(1);
+            $table->unsignedInteger('max_capacity')->default(30);
+            $table->unsignedInteger('capacity')->nullable();
             $table->timestamps();
 
             $table->unique(['available_course_id', 'group', 'activity_type'], 'unique_available_course_detail');

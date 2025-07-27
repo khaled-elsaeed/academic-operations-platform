@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Support\Facades\DB;
 
-
 class AvailableCourse extends Model
 {
     use HasFactory;
@@ -85,6 +84,14 @@ class AvailableCourse extends Model
     public function eligibilities(): HasMany
     {
         return $this->hasMany(CourseEligibility::class);
+    }
+
+    /**
+     * Get the details for this available course.
+     */
+    public function details(): HasMany
+    {
+        return $this->hasMany(AvailableCourseDetail::class, 'available_course_id');
     }
 
     /**

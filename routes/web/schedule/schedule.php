@@ -18,6 +18,7 @@ Route::middleware(['auth'])
         Route::get('create', 'create')->name('create');
         Route::get('/', 'index')->name('index');
         Route::post('/', 'store')->name('store');
-        Route::get('{schedule}', 'show')->name('show');
-        Route::delete('{schedule}', 'destroy')->name('destroy');
+        Route::get('{id}', 'show')->name('show');
+        Route::delete('{id}', 'destroy')->name('destroy');
+        Route::get('{id}/days-slots', 'getDaysAndSlots')->name('days-slots');
     });

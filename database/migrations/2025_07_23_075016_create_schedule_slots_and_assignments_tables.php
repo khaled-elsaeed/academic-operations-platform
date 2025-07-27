@@ -30,7 +30,7 @@ return new class extends Migration
         Schema::create('schedule_assignments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('schedule_slot_id')->constrained()->cascadeOnDelete();
-            $table->morphs('assignable'); // assignable_id, assignable_type for polymorphic relation
+            $table->morphs('assignable');
             $table->string('title'); 
             $table->text('description')->nullable();
             $table->string('location')->nullable();

@@ -38,7 +38,6 @@ class ScheduleService
         return app(CreateScheduleService::class)->execute($data);
     }
 
-
     /**
      * Delete a schedule and all its slots.
      *
@@ -51,8 +50,6 @@ class ScheduleService
             $schedule->delete();
         });
     }
-
-
 
     /**
      * Get schedule with slots for display.
@@ -70,6 +67,45 @@ class ScheduleService
         return $schedule;
     }
 
+    /**
+     * Get available days and slots for a given schedule.
+     *
+     * @param int $scheduleId
+     * @return array
+     */
+    public function getDaysAndSlots(int $scheduleId): array
+    {
+        // Fetch slots for the schedule, ordered by day and slot order
+        $slots = ScheduleSlot::where('schedule_id', $scheduleId)
+            ->orderBy('day_of_week')
+            ->orderBy('slot_order')
+            ->get();
+
+        // Group slots by day_of_week
+        $days = [];
+        foreach ($slots as $slot) {
+            $day = $slot->day_of_week;
+            if (!isset($days[$day])) {
+                $days[$day] = [
+                    'day_of_week' => $day,
+                    'slots' => [],
+                ];
+            }
+            $days[$day]['slots'][] = [
+                'id' => $slot->id,
+                'slot_order' => $slot->slot_order,
+                'start_time' => $slot->start_time ? $slot->start_time->format('H:i') : null,
+                'end_time' => $slot->end_time ? $slot->end_time->format('H:i') : null,
+                'label' => $slot->label ?? null,
+            ];
+        }
+
+        // Re-index days numerically (0=Sunday, 6=Saturday)
+        ksort($days);
+
+        // Optionally, you can return as a numerically indexed array
+        return array_values($days);
+    }
 
     /**
      * Get DataTable response for schedules listing.
@@ -77,41 +113,41 @@ class ScheduleService
      * @return JsonResponse DataTable JSON response
      */
     public function getDatatable(): JsonResponse
-{
-    $query = Schedule::with(['scheduleType', 'term']);    
-    
-    return DataTables::of($query)
-        ->addIndexColumn()
-        ->addColumn('type', fn($schedule) => $schedule->scheduleType->name ?? '-')
-        ->addColumn('term', fn($schedule) => $schedule->term->name ?? '-')
-        ->addColumn('start_time', fn($schedule) => $schedule->start_time ? $schedule->start_time->format('H:i') : '-')
-        ->addColumn('end_time', fn($schedule) => $schedule->end_time ? $schedule->end_time->format('H:i') : '-')
-        ->addColumn('status', fn($schedule) => ucfirst($schedule->status))
-        ->addColumn('slots_count', fn($schedule) => $schedule->slots()->count())
-        ->addColumn('actions', fn($schedule) => $this->renderActionButtons($schedule))
-        ->orderColumn('type', function ($query, $order) {
-            return $query->join('schedule_types', 'schedules.schedule_type_id', '=', 'schedule_types.id')
-                        ->orderBy('schedule_types.name', $order)
-                        ->select('schedules.*');
-        })
-        ->orderColumn('term', function ($query, $order) {
-            return $query->join('terms', 'schedules.term_id', '=', 'terms.id')
-                        ->orderBy('terms.code', $order)
-                        ->select('schedules.*');
-        })
-        ->orderColumn('slots_count', function ($query, $order) {
-            return $query->withCount('slots')
-                        ->orderBy('slots_count', $order);
-        })
-        ->orderColumn('formatted_day_starts_at', function ($query, $order) {
-            return $query->orderBy('day_starts_at', $order);
-        })
-        ->orderColumn('formatted_day_ends_at', function ($query, $order) {
-            return $query->orderBy('day_ends_at', $order);
-        })
-        ->rawColumns(['actions'])
-        ->make(true);
-}
+    {
+        $query = Schedule::with(['scheduleType', 'term']);    
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->addColumn('type', fn($schedule) => $schedule->scheduleType->name ?? '-')
+            ->addColumn('term', fn($schedule) => $schedule->term->name ?? '-')
+            ->addColumn('start_time', fn($schedule) => $schedule->start_time ? $schedule->start_time->format('H:i') : '-')
+            ->addColumn('end_time', fn($schedule) => $schedule->end_time ? $schedule->end_time->format('H:i') : '-')
+            ->addColumn('status', fn($schedule) => ucfirst($schedule->status))
+            ->addColumn('slots_count', fn($schedule) => $schedule->slots()->count())
+            ->addColumn('actions', fn($schedule) => $this->renderActionButtons($schedule))
+            ->orderColumn('type', function ($query, $order) {
+                return $query->join('schedule_types', 'schedules.schedule_type_id', '=', 'schedule_types.id')
+                            ->orderBy('schedule_types.name', $order)
+                            ->select('schedules.*');
+            })
+            ->orderColumn('term', function ($query, $order) {
+                return $query->join('terms', 'schedules.term_id', '=', 'terms.id')
+                            ->orderBy('terms.code', $order)
+                            ->select('schedules.*');
+            })
+            ->orderColumn('slots_count', function ($query, $order) {
+                return $query->withCount('slots')
+                            ->orderBy('slots_count', $order);
+            })
+            ->orderColumn('formatted_day_starts_at', function ($query, $order) {
+                return $query->orderBy('day_starts_at', $order);
+            })
+            ->orderColumn('formatted_day_ends_at', function ($query, $order) {
+                return $query->orderBy('day_ends_at', $order);
+            })
+            ->rawColumns(['actions'])
+            ->make(true);
+    }
 
     /**
      * Render action buttons for DataTable.

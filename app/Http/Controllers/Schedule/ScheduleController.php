@@ -96,4 +96,21 @@ class ScheduleController extends \App\Http\Controllers\Controller
             return errorResponse('Internal server error.', [], 500);
         }
     }
+
+    /**
+     * Get available days and slots for a given schedule.
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function getDaysAndSlots($id): JsonResponse
+    {
+        try {
+            $data = $this->scheduleService->getDaysAndSlots($id);
+            return successResponse('Days and slots fetched successfully.', $data);
+        } catch (Exception $e) {
+            logError('ScheduleController@getDaysAndSlots', $e, ['schedule_id' => $id]);
+            return errorResponse('Failed to fetch days and slots.', [], 500);
+        }
+    }
 }

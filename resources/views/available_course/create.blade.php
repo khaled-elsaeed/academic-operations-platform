@@ -611,41 +611,60 @@ const EligibilityModeManager = {
   validateMode(mode, data) {
     let isValid = true;
 
-    switch(mode) {
-      case ELIGIBILITY_MODES.ALL_PROGRAMS:
+    switch (mode) {
+      case ELIGIBILITY_MODES.ALL_PROGRAMS: {
         const levelId = $('#allProgramsLevelSelect').val();
         if (!levelId) {
           Utils.validateField($('#allProgramsLevelSelect'), 'Please select a level.', false);
           isValid = false;
         } else {
           Utils.validateField($('#allProgramsLevelSelect'), '', true);
-          data.eligibility = [{ program_id: 'all', level_id: levelId }];
+          data.is_all_programs = true;
+          data.is_all_levels = false;
+          data.is_universal = false;
+          data.eligibility = [{ level_id: levelId }];
         }
         break;
+      }
 
-      case ELIGIBILITY_MODES.ALL_LEVELS:
+      case ELIGIBILITY_MODES.ALL_LEVELS: {
         const programId = $('#allLevelsProgramSelect').val();
         if (!programId) {
           Utils.validateField($('#allLevelsProgramSelect'), 'Please select a program.', false);
           isValid = false;
         } else {
           Utils.validateField($('#allLevelsProgramSelect'), '', true);
-          data.eligibility = [{ program_id: programId, level_id: 'all' }];
+          data.is_all_programs = false;
+          data.is_all_levels = true;
+          data.is_universal = false;
+          data.eligibility = [{ program_id: programId }];
         }
         break;
+      }
 
-      case ELIGIBILITY_MODES.UNIVERSAL:
+      case ELIGIBILITY_MODES.UNIVERSAL: {
         data.is_universal = true;
+        data.is_all_programs = true;
+        data.is_all_levels = true;
         data.eligibility = [];
         break;
+      }
 
       case ELIGIBILITY_MODES.INDIVIDUAL:
-      default:
-        if (data.eligibility.length === 0) {
+      default: {
+        if (!Array.isArray(data.eligibility) || data.eligibility.length === 0) {
           Utils.showError('Please add at least one eligibility pair.');
           isValid = false;
+        } else {
+          data.eligibility = data.eligibility.map(item => ({
+            ...item,
+          }));
+          data.is_all_levels = false;
+          data.is_all_programs = false;
+          data.is_universal = false;
         }
         break;
+      }
     }
 
     return isValid;

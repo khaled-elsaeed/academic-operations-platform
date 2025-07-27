@@ -13,22 +13,9 @@ class StoreAvailableCourseRequest extends FormRequest
 
     public function rules()
     {
-        $isBulk = $this->isBulk();
         $isUniversal = $this->input('is_universal', false);
+        
         $eligibilityMode = $this->input('eligibility_mode', 'individual');
-
-        if ($isBulk) {
-            return [
-                'courses' => 'required|array|min:1',
-                'courses.*.course_id' => 'required|exists:courses,id',
-                'courses.*.term_id' => 'required|exists:terms,id',
-                'courses.*.min_capacity' => 'required|integer|min:1',
-                'courses.*.max_capacity' => 'required|integer|gte:courses.*.min_capacity',
-                'courses.*.is_universal' => 'boolean',
-                'courses.*.eligibility_mode' => 'required|string|in:individual,all_programs,all_levels,universal',
-                'courses.*.eligibility' => 'array',
-            ];
-        }
 
         $rules = [
             'course_id'    => 'required|exists:courses,id',
@@ -62,11 +49,6 @@ class StoreAvailableCourseRequest extends FormRequest
     {
         // If JSON input with program_ids and levels arrays, merge into eligibility array for validation
         $isUniversal = $this->input('is_universal', false);
-        $isBulk = $this->isBulk();
-        if ($isBulk) {
-            // No transformation needed for bulk, handled in service
-            return;
-        }
         if (!$isUniversal && $this->has('program_ids') && $this->has('levels')) {
             $programIds = $this->input('program_ids', []);
             $levels = $this->input('levels', []);
@@ -82,10 +64,5 @@ class StoreAvailableCourseRequest extends FormRequest
                 'eligibility' => $eligibility
             ]);
         }
-    }
-
-    private function isBulk()
-    {
-        return $this->has('courses') && is_array($this->input('courses'));
     }
 } 

@@ -211,7 +211,18 @@ const Utils = {
     } else {
       $btn.prop('disabled', false).html('<i class="bx bx-save me-1"></i> Update Available Course');
     }
-  }
+  },/**
+     * Hide the page loader overlay.
+     */
+    hidePageLoader() {
+      const loader = document.getElementById('pageLoader');
+      if (loader) {
+        loader.classList.add('fade-out');
+        // Restore scrollbars when loader is hidden
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+      }
+    }
 };
 // ===========================
 // API SERVICE
@@ -516,6 +527,8 @@ const AvailableCourseApp = {
   init() {
     AvailableCourseManager.initDropdownsAndTable();
     AvailableCourseManager.bindEvents();
+    Utils.hidePageLoader();
+
   }
 };
 // ===========================

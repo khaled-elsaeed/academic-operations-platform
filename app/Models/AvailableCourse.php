@@ -24,23 +24,16 @@ class AvailableCourse extends Model
     protected $fillable = [
         'course_id',
         'term_id',
-        'min_capacity',
-        'max_capacity',
-        'is_universal', // true if available for all programs/levels
+        'mode',
     ];
 
     /**
-     * The attributes that should be cast to native types.
-     *
-     * @var array<string, string>
+     * Enum values for mode.
      */
-    protected $casts = [
-        'course_id' => 'integer',
-        'term_id' => 'integer',
-        'min_capacity' => 'integer',
-        'max_capacity' => 'integer',
-        'is_universal' => 'boolean',
-    ];
+    public const MODE_UNIVERSAL = 'universal';
+    public const MODE_INDIVIDUAL = 'individual';
+    public const MODE_ALL_PROGRAMS = 'all_programs';
+    public const MODE_ALL_LEVELS = 'all_levels';
 
     /**
      * Get the enrollment count attribute.
@@ -87,11 +80,11 @@ class AvailableCourse extends Model
     }
 
     /**
-     * Get the details for this available course.
+     * Get the schedules for this available course.
      */
-    public function details(): HasMany
+    public function schedules(): HasMany
     {
-        return $this->hasMany(AvailableCourseDetail::class, 'available_course_id');
+        return $this->hasMany(AvailableCourseSchedule::class, 'available_course_id');
     }
 
     /**
@@ -129,8 +122,7 @@ class AvailableCourse extends Model
                     ->where('enrollments.term_id', $this->term_id);
     }
 
-
-   /**
+    /**
      * Scope a query to filter available courses by program, level, and term.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
@@ -144,19 +136,29 @@ class AvailableCourse extends Model
     {
         return $query->when($termId, function ($q) use ($termId) {
             return $q->where('term_id', $termId);
-        })->when($programId, function ($q) use ($programId) {
+        })
+        ->when($programId, function ($q) use ($programId) {
             return $q->where(function ($subQuery) use ($programId) {
-                $subQuery->where('is_universal', true)
-                         ->orWhereHas('eligibilities', function ($pairQuery) use ($programId) {
-                             $pairQuery->where('program_id', $programId);
-                         });
+                $subQuery
+                    ->where('mode', self::MODE_UNIVERSAL)
+                    ->orWhere(function ($q2) use ($programId) {
+                        $q2->where('mode', self::MODE_ALL_PROGRAMS);
+                    })
+                    ->orWhereHas('eligibilities', function ($pairQuery) use ($programId) {
+                        $pairQuery->where('program_id', $programId);
+                    });
             });
-        })->when($levelId, function ($q) use ($levelId) {
+        })
+        ->when($levelId, function ($q) use ($levelId) {
             return $q->where(function ($subQuery) use ($levelId) {
-                $subQuery->where('is_universal', true)
-                         ->orWhereHas('eligibilities', function ($pairQuery) use ($levelId) {
-                             $pairQuery->where('level_id', $levelId);
-                         });
+                $subQuery
+                    ->where('mode', self::MODE_UNIVERSAL)
+                    ->orWhere(function ($q2) use ($levelId) {
+                        $q2->where('mode', self::MODE_ALL_LEVELS);
+                    })
+                    ->orWhereHas('eligibilities', function ($pairQuery) use ($levelId) {
+                        $pairQuery->where('level_id', $levelId);
+                    });
             });
         });
     }
@@ -208,7 +210,7 @@ class AvailableCourse extends Model
      */
     public function getAvailableLevelIds(): array
     {
-        if ($this->is_universal) {
+        if ($this->mode === self::MODE_UNIVERSAL || $this->mode === self::MODE_ALL_LEVELS) {
             return Level::pluck('id')->toArray();
         }
 

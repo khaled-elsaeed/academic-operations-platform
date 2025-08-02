@@ -80,6 +80,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('js/utils.js') }}?v={{ config('app.version') }}"></script>
 <script>
 /**
  * Dashboard Charts and Statistics Management
@@ -453,6 +454,8 @@ function refreshCharts() {
 // Initialize dashboard when document is ready
 $(document).ready(function () {
     loadDashboardStats();
+    Utils.hidePageLoader();
+
 });
 </script>
 @endpush

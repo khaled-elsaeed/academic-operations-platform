@@ -177,7 +177,19 @@ const Utils = {
   },
   replaceRouteId(route, id) {
     return route.replace(':id', id);
-  }
+  },
+  /**
+     * Hide the page loader overlay.
+     */
+    hidePageLoader() {
+      const loader = document.getElementById('pageLoader');
+      if (loader) {
+        loader.classList.add('fade-out');
+        // Restore scrollbars when loader is hidden
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+      }
+    }
 };
 
 // ===========================
@@ -348,6 +360,8 @@ const FacultyManagementApp = {
     FacultyManager.handleEditFaculty();
     FacultyManager.handleDeleteFaculty();
     SearchManager.initializeAdvancedSearch();
+    Utils.hidePageLoader();
+
   }
 };
 

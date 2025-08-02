@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\View\View;
 use App\Services\AvailableCourseService;
+use App\Services\CreateAvailableCourseService;
 use App\Exports\AvailableCoursesTemplateExport;
 use App\Http\Requests\{StoreAvailableCourseRequest, UpdateAvailableCourseRequest};
 use App\Models\AvailableCourse;
@@ -64,13 +65,14 @@ class AvailableCourseController extends Controller
      * Store a new available course.
      *
      * @param StoreAvailableCourseRequest $request
+     * @param CreateAvailableCourseService $createAvailableCourseService
      * @return JsonResponse
      */
-    public function store(StoreAvailableCourseRequest $request): JsonResponse
+    public function store(StoreAvailableCourseRequest $request, CreateAvailableCourseService $createAvailableCourseService): JsonResponse
     {
         try {
             $validated = $request->validated();
-            $availableCourse = $this->availableCourseService->createAvailableCourse($validated);
+            $availableCourse = $createAvailableCourseService->createAvailableCourseSingle($validated);
             return successResponse('Available course created successfully.', $availableCourse);
         } catch (BusinessValidationException $e) {
             return errorResponse($e->getMessage(), [], $e->getCode());

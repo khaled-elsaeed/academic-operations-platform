@@ -362,6 +362,18 @@ const Utils = {
         });
         errorHtml += '</ul>';
         return errorHtml;
+    },
+    /**
+     * Hide the page loader overlay.
+     */
+    hidePageLoader() {
+      const loader = document.getElementById('pageLoader');
+      if (loader) {
+        loader.classList.add('fade-out');
+        // Restore scrollbars when loader is hidden
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+      }
     }
 };
 
@@ -733,6 +745,8 @@ const ScheduleCreationApp = {
 
 $(document).ready(function() {
     ScheduleCreationApp.init();
+    Utils.hidePageLoader();
+
 });
 
 </script>

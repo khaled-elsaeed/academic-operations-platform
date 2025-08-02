@@ -67,12 +67,12 @@
 
     {{-- ===== DATA TABLE ===== --}}
     <x-ui.datatable
-      :headers="['Course', 'Term', 'Eligibility', 'Details', 'Action']"
+      :headers="['Course', 'Term', 'Eligibilities', 'Schedules', 'Action']"
       :columns="[
           ['data' => 'course', 'name' => 'course'],
           ['data' => 'term', 'name' => 'term'],
           ['data' => 'eligibility', 'name' => 'eligibility'],
-          ['data' => 'details', 'name' => 'details'],
+          ['data' => 'schedules', 'name' => 'schedules'],
           ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
       ]"
       :ajax-url="route('available_courses.datatable')"
@@ -85,6 +85,16 @@
     <x-ui.modal id="eligibilityModal" title="Eligibility (Program / Level)" size="md" :scrollable="false" class="eligibility-modal">
       <x-slot name="slot">
         <div id="eligibilityContent"><!-- Content will be filled by JS --></div>
+      </x-slot>
+      <x-slot name="footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </x-slot>
+    </x-ui.modal>
+
+    {{-- Schedules Modal --}}
+    <x-ui.modal id="schedulesModal" title="Schedules" size="md" :scrollable="false" class="schedules-modal">
+      <x-slot name="slot">
+        <div id="schedulesContent"><!-- Content will be filled by JS --></div>
       </x-slot>
       <x-slot name="footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -194,7 +204,18 @@ const Utils = {
   },
   replaceRouteId(route, id) {
     return route.replace(':id', id);
-  }
+  },/**
+     * Hide the page loader overlay.
+     */
+    hidePageLoader() {
+      const loader = document.getElementById('pageLoader');
+      if (loader) {
+        loader.classList.add('fade-out');
+        // Restore scrollbars when loader is hidden
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+      }
+    }
 };
 // ===========================
 // API SERVICE LAYER
@@ -444,30 +465,64 @@ const SearchManager = {
 const EligibilityModalManager = {
   handleShowEligibilityModal() {
     $(document).on('click', '.show-eligibility-modal', function () {
-      const pairs = $(this).data('eligibility-pairs');
-      EligibilityModalManager.renderEligibilityContent(pairs);
+      const eligibilities = $(this).data('eligibility-pairs');
+      EligibilityModalManager.renderEligibilityContent(eligibilities);
       const modal = new bootstrap.Modal(document.getElementById('eligibilityModal'));
       modal.show();
     });
   },
-  renderEligibilityContent(pairs) {
+  renderEligibilityContent(eligibilities) {
     const $content = $('#eligibilityContent');
     $content.empty();
-    if (Array.isArray(pairs) && pairs.length > 0) {
-      if (pairs.length === 1) {
+    if (Array.isArray(eligibilities) && eligibilities.length > 0) {
+      if (eligibilities.length === 1) {
         $content.append('<div class="mb-2"><strong>Program / Level:</strong></div>');
-        $content.append(`<div class="alert alert-info">${pairs[0]}</div>`);
+        $content.append(`<div class="alert alert-info">${eligibilities[0]}</div>`);
       } else {
         $content.append('<div class="mb-2"><strong>Programs & Levels:</strong></div>');
         let table = `<table class="table table-bordered table-sm"><thead><tr><th>#</th><th>Program / Level</th></tr></thead><tbody>`;
-        pairs.forEach((pair, idx) => {
+        eligibilities.forEach((pair, idx) => {
           table += `<tr><td>${idx + 1}</td><td>${pair}</td></tr>`;
         });
         table += '</tbody></table>';
         $content.append(table);
       }
     } else {
-      $content.append('<div class="alert alert-warning">No eligibility pairs found.</div>');
+      $content.append('<div class="alert alert-warning">No eligibility found.</div>');
+    }
+  }
+};
+// ===========================
+// SCHEDULES MODAL MANAGER
+// ===========================
+const SchedulesModalManager = {
+  handleShowSchedulesModal() {
+    $(document).on('click', '.show-schedules-modal', function () {
+      const schedules = $(this).data('schedules-pairs');
+      SchedulesModalManager.renderSchedulesContent(schedules);
+      const modal = new bootstrap.Modal(document.getElementById('schedulesModal'));
+      modal.show();
+    });
+  },
+  renderSchedulesContent(schedules) {
+    const $content = $('#schedulesContent');
+    console.log($content);
+    $content.empty();
+    if (Array.isArray(schedules) && schedules.length > 0) {
+      if (schedules.length === 1) {
+        $content.append('<div class="mb-2"><strong>Schedule:</strong></div>');
+        $content.append(`<div class="alert alert-info">${schedules[0]}</div>`);
+      } else {
+        $content.append('<div class="mb-2"><strong>Schedules:</strong></div>');
+        let table = `<table class="table table-bordered table-sm"><thead><tr><th>#</th><th>Schedule</th></tr></thead><tbody>`;
+        schedules.forEach((schedule, idx) => {
+          table += `<tr><td>${idx + 1}</td><td>${schedule}</td></tr>`;
+        });
+        table += '</tbody></table>';
+        $content.append(table);
+      }
+    } else {
+      $content.append('<div class="alert alert-warning">No schedules found.</div>');
     }
   }
 };
@@ -481,7 +536,10 @@ const AvailableCourseManagementApp = {
     ImportManager.handleImportForm();
     DeleteManager.handleDeleteBtn();
     EligibilityModalManager.handleShowEligibilityModal();
+    SchedulesModalManager.handleShowSchedulesModal();
     TemplateDownloadManager.handleTemplateDownload();
+    Utils.hidePageLoader();
+
   }
 };
 // ===========================

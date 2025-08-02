@@ -241,6 +241,18 @@ const Utils = {
     normalizeSeason(season) {
         if (!season) return '';
         return season.charAt(0).toUpperCase() + season.slice(1).toLowerCase();
+    },
+    /**
+     * Hide the page loader overlay.
+     */
+    hidePageLoader() {
+      const loader = document.getElementById('pageLoader');
+      if (loader) {
+        loader.classList.add('fade-out');
+        // Restore scrollbars when loader is hidden
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+      }
     }
 };
 
@@ -497,6 +509,8 @@ $(document).ready(function () {
     TermManager.handleDeleteTerm();
     FormManager.handleSeasonYearChange();
     SearchManager.initializeAdvancedSearch();
+    Utils.hidePageLoader();
+
 });
 </script>
 @endpush

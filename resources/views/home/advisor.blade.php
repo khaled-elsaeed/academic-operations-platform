@@ -35,6 +35,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('js/utils.js') }}?v={{ config('app.version') }}"></script>
 <script>
 function loadAdvisorDashboardStats() {
     $.ajax({
@@ -66,6 +67,7 @@ function updateStatCard(id, total, lastUpdatedTime) {
 
 $(document).ready(function () {
     loadAdvisorDashboardStats();
+    Utils.hidePageLoader();
 });
 </script>
 @endpush 

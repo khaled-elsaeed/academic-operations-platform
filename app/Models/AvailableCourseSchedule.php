@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use App\Models\Schedule\ScheduleAssignment;
 
-class AvailableCourseDetail extends Model
+class AvailableCourseSchedule extends Model
 {
     use HasFactory;
 
@@ -21,7 +21,7 @@ class AvailableCourseDetail extends Model
     ];
 
     /**
-     * Get the available course that owns the detail.
+     * Get the available course that owns the schedule.
      */
     public function availableCourse()
     {
@@ -29,7 +29,7 @@ class AvailableCourseDetail extends Model
     }
 
     /**
-     * Get all of the schedule assignments for the available course detail.
+     * Get all of the schedule assignments for the available course schedule.
      */
     public function scheduleAssignments(): MorphMany
     {

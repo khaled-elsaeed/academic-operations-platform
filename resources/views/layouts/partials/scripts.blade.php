@@ -8,7 +8,6 @@
 <script src="{{ asset('vendor/js/bootstrap.js') }}?v={{ config('app.version') }}"></script>
 <script src="{{ asset('vendor/libs/perfect-scrollbar/perfect-scrollbar.js') }}?v={{ config('app.version') }}"></script>
 <script src="{{ asset('vendor/js/menu.js') }}?v={{ config('app.version') }}"></script>
-<script src="{{ asset('js/utils.js') }}?v={{ config('app.version') }}"></script>
 
 <!-- endbuild -->
 

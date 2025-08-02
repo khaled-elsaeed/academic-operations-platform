@@ -425,6 +425,8 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('js/utils.js') }}?v={{ config('app.version') }}"></script>
+
 <script>
 /**
  * Shows a loading spinner in the given container.
@@ -1613,6 +1615,9 @@ $(document).ready(function () {
       }
     });
   }
+
+  Utils.hidePageLoader();
+
 });
 </script>
 @endpush

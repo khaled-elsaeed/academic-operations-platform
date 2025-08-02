@@ -125,6 +125,8 @@
 
 @push('scripts')
 <script>
+    <script src="{{ asset('js/utils.js') }}?v={{ config('app.version') }}"></script>
+
 $(document).ready(function() {
 
     // Handle account settings form submission
@@ -268,6 +270,8 @@ $(document).ready(function() {
         $('#uploadedAvatar').attr('src', '{{ asset("img/avatars/default.png") }}');
         $('#upload').val('');
     });
+
+    Utils.hidePageLoader();
 
 
 });

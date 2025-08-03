@@ -114,6 +114,24 @@ class AvailableCourse extends Model
     }
 
     /**
+     * Get all existing (program_id, level_id) pairs for this available course as an array of arrays.
+     *
+     * @return array
+     */
+    public function getExistingProgramLevelPairs(): array
+    {
+        return $this->eligibilities()
+            ->get(['program_id', 'level_id'])
+            ->map(function ($item) {
+                return [
+                    'program_id' => $item->program_id,
+                    'level_id' => $item->level_id,
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
      * Get the enrollments for this available course.
      */
     public function enrollments(): HasMany
@@ -259,6 +277,16 @@ class AvailableCourse extends Model
     {
         $this->eligibilities()->delete();
         $this->addProgramLevelPairs($pairs);
+    }
+
+    /**
+     * Clear all program-level pairs for this available course.
+     *
+     * @return void
+     */
+    public function clearProgramLevelPairs(): void
+    {
+        $this->eligibilities()->delete();
     }
 
     /**

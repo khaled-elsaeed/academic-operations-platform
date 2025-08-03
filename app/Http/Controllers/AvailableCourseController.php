@@ -6,6 +6,8 @@ use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\View\View;
 use App\Services\AvailableCourseService;
 use App\Services\CreateAvailableCourseService;
+use App\Services\UpdateAvailableCourseService;
+
 use App\Exports\AvailableCoursesTemplateExport;
 use App\Http\Requests\{StoreAvailableCourseRequest, UpdateAvailableCourseRequest};
 use App\Models\AvailableCourse;
@@ -65,14 +67,13 @@ class AvailableCourseController extends Controller
      * Store a new available course.
      *
      * @param StoreAvailableCourseRequest $request
-     * @param CreateAvailableCourseService $createAvailableCourseService
      * @return JsonResponse
      */
-    public function store(StoreAvailableCourseRequest $request, CreateAvailableCourseService $createAvailableCourseService): JsonResponse
+    public function store(StoreAvailableCourseRequest $request): JsonResponse
     {
         try {
             $validated = $request->validated();
-            $availableCourse = $createAvailableCourseService->createAvailableCourseSingle($validated);
+            $availableCourse = $this->availableCourseService->createAvailableCourse($validated);
             return successResponse('Available course created successfully.', $availableCourse);
         } catch (BusinessValidationException $e) {
             return errorResponse($e->getMessage(), [], $e->getCode());
@@ -105,8 +106,8 @@ class AvailableCourseController extends Controller
     {
         try {
             $validated = $request->validated();
-            $this->availableCourseService->updateAvailableCourseById($id, $validated);
-            return successResponse('Available course updated successfully.');
+            $availableCourse = $this->availableCourseService->updateAvailableCourse($id, $validated);
+            return successResponse('Available course updated successfully.', $availableCourse);
         } catch (BusinessValidationException $e) {
             return errorResponse($e->getMessage(), [], $e->getCode());
         } catch (Exception $e) {
@@ -247,6 +248,25 @@ class AvailableCourseController extends Controller
             'success' => true,
             'courses' => $courses,
         ]);
+    }
+
+    /**
+     * Get the schedules for a specific available course using the service.
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function schedules($id): JsonResponse
+    {
+        try {
+            $schedules = $this->availableCourseService->getSchedules($id);
+            return successResponse('Schedules fetched successfully.', $schedules);
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('AvailableCourseController@schedules', $e, ['id' => $id]);
+            return errorResponse('Failed to fetch schedules.', [], 500);
+        }
     }
 
     /**

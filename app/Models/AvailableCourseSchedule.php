@@ -21,6 +21,20 @@ class AvailableCourseSchedule extends Model
     ];
 
     /**
+     * Boot the model and add event listeners.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($model) {
+            $model->scheduleAssignments()->each(function ($assignment) {
+                $assignment->delete();
+            });
+        });
+    }
+
+    /**
      * Get the available course that owns the schedule.
      */
     public function availableCourse()

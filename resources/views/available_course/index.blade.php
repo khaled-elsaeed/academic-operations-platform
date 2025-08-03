@@ -162,7 +162,8 @@ const ROUTES = {
     import: '{{ route('available_courses.import') }}',
     template: '{{ route('available_courses.template') }}',
     destroy: '{{ route('available_courses.destroy', ':id') }}',
-    terms: "{{ route('terms.all') }}"
+    terms: "{{ route('terms.all') }}",
+    schedules: "{{ route('available_courses.schedules', ':id') }}"
   }
 };
 const SELECTORS = {
@@ -226,7 +227,8 @@ const ApiService = {
   deleteAvailableCourse(id) { return this.request({ url: Utils.replaceRouteId(ROUTES.availableCourses.destroy, id), method: 'DELETE' }); },
   importAvailableCourses(formData) { return this.request({ url: ROUTES.availableCourses.import, method: 'POST', data: formData, processData: false, contentType: false }); },
   fetchTerms() { return this.request({ url: ROUTES.availableCourses.terms, method: 'GET' }); },
-  downloadTemplate() { return this.request({ url: ROUTES.availableCourses.template, method: 'GET', xhrFields: { responseType: 'blob' } }); }
+  downloadTemplate() { return this.request({ url: ROUTES.availableCourses.template, method: 'GET', xhrFields: { responseType: 'blob' } }); },
+  fetchSchedules(availableCourseId) { return this.request({ url: Utils.replaceRouteId(ROUTES.availableCourses.schedules, availableCourseId), method: 'GET' }); }
 };
 // ===========================
 // DROPDOWN MANAGEMENT
@@ -498,29 +500,92 @@ const EligibilityModalManager = {
 const SchedulesModalManager = {
   handleShowSchedulesModal() {
     $(document).on('click', '.show-schedules-modal', function () {
-      const schedules = $(this).data('schedules-pairs');
-      SchedulesModalManager.renderSchedulesContent(schedules);
+      const availableCourseId = $(this).data('id');
+      SchedulesModalManager.renderSchedulesLoading();
       const modal = new bootstrap.Modal(document.getElementById('schedulesModal'));
       modal.show();
+
+      ApiService.fetchSchedules(availableCourseId)
+        .done(function(response) {
+          SchedulesModalManager.renderSchedulesContent(response.data);
+        })
+        .fail(function(xhr) {
+          let message = 'Failed to load schedules.';
+          if (xhr.responseJSON && xhr.responseJSON.message) {
+            message = xhr.responseJSON.message;
+          }
+          SchedulesModalManager.renderSchedulesError(message);
+        });
     });
+  },
+  renderSchedulesLoading() {
+    const $content = $('#schedulesContent');
+    $content.html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+  },
+  renderSchedulesError(message) {
+    const $content = $('#schedulesContent');
+    $content.html(`<div class="alert alert-danger">${message}</div>`);
   },
   renderSchedulesContent(schedules) {
     const $content = $('#schedulesContent');
-    console.log($content);
     $content.empty();
     if (Array.isArray(schedules) && schedules.length > 0) {
-      if (schedules.length === 1) {
-        $content.append('<div class="mb-2"><strong>Schedule:</strong></div>');
-        $content.append(`<div class="alert alert-info">${schedules[0]}</div>`);
-      } else {
-        $content.append('<div class="mb-2"><strong>Schedules:</strong></div>');
-        let table = `<table class="table table-bordered table-sm"><thead><tr><th>#</th><th>Schedule</th></tr></thead><tbody>`;
-        schedules.forEach((schedule, idx) => {
-          table += `<tr><td>${idx + 1}</td><td>${schedule}</td></tr>`;
-        });
-        table += '</tbody></table>';
-        $content.append(table);
-      }
+      $content.append('<div class="mb-2"><strong>Schedules:</strong></div>');
+      schedules.forEach((schedule, idx) => {
+        const group = schedule.group ?? '';
+        const activityType = schedule.activity_type ?? '';
+        const minCapacity = schedule.min_capacity ?? '';
+        const maxCapacity = schedule.max_capacity ?? '';
+        // Render assignments (schedule_assignments)
+        let assignmentsHtml = '';
+        if (Array.isArray(schedule.schedule_assignments) && schedule.schedule_assignments.length > 0) {
+          assignmentsHtml += '<ul class="list-group mb-2">';
+          schedule.schedule_assignments.forEach(assignment => {
+            const slot = assignment.schedule_slot || {};
+            // Format times to HH:mm (local time)
+            let startTime = slot.start_time ? new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            let endTime = slot.end_time ? new Date(slot.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            // Fallback: if end_time is not in slot, try assignment.end_time
+            if (!endTime && assignment.end_time) {
+              endTime = new Date(assignment.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            // Fallback: if start_time is not in slot, try assignment.start_time
+            if (!startTime && assignment.start_time) {
+              startTime = new Date(assignment.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            const dayOfWeek = slot.day_of_week ?? '';
+            assignmentsHtml += `<li class="list-group-item py-1 px-2">
+              <span class="fw-bold">Day:</span> ${dayOfWeek} 
+              <span class="ms-3 fw-bold">Start:</span> ${startTime} 
+              <span class="ms-3 fw-bold">End:</span> ${endTime}
+            </li>`;
+          });
+          assignmentsHtml += '</ul>';
+        } else {
+          assignmentsHtml = '<span class="text-muted">No assignments</span>';
+        }
+
+        // Render schedule as a card/box
+        $content.append(`
+          <div class="card mb-3 shadow-sm">
+            <div class="card-body p-3">
+              <div class="mb-2">
+                <span class="badge bg-secondary me-2">#${idx + 1}</span>
+                <span class="fw-bold">Group:</span> ${group}
+                <span class="ms-3 fw-bold">Activity Type:</span> ${activityType}
+              </div>
+              <div class="mb-2">
+                <span class="fw-bold">Min Capacity:</span> ${minCapacity}
+                <span class="ms-3 fw-bold">Max Capacity:</span> ${maxCapacity}
+              </div>
+              <div>
+                <span class="fw-bold">Assignments:</span>
+                <div>${assignmentsHtml}</div>
+              </div>
+            </div>
+          </div>
+        `);
+      });
     } else {
       $content.append('<div class="alert alert-warning">No schedules found.</div>');
     }

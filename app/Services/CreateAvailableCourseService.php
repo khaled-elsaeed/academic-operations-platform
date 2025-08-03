@@ -224,7 +224,7 @@ class CreateAvailableCourseService
     {
         $query = AvailableCourse::where('course_id', $data['course_id'])
             ->where('term_id', $data['term_id'])
-            ->where('eligibility_mode', 'universal');
+            ->where('mode', 'universal');
 
         if ($excludeId) {
             $query->where('id', '!=', $excludeId);
@@ -274,7 +274,7 @@ class CreateAvailableCourseService
             ->where('term_id', $termId)
             ->where(function ($q) use ($levelId) {
                 // Check for exact same all_programs + level combination
-                $q->where('eligibility_mode', 'all_programs')
+                $q->where('mode', 'all_programs')
                   ->whereHas('eligibilities', function ($eq) use ($levelId) {
                       $eq->where('level_id', $levelId);
                   });
@@ -306,7 +306,7 @@ class CreateAvailableCourseService
             ->where('term_id', $termId)
             ->where(function ($q) use ($programId) {
                 // Check for exact same all_levels + program combination
-                $q->where('eligibility_mode', 'all_levels')
+                $q->where('mode', 'all_levels')
                   ->whereHas('eligibilities', function ($eq) use ($programId) {
                       $eq->where('program_id', $programId);
                   });
@@ -367,7 +367,7 @@ class CreateAvailableCourseService
         return AvailableCourse::create([
             'course_id' => $data['course_id'],
             'term_id' => $data['term_id'],
-            'eligibility_mode' => $data['eligibility_mode'] ?? 'individual',
+            'mode' => $data['eligibility_mode'] ?? 'individual',
         ]);
     }
 

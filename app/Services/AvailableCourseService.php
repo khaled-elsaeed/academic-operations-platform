@@ -24,25 +24,15 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\DataTables;
+use App\Services\CreateAvailableCourseService;
+use App\Services\UpdateAvailableCourseService;
 
 class AvailableCourseService
 {
-    private CreateAvailableCourseService $createService;
-    // private UpdateAvailableCourseService $updateService;
-
-    /**
-     * Constructor - inject the create and update services.
-     *
-     * @param CreateAvailableCourseService $createService
-     * @param UpdateAvailableCourseService $updateService
-     */
     public function __construct(
-        CreateAvailableCourseService $createService,
-        // UpdateAvailableCourseService $updateService
-    ) {
-        $this->createService = $createService;
-        // $this->updateService = $updateService;
-    }
+        private CreateAvailableCourseService $createService,
+        private UpdateAvailableCourseService $updateService
+    ) {}
 
     /**
      * Create a new available course or multiple courses in bulk.
@@ -79,8 +69,8 @@ class AvailableCourseService
         //     return $this->updateService->updateAvailableCourseSingle($availableCourseOrId, $data);
         // }
         
-        // $availableCourse = AvailableCourse::findOrFail($availableCourseOrId);
-        // return $this->updateService->updateAvailableCourseSingle($availableCourse, $data);
+        $availableCourse = AvailableCourse::findOrFail($availableCourseOrId);
+        return $this->updateService->updateAvailableCourse($availableCourse, $data);
     }
 
     /**
@@ -136,6 +126,44 @@ class AvailableCourseService
     }
 
     /**
+     * Get all schedules for a given available course.
+     *
+     * @param int $availableCourseId
+     * @return \Illuminate\Database\Eloquent\Collection
+     * @throws BusinessValidationException
+     */
+    public function getSchedules(int $availableCourseId)
+    {
+        $availableCourse = AvailableCourse::with('schedules.scheduleAssignments.scheduleSlot')->find($availableCourseId);
+
+        if (!$availableCourse) {
+            throw new BusinessValidationException('Available course not found.');
+        }
+
+        return $availableCourse->schedules->map(function ($schedule) {
+            return [
+                'id' => $schedule->id,
+                'group' => $schedule->group,
+                'activity_type' => $schedule->activity_type,
+                'min_capacity' => $schedule->min_capacity,
+                'max_capacity' => $schedule->max_capacity,
+                'schedule_assignments' => $schedule->scheduleAssignments->map(function ($assignment) {
+                    $slot = $assignment->scheduleSlot;
+                    return [
+                        'id' => $assignment->id,
+                        'schedule_slot' => $slot ? [
+                            'id' => $slot->id,
+                            'day_of_week' => $slot->day_of_week,
+                            'start_time' => $slot->start_time,
+                            'end_time' => $slot->end_time,
+                        ] : null,
+                    ];
+                })->values(),
+            ];
+        });
+    }
+
+    /**
      * Get DataTables JSON response for available courses.
      *
      * @return JsonResponse
@@ -159,24 +187,13 @@ class AvailableCourseService
                 if ($schedules->isEmpty()) {
                     return '<span class="text-muted">No schedules</span>';
                 }
-                $pairs = $schedules->map(function ($detail) {
-                    $group = $detail->group ?? '-';
-                    $activity = ucfirst($detail->activity_type ?? '-');
-                    $min = $detail->min_capacity ?? null;
-                    $max = $detail->max_capacity ?? null;
-                    $capacity = ($min !== null && $max !== null) ? " ({$min}-{$max})" : '';
-                    return "Group {$group} / {$activity}{$capacity}";
-                });
-                $count = $pairs->count();
-                if ($count === 1) {
-                    return e($pairs->first());
-                }
+                $count = $schedules->count();
+                // Always show a button, details will be fetched via AJAX
                 return sprintf(
-                    '<button type="button" class="btn btn-outline-secondary btn-sm show-schedules-modal position-relative group-hover-parent" data-schedules-pairs="%s" data-ac-id="%d" title="View Schedules" style="position: relative;">
+                    '<button type="button" class="btn btn-outline-secondary btn-sm show-schedules-modal position-relative group-hover-parent" data-id="%d" title="View Schedules" style="position: relative;">
                         <i class="bx bx-calendar"></i> Schedules 
                         <span class="badge bg-secondary schedules-badge-hover" style="transition: background-color 0.2s, color 0.2s;">%d</span>
                     </button>',
-                    e(json_encode($pairs->toArray())),
                     $availableCourse->id,
                     $count
                 );
@@ -778,13 +795,19 @@ class AvailableCourseService
 
     public function getAvailableCourseWithEligibilities(int $id): AvailableCourse
     {
-        return AvailableCourse::with(['eligibilities.program', 'eligibilities.level', 'course', 'term', 'schedules'])
-            ->findOrFail($id);
+        return AvailableCourse::with([
+            'eligibilities.program',
+            'eligibilities.level',
+            'course',
+            'term',
+            'schedules.scheduleAssignments.scheduleSlot'
+        ])->findOrFail($id);
     }
 
     public function getAvailableCourse(int $id): array
     {
         $availableCourse = $this->getAvailableCourseWithEligibilities($id);
+
         return [
             'id' => $availableCourse->id,
             'course_id' => $availableCourse->course_id,
@@ -794,20 +817,26 @@ class AvailableCourseService
                 return [
                     'program_id' => $eligibility->program_id,
                     'level_id' => $eligibility->level_id,
-                    'program_name' => $eligibility->program?->name,
-                    'level_name' => $eligibility->level?->name,
+                    'program_name' => $eligibility->program ? $eligibility->program->name : null,
+                    'level_name' => $eligibility->level ? $eligibility->level->name : null,
                 ];
             })->toArray(),
-            'schedules' => $availableCourse->schedules->map(function($detail) {
+            'schedules' => $availableCourse->schedules->map(function($schedule) {
                 return [
-                    'id' => $detail->id,
-                    'group' => $detail->group,
-                    'activity_type' => $detail->activity_type,
-                    'day' => $detail->day ?? null,
-                    'slot' => $detail->slot ?? null,
-                    'schedule_code' => $detail->schedule?->code ?? null,
-                    'min_capacity' => $detail->min_capacity ?? 1,
-                    'max_capacity' => $detail->max_capacity ?? 30,
+                    'group' => $schedule->group,
+                    'activity_type' => $schedule->activity_type,
+                    'slots' => optional($schedule->scheduleAssignments)->map(function($assignment) {
+                        return [
+                            'schedule_assignment_id' => $assignment->id,
+                            'slot_id' => $assignment->scheduleSlot?->id,
+                            'schedule_id' => $assignment->scheduleSlot?->schedule_id,
+                            'day_of_week' => $assignment->scheduleSlot?->day_of_week,
+                            'start_time' => $assignment->scheduleSlot?->start_time,
+                            'end_time' => $assignment->scheduleSlot?->end_time,
+                        ];
+                    })->filter()->values()->toArray(),
+                    'min_capacity' => $schedule->min_capacity ?? 1,
+                    'max_capacity' => $schedule->max_capacity ?? 30,
                 ];
             })->toArray(),
         ];
@@ -982,33 +1011,18 @@ class AvailableCourseService
         $editUrl = route('available_courses.edit', $availableCourse->id);
 
         return '
-            <div class="btn-group">
-                <button
-                    type="button"
-                    class="btn btn-primary btn-icon rounded-pill dropdown-toggle hide-arrow"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                >
-                    <i class="bx bx-dots-vertical-rounded"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li>
-                        <a class="dropdown-item editAvailableCourseBtn" href="' . e($editUrl) . '" data-id="' . e($availableCourse->id) . '">
-                            <i class="bx bx-edit me-1"></i> Edit
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item viewCourseSchedulesBtn" href="javascript:void(0);" data-id="' . e($availableCourse->id) . '">
-                            <i class="bx bx-calendar me-1"></i> View Schedules
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item deleteAvailableCourseBtn" href="javascript:void(0);" data-id="' . e($availableCourse->id) . '">
-                            <i class="bx bx-trash text-danger me-1"></i> Delete
-                        </a>
-                    </li>
-                </ul>
-            </div>
+            <a class="btn btn-sm btn-primary editAvailableCourseBtn me-1"
+               href="' . e($editUrl) . '"
+               data-id="' . e($availableCourse->id) . '"
+               title="Edit">
+                <i class="bx bx-edit"></i>
+            </a>
+            <button class="btn btn-sm btn-danger deleteAvailableCourseBtn"
+                    data-id="' . e($availableCourse->id) . '"
+                    title="Delete"
+                    type="button">
+                <i class="bx bx-trash"></i>
+            </button>
         ';
     }
 }

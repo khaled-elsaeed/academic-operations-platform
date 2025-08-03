@@ -233,7 +233,7 @@ const Utils = {
 
     /**
      * Populate a <select> element with options.
-     * @param {jQuery} $select - jQuery object for the select element
+     * @param {jQuery|string} select - jQuery object for the select element or a selector string
      * @param {Array} items - Array of items to populate. Each item can be an object or a string/number.
      * @param {Object} options - Optional config:
      *   - valueField: property name for option value (default: 'id')
@@ -243,9 +243,15 @@ const Utils = {
      *   - includePlaceholder: whether to include placeholder (default: true)
      * @param {boolean} isSelect2 - true if select2 is used, false for normal select (default: false)
      */
-    populateSelect($select, items, options = {}, isSelect2 = false) {
-      // Always treat $select as a jQuery object
-      // (Assume all callers pass a jQuery object)
+    populateSelect(select, items, options = {}, isSelect2 = false) {
+      // Accept either a jQuery object or a selector string
+      let $select;
+      if (typeof select === 'string') {
+        $select = $(select);
+      } else {
+        $select = select;
+      }
+
       const {
         valueField = 'id',
         textField = 'name',

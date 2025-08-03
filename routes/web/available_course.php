@@ -41,4 +41,7 @@ Route::middleware(['auth'])
         // ===== Related Data Routes =====
         Route::get('{availableCourse}/programs', 'programs')->name('programs')->middleware('can:course.view');
         Route::get('{availableCourse}/levels', 'levels')->name('levels')->middleware('can:course.view');
+
+        // ===== Schedules AJAX Route =====
+        Route::get('{availableCourse}/schedules', 'schedules')->name('schedules')->middleware('can:course.view');
     });

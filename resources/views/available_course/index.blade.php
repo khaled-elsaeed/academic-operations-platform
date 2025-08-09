@@ -180,8 +180,12 @@ const SELECTORS = {
 // UTILITY FUNCTIONS
 // ===========================
 const Utils = {
-  showSuccess(message) {
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: message, showConfirmButton: false, timer: 2500, timerProgressBar: true });
+  showSuccess(message, useToast = true) {
+    if (useToast) {
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: message, showConfirmButton: false, timer: 2500, timerProgressBar: true });
+    } else {
+      Swal.fire({ title: 'Success', text: message, icon: 'success' });
+    }
   },
   showError(message) {
     Swal.fire({ title: 'Error', html: message, icon: 'error' });
@@ -357,9 +361,16 @@ const ImportManager = {
     errorHtml += '<thead><tr><th style="width: 80px;">Row #</th><th style="width: 200px;">Error</th><th>Original Data</th></tr></thead><tbody>';
     errors.forEach(function(error) {
       let errorMessages = '';
-      if (Array.isArray(error.errors)) {
+      
+      // Handle different error message formats
+      if (error.error) {
+        // Single error message (current format)
+        errorMessages = String(error.error);
+      } else if (Array.isArray(error.errors)) {
+        // Array of error messages
         errorMessages = error.errors.join('<br>');
-      } else if (typeof error.errors === 'object') {
+      } else if (typeof error.errors === 'object' && error.errors !== null) {
+        // Object of field errors
         Object.keys(error.errors).forEach(function(field) {
           const fieldErrors = error.errors[field];
           if (Array.isArray(fieldErrors)) {
@@ -370,21 +381,29 @@ const ImportManager = {
             errorMessages += String(fieldErrors) + '<br>';
           }
         });
+      } else if (typeof error.errors === 'string') {
+        // String error message
+        errorMessages = error.errors;
       } else {
-        errorMessages = String(error.errors);
+        // Fallback
+        errorMessages = 'Unknown error';
       }
+      
       let originalDataHtml = '';
-      if (error.original_data) {
+      const dataSource = error.data || error.original_data; // Handle both formats
+      if (dataSource) {
         originalDataHtml = '<div class="small">';
-        Object.keys(error.original_data).forEach(function(key) {
-          const value = error.original_data[key];
+        Object.keys(dataSource).forEach(function(key) {
+          const value = dataSource[key];
           const displayValue = value === null || value === undefined ? '<em class="text-muted">null</em>' : value;
           originalDataHtml += `<strong>${key}:</strong> ${displayValue}<br>`;
         });
         originalDataHtml += '</div>';
       }
+      
+      const rowNumber = error.row_number || error.row || 'N/A';
       errorHtml += '<tr>';
-      errorHtml += `<td class="text-center fw-bold">${error.row}</td>`;
+      errorHtml += `<td class="text-center fw-bold">${rowNumber}</td>`;
       errorHtml += `<td class="text-danger small">${errorMessages}</td>`;
       errorHtml += `<td class="small">${originalDataHtml}</td>`;
       errorHtml += '</tr>';

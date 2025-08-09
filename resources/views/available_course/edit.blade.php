@@ -51,25 +51,25 @@
               <div class="card-body pt-2 pb-3">
                 <div class="d-flex flex-wrap gap-3 align-items-center">
                   <div class="form-check">
-                    <input class="form-check-input" type="radio" name="eligibility_mode" id="mode_individual" value="individual">
+                    <input class="form-check-input" type="radio" name="mode" id="mode_individual" value="individual">
                     <label class="form-check-label" for="mode_individual">
                       Individual <i class="bx bx-question-mark small text-muted" data-bs-toggle="tooltip" title="Add specific program & level pairs."></i>
                     </label>
                   </div>
                   <div class="form-check">
-                    <input class="form-check-input" type="radio" name="eligibility_mode" id="mode_all_programs" value="all_programs">
+                    <input class="form-check-input" type="radio" name="mode" id="mode_all_programs" value="all_programs">
                     <label class="form-check-label" for="mode_all_programs">
                       All Programs <i class="bx bx-question-mark small text-muted" data-bs-toggle="tooltip" title="Make available to all programs for a specific level."></i>
                     </label>
                   </div>
                   <div class="form-check">
-                    <input class="form-check-input" type="radio" name="eligibility_mode" id="mode_all_levels" value="all_levels">
+                    <input class="form-check-input" type="radio" name="mode" id="mode_all_levels" value="all_levels">
                     <label class="form-check-label" for="mode_all_levels">
                       All Levels <i class="bx bx-question-mark small text-muted" data-bs-toggle="tooltip" title="Make available to all levels for a specific program."></i>
                     </label>
                   </div>
                   <div class="form-check">
-                    <input class="form-check-input" type="radio" name="eligibility_mode" id="mode_universal" value="universal">
+                    <input class="form-check-input" type="radio" name="mode" id="mode_universal" value="universal">
                     <label class="form-check-label" for="mode_universal">
                       Universal <i class="bx bx-question-mark small text-muted" data-bs-toggle="tooltip" title="Make available to all programs and all levels."></i>
                     </label>
@@ -261,7 +261,7 @@ const ROUTES = {
   }
 };
 
-const ELIGIBILITY_MODES = {
+const ModeS = {
   INDIVIDUAL: 'individual',
   ALL_PROGRAMS: 'all_programs',
   ALL_LEVELS: 'all_levels',
@@ -375,8 +375,8 @@ const DropdownManager = {
     $('#term_id').val(availableCourse.term_id).trigger('change');
 
     // Set eligibility mode - handle null case and default to 'individual'
-    const eligibilityMode = availableCourse.eligibility_mode || 'individual';
-    $(`input[name="eligibility_mode"][value="${eligibilityMode}"]`).prop('checked', true);
+    const eligibilityMode = availableCourse.mode || 'individual';
+    $(`input[name="mode"][value="${eligibilityMode}"]`).prop('checked', true);
 
     // Load eligibility data based on mode
     this.loadEligibilityData(availableCourse, eligibilityMode);
@@ -387,17 +387,17 @@ const DropdownManager = {
 
   loadEligibilityData(availableCourse, mode) {
     switch(mode) {
-      case ELIGIBILITY_MODES.ALL_PROGRAMS:
+      case ModeS.ALL_PROGRAMS:
         if (availableCourse.eligibilities && availableCourse.eligibilities.length > 0) {
           $('#allProgramsLevelSelect').val(availableCourse.eligibilities[0].level_id);
         }
         break;
-      case ELIGIBILITY_MODES.ALL_LEVELS:
+      case ModeS.ALL_LEVELS:
         if (availableCourse.eligibilities && availableCourse.eligibilities.length > 0) {
           $('#allLevelsProgramSelect').val(availableCourse.eligibilities[0].program_id);
         }
         break;
-      case ELIGIBILITY_MODES.INDIVIDUAL:
+      case ModeS.INDIVIDUAL:
         // Load individual eligibility pairs
         if (availableCourse.eligibilities && availableCourse.eligibilities.length > 0) {
           availableCourse.eligibilities.forEach(eligibility => {
@@ -407,7 +407,7 @@ const DropdownManager = {
           EligibilityTableManager.addRow(); // Add empty row
         }
         break;
-      case ELIGIBILITY_MODES.UNIVERSAL:
+      case ModeS.UNIVERSAL:
         // Nothing specific to load for universal
         break;
     }
@@ -559,7 +559,13 @@ const ScheduleDetailsCardManager = {
       </select>
     `;
     const daySelect = `<select class='form-select schedule-day-select' name='schedule_details[${index}][schedule_day_id]' disabled></select>`;
-    const slotSelect = `<select class='form-select schedule-slot-select' name='schedule_details[${index}][schedule_slot_id]' disabled></select>`;
+    const slotSelect = `<select class='form-select schedule-slot-select' name='schedule_details[${index}][schedule_slot_ids]' multiple disabled style='min-height: 120px;'></select>`;
+    const slotHelpText = `<div class="form-text small">Hold Ctrl/Cmd to select multiple consecutive slots</div>`;
+    const slotSummary = `
+      <div class="selected-slots-summary mt-2 d-none">
+        <small class="text-muted">Selected: <span class="slot-summary-text"></span></small>
+      </div>
+    `;
     const groupSelect = `
       <select class='form-select group-select' name='schedule_details[${index}][group_number]'>
         <option value=''>Select Group</option>
@@ -612,12 +618,18 @@ const ScheduleDetailsCardManager = {
             ${groupSelect}
           </div>
           <div class="col-md-4">
+            <label class="form-label fw-semibold">Location</label>
+            <input type="text" class="form-control location-input" name="schedule_details[${index}][location]" placeholder="Enter Location" value="${schedule.location || ''}">
+          </div>
+          <div class="col-md-4">
             <label class="form-label fw-semibold">Day</label>
             ${daySelect}
           </div>
           <div class="col-md-4">
-            <label class="form-label fw-semibold">Slot</label>
+            <label class="form-label fw-semibold">Slots</label>
             ${slotSelect}
+            ${slotHelpText}
+            ${slotSummary}
           </div>
           <div class="col-md-4">
             <label class="form-label fw-semibold">Capacity</label>
@@ -683,12 +695,16 @@ const ScheduleDetailsCardManager = {
     if (schedule.slots?.[0]?.schedule_id) {
       const $daySelect = $newCard.find('.schedule-day-select');
       const $slotSelect = $newCard.find('.schedule-slot-select');
+      
+      // Collect all slot IDs from multiple slots
+      const slotIds = schedule.slots.map(slot => slot.slot_id);
+      
       this.loadScheduleDaysSlots(
         schedule.slots[0].schedule_id,
         $daySelect,
         $slotSelect,
         schedule.slots[0].day_of_week,
-        schedule.slots[0].slot_id
+        slotIds
       );
     }
 
@@ -800,25 +816,45 @@ const ScheduleDetailsCardManager = {
       const dayData = daysData.find(day => day.day_of_week === selectedDay);
       
       if (dayData && dayData.slots && dayData.slots.length > 0) {
-        // Map slots to dropdown options
-        const slotOptions = dayData.slots.map(slot => ({
-          id: slot.id,
-          name: `Slot ${slot.slot_order}: ${slot.label || `${slot.start_time} - ${slot.end_time}`}`
-        }));
+        // Map slots to dropdown options with data-order attribute
+        const slotOptions = dayData.slots.map(slot => {
+          
+          const startTime = slot.start_time;
+          const endTime = slot.end_time;
 
-        // Populate the slot select dropdown
-        Utils.populateSelect(
-          $slotSelect,
-          slotOptions,
-          {
-            valueField: 'id',
-            textField: 'name',
-            placeholder: 'Select Slot',
-            selected: selectedSlotId,
-            includePlaceholder: true
-          },
-          true
-        );
+          return {
+            id: slot.id,
+            name: `Slot ${slot.slot_order}: ${slot.label || `${startTime} - ${endTime}`}`,
+            order: slot.slot_order
+          };
+        });
+
+        // Populate the slot select dropdown manually to add data-order attribute
+        $slotSelect.empty();
+        $slotSelect.append(`<option value="">Select Slots</option>`);
+        
+        slotOptions.forEach(slot => {
+          let selected = '';
+          if (selectedSlotId) {
+            if (Array.isArray(selectedSlotId)) {
+              selected = selectedSlotId.includes(slot.id) ? 'selected' : '';
+            } else {
+              selected = selectedSlotId == slot.id ? 'selected' : '';
+            }
+          }
+          $slotSelect.append(`<option value="${slot.id}" data-order="${slot.order}" ${selected}>${slot.name}</option>`);
+        });
+
+        // Initialize Select2 for multiple selection
+        Utils.initSelect2($slotSelect, { 
+          placeholder: 'Select Slots',
+          closeOnSelect: false 
+        });
+
+        // Add consecutive slot validation
+        $slotSelect.off('change.consecutiveValidation').on('change.consecutiveValidation', function() {
+          ScheduleDetailsCardManager.validateConsecutiveSlots($(this));
+        });
 
         // Enable the slot select
         $slotSelect.prop('disabled', false);
@@ -864,6 +900,69 @@ const ScheduleDetailsCardManager = {
    */
   loadScheduleSlots(scheduleId, dayValue, $slotSelect, selectedSlotId = null) {
     this.populateScheduleSlots(scheduleId, dayValue, $slotSelect, selectedSlotId);
+  },
+
+  validateConsecutiveSlots($slotSelect) {
+    const selectedValues = $slotSelect.val() || [];
+    const $card = $slotSelect.closest('.schedule-detail-card');
+    const $feedback = $card.find('.slot-feedback');
+    const $summary = $card.find('.selected-slots-summary');
+    const $summaryText = $card.find('.slot-summary-text');
+    
+    if (selectedValues.length === 0) {
+      $feedback.removeClass('d-block').addClass('d-none');
+      $summary.addClass('d-none');
+      $slotSelect.removeClass('is-invalid');
+      return true;
+    }
+
+    // Get slot orders and labels for validation and display
+    const selectedSlots = selectedValues.map(val => {
+      const option = $slotSelect.find(`option[value="${val}"]`);
+      return {
+        id: val,
+        order: parseInt(option.attr('data-order')),
+        label: option.text()
+      };
+    }).sort((a, b) => a.order - b.order);
+
+    // Update summary
+    if (selectedSlots.length > 0) {
+      const summaryText = selectedSlots.length === 1 
+        ? selectedSlots[0].label
+        : `${selectedSlots[0].label} - ${selectedSlots[selectedSlots.length - 1].label} (${selectedSlots.length} slots)`;
+      $summaryText.text(summaryText);
+      $summary.removeClass('d-none');
+    }
+
+    if (selectedSlots.length <= 1) {
+      $feedback.removeClass('d-block').addClass('d-none');
+      $slotSelect.removeClass('is-invalid');
+      return true;
+    }
+
+    // Check if slots are consecutive
+    let isConsecutive = true;
+    for (let i = 1; i < selectedSlots.length; i++) {
+      if (selectedSlots[i].order !== selectedSlots[i-1].order + 1) {
+        isConsecutive = false;
+        break;
+      }
+    }
+
+    if (!isConsecutive) {
+      if ($feedback.length === 0) {
+        $slotSelect.after('<div class="invalid-feedback slot-feedback d-block">Selected slots must be consecutive.</div>');
+      } else {
+        $feedback.text('Selected slots must be consecutive.').addClass('d-block');
+      }
+      $slotSelect.addClass('is-invalid');
+      return false;
+    } else {
+      $feedback.removeClass('d-block').addClass('d-none');
+      $slotSelect.removeClass('is-invalid');
+      return true;
+    }
   }
 };
 
@@ -876,7 +975,7 @@ const EligibilityModeManager = {
     $('[data-bs-toggle="tooltip"]').tooltip();
 
     // Set up mode change handler
-    $('input[name="eligibility_mode"]').on('change', (e) => {
+    $('input[name="mode"]').on('change', (e) => {
       this.showSection(e.target.value);
     });
 
@@ -885,7 +984,7 @@ const EligibilityModeManager = {
     Utils.initSelect2($('#allLevelsProgramSelect'), { placeholder: 'Select Program' });
 
     // Show initial section based on checked radio
-    const initialMode = $('input[name="eligibility_mode"]:checked').val() || ELIGIBILITY_MODES.INDIVIDUAL;
+    const initialMode = $('input[name="mode"]:checked').val() || ModeS.INDIVIDUAL;
     this.showSection(initialMode);
   },
 
@@ -902,16 +1001,16 @@ const EligibilityModeManager = {
     
     // Show appropriate section
     switch(mode) {
-      case ELIGIBILITY_MODES.INDIVIDUAL:
+      case ModeS.INDIVIDUAL:
         $('#eligibility-individual-section').removeClass('d-none').addClass('show');
         break;
-      case ELIGIBILITY_MODES.ALL_PROGRAMS:
+      case ModeS.ALL_PROGRAMS:
         $('#eligibility-all-programs-section').removeClass('d-none').addClass('show');
         break;
-      case ELIGIBILITY_MODES.ALL_LEVELS:
+      case ModeS.ALL_LEVELS:
         $('#eligibility-all-levels-section').removeClass('d-none').addClass('show');
         break;
-      case ELIGIBILITY_MODES.UNIVERSAL:
+      case ModeS.UNIVERSAL:
         $('#eligibility-universal-section').removeClass('d-none').addClass('show');
         break;
     }
@@ -921,41 +1020,41 @@ const EligibilityModeManager = {
     let isValid = true;
 
     switch (mode) {
-      case ELIGIBILITY_MODES.ALL_PROGRAMS: {
+      case ModeS.ALL_PROGRAMS: {
         const levelId = $('#allProgramsLevelSelect').val();
         if (!levelId) {
           Utils.validateField($('#allProgramsLevelSelect'), 'Please select a level.', false);
           isValid = false;
         } else {
           Utils.validateField($('#allProgramsLevelSelect'), '', true);
-          data.eligibility_mode = 'all_programs';
+          data.mode = 'all_programs';
           data.level_id = levelId;
           data.eligibility = [];
         }
         break;
       }
 
-      case ELIGIBILITY_MODES.ALL_LEVELS: {
+      case ModeS.ALL_LEVELS: {
         const programId = $('#allLevelsProgramSelect').val();
         if (!programId) {
           Utils.validateField($('#allLevelsProgramSelect'), 'Please select a program.', false);
           isValid = false;
         } else {
           Utils.validateField($('#allLevelsProgramSelect'), '', true);
-          data.eligibility_mode = 'all_levels';
+          data.mode = 'all_levels';
           data.eligibility = [];
           data.program_id = programId;
         }
         break;
       }
 
-      case ELIGIBILITY_MODES.UNIVERSAL: {
-        data.eligibility_mode = 'universal';
+      case ModeS.UNIVERSAL: {
+        data.mode = 'universal';
         data.eligibility = [];
         break;
       }
 
-      case ELIGIBILITY_MODES.INDIVIDUAL:
+      case ModeS.INDIVIDUAL:
       default: {
         if (!Array.isArray(data.eligibility) || data.eligibility.length === 0) {
           Utils.showError('Please add at least one eligibility pair.');
@@ -964,7 +1063,7 @@ const EligibilityModeManager = {
           data.eligibility = data.eligibility.map(item => ({
             ...item,
           }));
-          data.eligibility_mode = 'individual';
+          data.mode = 'individual';
         }
         break;
       }
@@ -977,15 +1076,15 @@ const EligibilityModeManager = {
     let summary = '';
     
     switch(mode) {
-      case ELIGIBILITY_MODES.ALL_PROGRAMS:
+      case ModeS.ALL_PROGRAMS:
         const levelText = $('#allProgramsLevelSelect option:selected').text();
         summary = `<b>All Programs</b> for <b>Level:</b> ${levelText}`;
         break;
-      case ELIGIBILITY_MODES.ALL_LEVELS:
+      case ModeS.ALL_LEVELS:
         const programText = $('#allLevelsProgramSelect option:selected').text();
         summary = `<b>All Levels</b> for <b>Program:</b> ${programText}`;
         break;
-      case ELIGIBILITY_MODES.UNIVERSAL:
+      case ModeS.UNIVERSAL:
         summary = `<b>All Programs</b> and <b>All Levels</b> (Universal)`;
         break;
       default:
@@ -1054,13 +1153,13 @@ const FormManager = {
       _method: 'PUT',
       course_id: $('#course_id').val(),
       term_id: $('#term_id').val(),
-      eligibility_mode: $('input[name="eligibility_mode"]:checked').val(),
+      mode: $('input[name="mode"]:checked').val(),
       eligibility: [],
       schedule_details: [],
     };
 
     // Collect eligibility data (only for individual mode)
-    if (data.eligibility_mode === ELIGIBILITY_MODES.INDIVIDUAL) {
+    if (data.mode === ModeS.INDIVIDUAL) {
       $('#eligibilityTable tbody tr').each(function() {
         const program_id = $(this).find('.program-select').val();
         const level_id = $(this).find('.level-select').val();
@@ -1075,21 +1174,23 @@ const FormManager = {
       const schedule_id = $(this).find('.schedule-select').val();
       const activity_type = $(this).find('.activity-type-select').val();
       const schedule_day_id = $(this).find('.schedule-day-select').val();
-      const schedule_slot_id = $(this).find('.schedule-slot-select').val();
+      const schedule_slot_ids = $(this).find('.schedule-slot-select').val() || [];
       const group_number = $(this).find('.group-select').val();
       const min_capacity = $(this).find('.min-capacity-input').val();
       const max_capacity = $(this).find('.max-capacity-input').val();
+      const location = $(this).find('.location-input').val();
       const schedule_assignment_id = $(this).find('.schedule-assignment-id-input').val();
 
-      if (schedule_id && schedule_day_id !== "" && schedule_slot_id && group_number) {
+      if (schedule_id && schedule_day_id !== "" && schedule_slot_ids.length > 0 && group_number) {
         data.schedule_details.push({
           schedule_id,
           activity_type,
           schedule_day_id,
-          schedule_slot_id,
+          schedule_slot_ids,
           group_number,
           min_capacity,
           max_capacity,
+          location,
           schedule_assignment_id
         });
       }
@@ -1113,7 +1214,7 @@ const FormManager = {
     }
 
     // Validate eligibility mode
-    if (!EligibilityModeManager.validateMode(data.eligibility_mode, data)) {
+    if (!EligibilityModeManager.validateMode(data.mode, data)) {
       isValid = false;
     }
 
@@ -1140,9 +1241,19 @@ const FormManager = {
         Utils.showError(`Please select a day in Schedule Detail ${scheduleNum}.`);
         return false;
       }
-      if (!detail.schedule_slot_id) {
-        Utils.showError(`Please select a slot in Schedule Detail ${scheduleNum}.`);
+      if (!detail.schedule_slot_ids || !Array.isArray(detail.schedule_slot_ids) || detail.schedule_slot_ids.length === 0) {
+        Utils.showError(`Please select at least one slot in Schedule Detail ${scheduleNum}.`);
         return false;
+      }
+
+      // Validate that slots are consecutive if multiple are selected
+      if (detail.schedule_slot_ids.length > 1) {
+        const $card = $(`#schedule-details-container .schedule-detail-card:eq(${i})`);
+        const $slotSelect = $card.find('.schedule-slot-select');
+        if (!ScheduleDetailsCardManager.validateConsecutiveSlots($slotSelect)) {
+          Utils.showError(`Selected slots must be consecutive in Schedule Detail ${scheduleNum}.`);
+          return false;
+        }
       }
       if (!detail.group_number) {
         Utils.showError(`Please select a group in Schedule Detail ${scheduleNum}.`);
@@ -1195,7 +1306,7 @@ const FormManager = {
       }
       
       // Show eligibility summary
-      EligibilityModeManager.showSummary(data.eligibility_mode);
+      EligibilityModeManager.showSummary(data.mode);
       
       // Submit form
       const response = await ApiService.updateAvailableCourse(data);

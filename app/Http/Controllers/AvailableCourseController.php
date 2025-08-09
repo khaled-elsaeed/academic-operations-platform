@@ -4,10 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\View\View;
-use App\Services\AvailableCourseService;
-use App\Services\CreateAvailableCourseService;
-use App\Services\UpdateAvailableCourseService;
-
+use App\Services\AvailableCourse\AvailableCourseService;
 use App\Exports\AvailableCoursesTemplateExport;
 use App\Http\Requests\{StoreAvailableCourseRequest, UpdateAvailableCourseRequest};
 use App\Models\AvailableCourse;
@@ -168,8 +165,9 @@ class AvailableCourseController extends Controller
 
         try {
             $result = $this->availableCourseService->importAvailableCoursesFromFile($request->file('courses_file'));
+            $importedCount = ($result['summary']['total_created'] ?? 0) + ($result['summary']['total_updated'] ?? 0);
             return successResponse($result['message'], [
-                'imported_count' => $result['imported_count'] ?? 0,
+                'imported_count' => $importedCount,
                 'errors' => $result['errors'] ?? [],
             ]);
         } catch (Exception $e) {

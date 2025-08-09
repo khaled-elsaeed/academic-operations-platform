@@ -12,17 +12,19 @@ class AvailableCoursesTemplateExport implements FromArray, WithHeadings
         // Example row
         return [
             [
-                'CS101',    // course_code
-                '2024FALL', // term_code
-                'Sch202568', // schedule_code
-                'Computer Science', // program_name
-                '1',  // level_name
-                '10',       // min_capacity
-                '30',       // max_capacity
-                'Lecture',  // activity_type
-                '1',  // group
-                'Saturday', // day
-                '1',        // slot
+                'CSE015',       
+                'Object Oriented Programming',  
+                '2243',         
+                'Lecture',      
+                '1',            
+                'Saturday',     
+                '1',            
+                '09:00 - 09:50',
+                'Dr.Mohamed Handousa', 
+                'Room(2-1-16)', 
+                'N',            
+                '1',            
+                'AIE',          
             ],
         ];
     }
@@ -30,17 +32,19 @@ class AvailableCoursesTemplateExport implements FromArray, WithHeadings
     public function headings(): array
     {
         return [
-            'course_code',
-            'term_code',
-            'schedule_code',
-            'program_name',
-            'level_name',
-            'min_capacity',
-            'max_capacity',
-            'activity_type',
-            'group',
-            'day',
-            'slot',
+            'Course Code',
+            'Course Name',
+            'Term',
+            'Activity Type',
+            'Grouping',
+            'Day',
+            'Slot',
+            'Time',
+            'Instructor',
+            'Location',
+            'External (Y/N)',
+            'Level',
+            'Program',
         ];
     }
 } 

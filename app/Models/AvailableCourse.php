@@ -84,7 +84,7 @@ class AvailableCourse extends Model
      */
     public function schedules(): HasMany
     {
-        return $this->hasMany(AvailableCourseSchedule::class, 'available_course_id');
+        return $this->hasMany(AvailableCourseSchedule::class);
     }
 
     /**

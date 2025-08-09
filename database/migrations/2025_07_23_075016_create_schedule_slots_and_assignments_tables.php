@@ -29,12 +29,11 @@ return new class extends Migration
 
         Schema::create('schedule_assignments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('schedule_slot_id')->constrained()->cascadeOnDelete();
-            $table->morphs('assignable');
+            $table->foreignId('schedule_slot_id')->constrained('schedule_slots')->cascadeOnDelete();
+            $table->string('type');
+            $table->foreignId('available_course_schedule_id')->constrained('available_course_schedules')->cascadeOnDelete();
             $table->string('title'); 
             $table->text('description')->nullable();
-            $table->string('location')->nullable();
-            $table->integer('capacity')->nullable();
             $table->integer('enrolled')->default(0);
             $table->json('resources')->nullable(); 
             $table->enum('status', ['scheduled', 'confirmed', 'cancelled', 'completed'])->default('scheduled');

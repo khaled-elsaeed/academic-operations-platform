@@ -5,7 +5,7 @@ namespace App\Models\Schedule;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
+use App\Models\AvailableCourseSchedule;
 
 class ScheduleAssignment extends Model
 {
@@ -13,12 +13,10 @@ class ScheduleAssignment extends Model
 
     protected $fillable = [
         'schedule_slot_id',
-        'assignable_id',
-        'assignable_type',
+        'type',
+        'available_course_schedule_id',
         'title',
         'description',
-        'location',
-        'capacity',
         'enrolled',
         'resources',
         'status',
@@ -37,9 +35,9 @@ class ScheduleAssignment extends Model
         return $this->belongsTo(ScheduleSlot::class);
     }
 
-    public function assignable(): MorphTo
+    public function availableCourseSchedule(): BelongsTo
     {
-        return $this->morphTo();
+        return $this->belongsTo(AvailableCourseSchedule::class);
     }
 
 

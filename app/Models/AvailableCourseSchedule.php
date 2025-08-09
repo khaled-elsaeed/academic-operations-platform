@@ -4,7 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Schedule\ScheduleAssignment;
 
 class AvailableCourseSchedule extends Model
@@ -15,6 +16,7 @@ class AvailableCourseSchedule extends Model
         'available_course_id',
         'group',
         'activity_type',
+        'location',
         'min_capacity',
         'max_capacity',
         'capacity',
@@ -37,7 +39,7 @@ class AvailableCourseSchedule extends Model
     /**
      * Get the available course that owns the schedule.
      */
-    public function availableCourse()
+    public function availableCourse(): BelongsTo
     {
         return $this->belongsTo(AvailableCourse::class);
     }
@@ -45,8 +47,8 @@ class AvailableCourseSchedule extends Model
     /**
      * Get all of the schedule assignments for the available course schedule.
      */
-    public function scheduleAssignments(): MorphMany
+    public function scheduleAssignments(): HasMany
     {
-        return $this->morphMany(ScheduleAssignment::class, 'assignable');
+        return $this->hasMany(ScheduleAssignment::class, 'available_course_schedule_id');
     }
 }

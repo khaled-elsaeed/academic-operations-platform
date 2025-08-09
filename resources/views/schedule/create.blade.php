@@ -252,7 +252,7 @@ const CONFIG = {
             index: '{{ route('schedules.index') }}'
         },
         api: {
-            terms: '{{ route('terms.all') }}',
+            terms: '{{ route('terms.all.with_inactive') }}',
             scheduleTypes: '{{ route('schedule-types.all') }}'
         }
     },

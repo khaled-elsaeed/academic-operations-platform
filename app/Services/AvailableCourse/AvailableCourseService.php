@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\AvailableCourse;
 
 use App\Models\AvailableCourse;
 use App\Models\AvailableCourseSchedule;
@@ -13,25 +13,23 @@ use App\Models\Program;
 use App\Models\Term;
 use App\Models\Schedule\Schedule;
 use App\Exceptions\BusinessValidationException;
-use App\Imports\AvailableCoursesImport;
-use App\Validators\AvailableCourseImportValidator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
-use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\DataTables;
-use App\Services\CreateAvailableCourseService;
-use App\Services\UpdateAvailableCourseService;
+use App\Services\AvailableCourse\CreateAvailableCourseService;
+use App\Services\AvailableCourse\UpdateAvailableCourseService;
+use App\Services\AvailableCourse\ImportAvailableCourseService;
 
 class AvailableCourseService
 {
     public function __construct(
         private CreateAvailableCourseService $createService,
-        private UpdateAvailableCourseService $updateService
+        private UpdateAvailableCourseService $updateService,
+        private ImportAvailableCourseService $importService
     ) {}
 
     /**
@@ -199,7 +197,7 @@ class AvailableCourseService
                 );
             })
             ->addColumn('eligibility', function ($availableCourse) {
-                if ($availableCourse->eligibility_mode === 'universal') {
+                if ($availableCourse->mode === 'universal') {
                     return '<span class="badge bg-primary">Universal</span>';
                 }
                 $pairs = $availableCourse->eligibilities->map(function ($eligibility) {
@@ -287,9 +285,9 @@ class AvailableCourseService
         }
 
         // --- Eligibility Mode Filter ---
-        $eligibilityMode = $request->input('search_eligibility_mode');
+        $eligibilityMode = $request->input('search_mode');
         if (!empty($eligibilityMode)) {
-            $query->where('eligibility_mode', $eligibilityMode);
+            $query->where('mode', $eligibilityMode);
         }
 
         // --- Activity Type Filter ---
@@ -317,23 +315,7 @@ class AvailableCourseService
      */
     public function importAvailableCoursesFromFile(UploadedFile $file): array
     {
-        try {
-            $import = new AvailableCoursesImport();
-            Excel::import($import, $file);
-            $rows = $import->rows ?? collect();
-            return $this->importAvailableCoursesFromRows($rows);
-        } catch (\Exception $e) {
-            Log::error('Failed to import available courses', [
-                'error' => $e->getMessage(),
-                'file' => $file->getClientOriginalName()
-            ]);
-            return [
-                'success' => false,
-                'message' => 'Failed to process the uploaded file.',
-                'errors' => [$e->getMessage()],
-                'created' => 0,
-            ];
-        }
+        return $this->importService->importAvailableCoursesFromFile($file);
     }
 
     /**
@@ -344,488 +326,51 @@ class AvailableCourseService
      */
     public function importAvailableCoursesFromRows(Collection $rows): array
     {
-        $errors = [];
-        $created = 0;
-        $skipped = 0;
-        
-        foreach ($rows as $index => $row) {
-            $rowNum = $index + 2;
-            try {
-                DB::transaction(function () use ($row, $rowNum, &$created, &$skipped) {
-                    $result = $this->processImportRow($row->toArray(), $rowNum);
-                    if ($result === 'created') {
-                        $created++;
-                    } else {
-                        $skipped++;
-                    }
-                });
-            } catch (ValidationException $e) {
-                $errors[] = [
-                    'row' => $rowNum,
-                    'errors' => $e->errors()["Row {$rowNum}"] ?? [],
-                    'original_data' => $row->toArray(),
-                ];
-            } catch (BusinessValidationException $e) {
-                $errors[] = [
-                    'row' => $rowNum,
-                    'errors' => ['general' => [$e->getMessage()]],
-                    'original_data' => $row->toArray(),
-                ];
-            } catch (\Exception $e) {
-                $errors[] = [
-                    'row' => $rowNum,
-                    'errors' => ['general' => ['Unexpected error - ' . $e->getMessage()]],
-                    'original_data' => $row->toArray(),
-                ];
-                Log::error('Import row processing failed', [
-                    'row' => $rowNum,
-                    'error' => $e->getMessage(),
-                    'data' => $row
-                ]);
-            }
-        }
-        
-        $totalProcessed = $created + $skipped;
-        $message = empty($errors) 
-            ? "Successfully processed {$totalProcessed} available courses. ({$created} created, {$skipped} skipped)." 
-            : "Import completed with {$totalProcessed} successful ({$created} created, {$skipped} skipped) and " . count($errors) . " failed rows.";
-        $success = empty($errors);
-        
-        return [
-            'success' => $success,
-            'message' => $message,
-            'errors' => $errors,
-            'imported_count' => $totalProcessed,
-            'created_count' => $created,
-            'skipped_count' => $skipped,
-        ];
+        return $this->importService->importAvailableCoursesFromRows($rows);
     }
 
-    /**
-     * Process a single import row.
-     *
-     * @param array $row
-     * @param int $rowNum
-     * @return string 'created' or 'skipped'
-     * @throws ValidationException|BusinessValidationException
-     */
-    private function processImportRow(array $row, int $rowNum): string
+    
+
+    public function getAvailableCourse(int $id): array
     {
-        AvailableCourseImportValidator::validateRow($row, $rowNum);
-        
-        $course = $this->findCourseByCode($row['course_code'] ?? '');
-        $term = $this->findTermByCode($row['term_code'] ?? '');
-        $programName = $row['program_name'] ?? null;
-        $levelName = $row['level_name'] ?? null;
-        $scheduleCode = $row['schedule_code'] ?? null;
-        $activityType = $row['activity_type'] ?? 'lecture';
-        $group = $row['group'] ?? 1;
-        $day = $row['day'] ?? null;
-        $slot = $row['slot'] ?? null;
-        $minCapacity = $row['min_capacity'] ?? 1;
-        $maxCapacity = $row['max_capacity'] ?? 30;
-
-        if (empty($programName) && empty($levelName)) {
-            // Universal course
-            $existingCourse = $this->findOrCreateUniversalAvailableCourse($course, $term, $row);
-            $this->createOrUpdateCourseDetail($existingCourse, $scheduleCode, $activityType, $group, $day, $slot, $minCapacity, $maxCapacity);
-            return 'created';
-        } else {
-            // Program/Level specific course
-            $program = $this->findProgramByName($programName);
-            $level = $this->findLevelByName($levelName);
-            $existingCourse = $this->findOrCreateProgramLevelAvailableCourse($course, $term, $program, $level, $row);
-            $this->createOrUpdateCourseDetail($existingCourse, $scheduleCode, $activityType, $group, $day, $slot, $minCapacity, $maxCapacity);
-            return 'created';
-        }
-    }
-
-    /**
-     * Find or create universal available course.
-     *
-     * @param Course $course
-     * @param Term $term
-     * @param array $row
-     * @return AvailableCourse
-     */
-    private function findOrCreateUniversalAvailableCourse(Course $course, Term $term, array $row): AvailableCourse
-    {
-        $existingCourse = AvailableCourse::where('course_id', $course->id)
-            ->where('term_id', $term->id)
-            ->where('eligibility_mode', 'universal')
-            ->first();
-
-        if (!$existingCourse) {
-            $data = [
-                'course_id' => $course->id,
-                'term_id' => $term->id,
-                'eligibility_mode' => 'universal',
-            ];
-            $existingCourse = $this->createService->createAvailableCourseSingle($data);
-        }
-
-        return $existingCourse;
-    }
-
-    /**
-     * Find or create program/level specific available course.
-     *
-     * @param Course $course
-     * @param Term $term
-     * @param Program $program
-     * @param Level $level
-     * @param array $row
-     * @return AvailableCourse
-     */
-    private function findOrCreateProgramLevelAvailableCourse(Course $course, Term $term, Program $program, Level $level, array $row): AvailableCourse
-    {
-        $existingCourse = AvailableCourse::where('course_id', $course->id)
-            ->where('term_id', $term->id)
-            ->where('eligibility_mode', 'individual')
-            ->whereHas('eligibilities', function ($q) use ($program, $level) {
-                $q->where('program_id', $program->id)
-                  ->where('level_id', $level->id);
-            })
-            ->first();
-
-        if (!$existingCourse) {
-            $data = [
-                'course_id' => $course->id,
-                'term_id' => $term->id,
-                'eligibility_mode' => 'individual',
-                'eligibility' => [
-                    [
-                        'program_id' => $program->id,
-                        'level_id' => $level->id,
-                    ]
-                ],
-            ];
-            $existingCourse = $this->createService->createAvailableCourseSingle($data);
-        }
-
-        return $existingCourse;
-    }
-
-    /**
-     * Create or update course detail.
-     *
-     * @param AvailableCourse $availableCourse
-     * @param string|null $scheduleCode
-     * @param string $activityType
-     * @param int $group
-     * @param string|null $day
-     * @param string|null $slot
-     * @param int|null $minCapacity
-     * @param int|null $maxCapacity
-     * @return AvailableCourseSchedule
-     */
-    private function createOrUpdateCourseDetail(
-        AvailableCourse $availableCourse,
-        ?string $scheduleCode,
-        string $activityType,
-        int $group,
-        ?string $day,
-        ?string $slot,
-        ?int $minCapacity = 1,
-        ?int $maxCapacity = 30
-    ): AvailableCourseSchedule {
-        $detailData = [
-            'available_course_id' => $availableCourse->id,
-            'group' => $group,
-            'activity_type' => strtolower($activityType),
-            'min_capacity' => $minCapacity ?? 1,
-            'max_capacity' => $maxCapacity ?? 30,
-        ];
-
-        $schedule = null;
-        if ($scheduleCode) {
-            $schedule = $this->findScheduleByCode($scheduleCode);
-            $detailData['schedule_id'] = $schedule->id;
-        }
-
-        if ($day) {
-            $detailData['day'] = $day;
-        }
-
-        if ($slot) {
-            $detailData['slot'] = $slot;
-        }
-
-        // If both day and slot are provided and schedule is found, try to resolve slot id
-        $scheduleSlot = null;
-        if ($schedule && $day && $slot) {
-            $scheduleSlot = ScheduleSlot::where('schedule_id', $schedule->id)
-                ->where('day_of_week', $day)
-                ->where('slot_order', $slot)
-                ->first();
-
-            if ($scheduleSlot) {
-                $detailData['schedule_slot_id'] = $scheduleSlot->id;
-            }
-        }
-
-        // Create or update the AvailableCourseSchedule
-        $availableCourseSchedule = AvailableCourseSchedule::updateOrCreate(
-            [
-                'available_course_id' => $availableCourse->id,
-                'group' => $group,
-                'activity_type' => strtolower($activityType),
-            ],
-            $detailData
-        );
-
-        // If a schedule slot was found, create a ScheduleAssignment morphing to this AvailableCourseSchedule
-        if ($scheduleSlot) {
-            ScheduleAssignment::firstOrCreate([
-                'schedule_slot_id' => $scheduleSlot->id,
-                'assignable_id' => $availableCourseSchedule->id,
-                'assignable_type' => AvailableCourseSchedule::class,
-            ], [
-                'title' => $availableCourse->course->name ?? 'Course Activity',
-                'description' => $availableCourse->course->description ?? null,
-                'location' => null,
-                'capacity' => $availableCourseSchedule->max_capacity,
-                'enrolled' => 0,
-                'resources' => null,
-                'status' => 'scheduled',
-                'notes' => null,
-            ]);
-        }
-
-        return $availableCourseSchedule;
-    }
-
-    /**
-     * Create course schedules for an available course.
-     *
-     * @param AvailableCourse $availableCourse
-     * @param array $schedules
-     * @return void
-     */
-    private function createCourseSchedules(AvailableCourse $availableCourse, array $schedules): void
-    {
-        foreach ($schedules as $detail) {
-            AvailableCourseSchedule::create([
-                'available_course_id' => $availableCourse->id,
-                'group' => $detail['group'] ?? 1,
-                'activity_type' => strtolower($detail['activity_type'] ?? 'lecture'),
-                'min_capacity' => $detail['min_capacity'] ?? 1,
-                'max_capacity' => $detail['max_capacity'] ?? 30,
-                'day' => $detail['day'] ?? null,
-                'slot' => $detail['slot'] ?? null,
-            ]);
-        }
-    }
-
-    /**
-     * Update course schedules for an available course.
-     *
-     * @param AvailableCourse $availableCourse
-     * @param array $schedules
-     * @return void
-     */
-    private function updateCourseSchedules(AvailableCourse $availableCourse, array $schedules): void
-    {
-        // Delete existing schedules
-        $availableCourse->schedules()->delete();
-
-        // Create new schedules
-        $this->createCourseSchedules($availableCourse, $schedules);
-    }
-
-    // --- Private helpers for finding related models and validation ---
-
-    private function findCourseByCode(string $code): Course
-    {
-        $course = Course::where('code', $code)->first();
-        if (!$course) {
-            throw new BusinessValidationException("Course with code '{$code}' not found.");
-        }
-        return $course;
-    }
-
-    private function findTermByCode(string $code): Term
-    {
-        $term = Term::where('code', $code)->first();
-        if (!$term) {
-            throw new BusinessValidationException("Term with code '{$code}' not found.");
-        }
-        return $term;
-    }
-
-    private function findProgramByName(string $name): Program
-    {
-        $program = Program::where('name', $name)->first();
-        if (!$program) {
-            throw new BusinessValidationException("Program '{$name}' not found.");
-        }
-        return $program;
-    }
-
-    private function findLevelByName(string $name): Level
-    {
-        $level = Level::where('name', $name)->first();
-        if (!$level) {
-            throw new BusinessValidationException("Level '{$name}' not found.");
-        }
-        return $level;
-    }
-
-    private function findScheduleByCode(string $code): Schedule
-    {
-        $schedule = Schedule::where('code', $code)->first();
-        if (!$schedule) {
-            throw new BusinessValidationException("Schedule with code '{$code}' not found.");
-        }
-        return $schedule;
-    }
-
-    private function validateAvailableCourseData(array $data): void
-    {
-        // Validate min/max capacity for each detail if present
-        if (isset($data['schedules']) && is_array($data['schedules'])) {
-            foreach ($data['schedules'] as $detail) {
-                $minCapacity = $detail['min_capacity'] ?? 1;
-                $maxCapacity = $detail['max_capacity'] ?? 30;
-                if ($minCapacity > $maxCapacity) {
-                    throw new BusinessValidationException('Minimum capacity cannot be greater than maximum capacity in course schedules.');
-                }
-                if ($minCapacity < 0 || $maxCapacity < 0) {
-                    throw new BusinessValidationException('Capacity values cannot be negative in course schedules.');
-                }
-            }
-        }
-    }
-
-    private function ensureAvailableCourseDoesNotExist(array $data, int $excludeId = null): void
-    {
-        $eligibilityMode = $data['eligibility_mode'] ?? 'individual';
-        
-        if ($eligibilityMode === 'universal') {
-            if ($this->universalAvailableCourseExists($data, $excludeId)) {
-                throw new BusinessValidationException('A universal available course for this Course and Term already exists.');
-            }
-        } else {
-            if ($this->availableCourseEligibilitiesExist($data, $excludeId)) {
-                throw new BusinessValidationException('An available course with the same Course, Term, Program, and Level already exists.');
-            }
-        }
-    }
-
-    private function universalAvailableCourseExists(array $data, int $excludeId = null): bool
-    {
-        $query = AvailableCourse::where('course_id', $data['course_id'])
-            ->where('term_id', $data['term_id'])
-            ->where('eligibility_mode', 'universal');
-        if ($excludeId) {
-            $query->where('id', '!=', $excludeId);
-        }
-        return $query->exists();
-    }
-
-    private function availableCourseEligibilitiesExist(array $data, int $excludeId = null): bool
-    {
-        $eligibilityMode = $data['eligibility_mode'] ?? 'individual';
-        $courseId = $data['course_id'];
-        $termId = $data['term_id'];
-
-        switch ($eligibilityMode) {
-            case 'all_programs':
-                $levelId = $data['level_id'];
-                $query = AvailableCourse::where('course_id', $courseId)
-                    ->where('term_id', $termId)
-                    ->where(function ($q) use ($levelId) {
-                        $q->where('eligibility_mode', 'all_programs')
-                          ->whereHas('eligibilities', function ($eq) use ($levelId) {
-                              $eq->where('level_id', $levelId);
-                          });
-                        $q->orWhereHas('eligibilities', function ($eq) use ($levelId) {
-                            $eq->where('level_id', $levelId);
-                        });
-                    });
-                break;
-
-            case 'all_levels':
-                $programId = $data['program_id'];
-                $query = AvailableCourse::where('course_id', $courseId)
-                    ->where('term_id', $termId)
-                    ->where(function ($q) use ($programId) {
-                        $q->where('eligibility_mode', 'all_levels')
-                          ->whereHas('eligibilities', function ($eq) use ($programId) {
-                              $eq->where('program_id', $programId);
-                          });
-                        $q->orWhereHas('eligibilities', function ($eq) use ($programId) {
-                            $eq->where('program_id', $programId);
-                        });
-                    });
-                break;
-
-            case 'individual':
-            default:
-                $eligibility = $data['eligibility'] ?? [];
-                foreach ($eligibility as $pair) {
-                    $programId = $pair['program_id'];
-                    $levelId = $pair['level_id'];
-                    
-                    $query = AvailableCourse::where('course_id', $courseId)
-                        ->where('term_id', $termId)
-                        ->whereHas('eligibilities', function ($q) use ($programId, $levelId) {
-                            $q->where('program_id', $programId)->where('level_id', $levelId);
-                        });
-                    
-                    if ($excludeId) {
-                        $query->where('id', '!=', $excludeId);
-                    }
-                    
-                    if ($query->exists()) {
-                        return true;
-                    }
-                }
-                return false;
-        }
-
-        if ($excludeId) {
-            $query->where('id', '!=', $excludeId);
-        }
-        
-        return $query->exists();
-    }
-
-    // --- Additional methods for fetching and formatting data ---
-
-    public function getAvailableCourseWithEligibilities(int $id): AvailableCourse
-    {
-        return AvailableCourse::with([
+        $availableCourse = AvailableCourse::with([
             'eligibilities.program',
             'eligibilities.level',
             'course',
             'term',
             'schedules.scheduleAssignments.scheduleSlot'
         ])->findOrFail($id);
-    }
 
-    public function getAvailableCourse(int $id): array
-    {
-        $availableCourse = $this->getAvailableCourseWithEligibilities($id);
+        Log::info('Retrieved available course', [
+            'course_id' => $availableCourse->id,
+            'term_id' => $availableCourse->term_id,
+            'availability' => $availableCourse,
+        ]);
 
         return [
             'id' => $availableCourse->id,
             'course_id' => $availableCourse->course_id,
             'term_id' => $availableCourse->term_id,
-            'eligibility_mode' => $availableCourse->eligibility_mode,
-            'eligibilities' => $availableCourse->eligibilities->map(function($eligibility) {
+            'mode' => $availableCourse->mode,
+            'eligibilities' => $availableCourse->eligibilities->map(function ($eligibility) {
                 return [
                     'program_id' => $eligibility->program_id,
                     'level_id' => $eligibility->level_id,
-                    'program_name' => $eligibility->program ? $eligibility->program->name : null,
-                    'level_name' => $eligibility->level ? $eligibility->level->name : null,
+                    'program_name' => $eligibility->program?->name,
+                    'level_name' => $eligibility->level?->name,
                 ];
             })->toArray(),
-            'schedules' => $availableCourse->schedules->map(function($schedule) {
+            'schedules' => $availableCourse->schedules->map(function ($schedule) {
                 return [
+                    'id' => $schedule->id,
                     'group' => $schedule->group,
                     'activity_type' => $schedule->activity_type,
-                    'slots' => optional($schedule->scheduleAssignments)->map(function($assignment) {
+                    'location' => $schedule->location,
+                    'slots' => $schedule->scheduleAssignments->map(function ($assignment) {
+                        Log::info('Mapping schedule assignment', [
+                            'assignment_id' => $assignment->id,
+                            'slot_id' => $assignment->scheduleSlot?->id,
+                        ]);
                         return [
                             'schedule_assignment_id' => $assignment->id,
                             'slot_id' => $assignment->scheduleSlot?->id,
@@ -833,14 +378,16 @@ class AvailableCourseService
                             'day_of_week' => $assignment->scheduleSlot?->day_of_week,
                             'start_time' => $assignment->scheduleSlot?->start_time,
                             'end_time' => $assignment->scheduleSlot?->end_time,
+                            'slot_order' => $assignment->scheduleSlot?->slot_order,
                         ];
-                    })->filter()->values()->toArray(),
+                    })->toArray(),
                     'min_capacity' => $schedule->min_capacity ?? 1,
                     'max_capacity' => $schedule->max_capacity ?? 30,
                 ];
             })->toArray(),
         ];
     }
+
 
     public function getAll(): Collection
     {
@@ -855,7 +402,7 @@ class AvailableCourseService
                     'term_id' => $availableCourse->term_id,
                     'term_name' => $availableCourse->term?->name ?? '-',
                     'term_code' => $availableCourse->term?->code ?? '-',
-                    'eligibility_mode' => $availableCourse->eligibility_mode,
+                    'mode' => $availableCourse->mode,
                     'eligibilities' => $availableCourse->eligibilities->map(function($eligibility) {
                         return [
                             'program_id' => $eligibility->program_id,
@@ -896,7 +443,7 @@ class AvailableCourseService
 
         if (isset($filters['program_id']) && isset($filters['level_id'])) {
             $query->where(function($q) use ($filters) {
-                $q->where('eligibility_mode', 'universal')
+                $q->where('mode', 'universal')
                   ->orWhereHas('eligibilities', function($eligibilityQuery) use ($filters) {
                       $eligibilityQuery->where('program_id', $filters['program_id'])
                                       ->where('level_id', $filters['level_id']);

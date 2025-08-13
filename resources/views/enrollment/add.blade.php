@@ -1073,8 +1073,10 @@ function loadCourseGroups(courseId) {
     url: '{{ route('available_courses.schedules', ':id') }}'.replace(':id', courseId),
     method: 'GET',
     success: function(res) {
-      const schedules = res.data || [];
-      displayCourseGroups(schedules);
+      const groups = res.data || [];
+      // Cache the groups data in the modal
+      $('#groupSelectionModal').data('groups', groups);
+      displayCourseGroups(groups);
     },
     error: function() {
       $('#groupsList').html(`
@@ -1090,8 +1092,8 @@ function loadCourseGroups(courseId) {
 /**
  * Displays course groups for selection
  */
-function displayCourseGroups(schedules) {
-  if (schedules.length === 0) {
+function displayCourseGroups(groups) {
+  if (groups.length === 0) {
     $('#groupsList').html(`
       <div class="alert alert-warning">
         <i class="bx bx-info-circle me-2"></i>
@@ -1102,32 +1104,67 @@ function displayCourseGroups(schedules) {
   }
   
   let html = '';
-  schedules.forEach(function(schedule) {
+  groups.forEach(function(group) {
+    if (!group.activities || group.activities.length === 0) return;
+    
+    // Create a group selection card
     html += `
-      <div class="group-selection-item" data-group-id="${schedule.id}">
+      <div class="group-selection-item mb-3 border rounded p-3" data-group-number="${group.group}">
         <div class="form-check">
           <input class="form-check-input group-radio" type="radio" 
-                 name="selected_group" value="${schedule.id}" 
-                 id="group_${schedule.id}">
-          <label class="form-check-label w-100" for="group_${schedule.id}">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
-                <h6 class="mb-1 text-dark">Group ${schedule.group} - ${schedule.activity_type}</h6>
-                <p class="text-muted mb-1 small">
-                  <i class="bx bx-time me-1"></i>
-                  <strong>${schedule.start_time} - ${schedule.end_time}</strong>
-                </p>
-                <p class="text-muted mb-0 small">
-                  <i class="bx bx-calendar me-1"></i>
-                  <strong>${schedule.day_of_week || 'Schedule TBA'}</strong>
-                </p>
+                 name="selected_group" value="${group.group}" 
+                 id="group_${group.group}">
+          <label class="form-check-label w-100" for="group_${group.group}">
+            <div class="mb-2">
+              <h5 class="mb-1 text-primary">
+                <i class="bx bx-group me-2"></i>Group ${group.group}
+              </h5>
+            </div>
+            
+            <div class="row">
+    `;
+    
+    // Display each activity type in the group
+    group.activities.forEach(function(activity) {
+      html += `
+        <div class="col-md-6 mb-2">
+          <div class="card border-light">
+            <div class="card-body p-2">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <h6 class="mb-1 text-dark">
+                    <i class="bx ${activity.activity_type === 'lecture' ? 'bx-book-open' : 'bx-edit'} me-1"></i>
+                    ${activity.activity_type.charAt(0).toUpperCase() + activity.activity_type.slice(1)}
+                  </h6>
+                  <p class="text-muted mb-1 small">
+                    <i class="bx bx-time me-1"></i>
+                    <strong>${activity.start_time} - ${activity.end_time}</strong>
+                  </p>
+                  <p class="text-muted mb-1 small">
+                    <i class="bx bx-calendar me-1"></i>
+                    <strong>${activity.day_of_week || 'Schedule TBA'}</strong>
+                  </p>
+                  ${activity.location ? `
+                    <p class="text-muted mb-0 small">
+                      <i class="bx bx-map me-1"></i>
+                      <strong>${activity.location}</strong>
+                    </p>
+                  ` : ''}
+                </div>
+                <div class="text-end">
+                  <span class="badge bg-info text-white small">
+                    <i class="bx bx-users me-1"></i>
+                    ${activity.enrolled_count || 0}/${activity.max_capacity}
+                  </span>
+                </div>
               </div>
-              <div class="text-end">
-                <span class="badge bg-info text-white">
-                  <i class="bx bx-users me-1"></i>
-                  ${schedule.enrolled_count || 0}/${schedule.max_capacity}
-                </span>
-              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    html += `
             </div>
           </label>
         </div>
@@ -1175,16 +1212,23 @@ function showMissingPrerequisites(missingPrereqs) {
  * Updates the weekly schedule visualization
  */
 function updateWeeklySchedule() {
-  const selectedCourses = [];
+  const selectedActivities = [];
   $('.course-checkbox:checked').each(function() {
     const courseId = $(this).val();
     const groupData = selectedCourseGroups.get(courseId);
-    if (groupData) {
-      selectedCourses.push(groupData);
+    if (groupData && groupData.group_activities) {
+      // Add each activity from the selected group
+      groupData.group_activities.forEach(activity => {
+        selectedActivities.push({
+          course: groupData.course,
+          activity: activity,
+          group: groupData.group_number
+        });
+      });
     }
   });
   
-  if (selectedCourses.length === 0) {
+  if (selectedActivities.length === 0) {
     $('#weeklyScheduleCard').hide();
     return;
   }
@@ -1193,17 +1237,17 @@ function updateWeeklySchedule() {
   $('#weeklyScheduleCard').show();
   
   // Generate schedule grid
-  generateScheduleGrid(selectedCourses);
+  generateScheduleGrid(selectedActivities);
 }
 
 /**
  * Generates the weekly schedule grid with improved day mapping
  */
-function generateScheduleGrid(selectedCourses) {
+function generateScheduleGrid(selectedActivities) {
   const days = ['Time', 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
   const timeSlots = [
-    '08:00', '09:00', '10:00', '11:00', '12:00', 
-    '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'
+    '9:00 – 9:50', '9:50 – 10:40', '10:40 – 11:30', '11:30 – 12:20', 
+    '12:20 – 1:10', '1:10 – 2:00', '2:00 – 2:50', '2:50 – 3:40'
   ];
   
   let html = '';
@@ -1221,11 +1265,11 @@ function generateScheduleGrid(selectedCourses) {
     // Day columns
     for (let dayIndex = 1; dayIndex < days.length; dayIndex++) {
       const dayName = days[dayIndex].toLowerCase();
-      // Check if any selected course has a class at this time and day
-      const classAtThisTime = selectedCourses.find(course => {
-        if (!course.schedule || !course.schedule.day_of_week) return false;
+      // Check if any selected activity has a class at this time and day
+      const classAtThisTime = selectedActivities.find(item => {
+        if (!item.activity || !item.activity.day_of_week) return false;
         
-        const scheduleDays = course.schedule.day_of_week.toLowerCase();
+        const scheduleDays = item.activity.day_of_week.toLowerCase();
         const dayMatches = scheduleDays.includes(dayName) || 
                           scheduleDays.includes(dayName.substring(0, 3)) ||
                           (dayName === 'saturday' && (scheduleDays.includes('sat') || scheduleDays.includes('s'))) ||
@@ -1236,18 +1280,19 @@ function generateScheduleGrid(selectedCourses) {
                           (dayName === 'thursday' && (scheduleDays.includes('thu') || scheduleDays.includes('th'))) ||
                           (dayName === 'friday' && (scheduleDays.includes('fri') || scheduleDays.includes('f')));
         
-        return dayMatches && isTimeInRange(timeSlot, course.schedule.start_time, course.schedule.end_time);
+        return dayMatches && isTimeInRange(timeSlot, item.activity.start_time, item.activity.end_time);
       });
       
       if (classAtThisTime) {
         html += `
-          <div class="schedule-cell has-class" title="${classAtThisTime.course.name} - Group ${classAtThisTime.schedule.group}">
+          <div class="schedule-cell has-class" title="${classAtThisTime.course.name} - Group ${classAtThisTime.group} (${classAtThisTime.activity.activity_type})">
             <div class="class-info">
               <div class="class-title">${classAtThisTime.course.name}</div>
               <div class="class-details">
-                Group ${classAtThisTime.schedule.group}<br>
-                ${classAtThisTime.schedule.activity_type}<br>
-                ${classAtThisTime.schedule.start_time}-${classAtThisTime.schedule.end_time}
+                Group ${classAtThisTime.group}<br>
+                ${classAtThisTime.activity.activity_type}<br>
+                ${classAtThisTime.activity.start_time}-${classAtThisTime.activity.end_time}
+                ${classAtThisTime.activity.location ? '<br>' + classAtThisTime.activity.location : ''}
               </div>
             </div>
           </div>
@@ -1267,7 +1312,9 @@ function generateScheduleGrid(selectedCourses) {
 function isTimeInRange(timeSlot, startTime, endTime) {
   if (!startTime || !endTime) return false;
   
-  const slotTime = parseTime(timeSlot);
+  // Extract start time from slot range (e.g., "9:00 – 9:50" -> "9:00")
+  const slotStartTime = timeSlot.split('–')[0].trim();
+  const slotTime = parseTime(slotStartTime);
   const start = parseTime(startTime);
   const end = parseTime(endTime);
   
@@ -1679,9 +1726,9 @@ $(document).ready(function () {
   // Group selection modal handlers
   $('#confirmGroupSelection').on('click', function() {
     const courseId = $('#groupSelectionModal').data('course-id');
-    const selectedGroupId = $('input[name="selected_group"]:checked').val();
+    const selectedGroupNumber = $('input[name="selected_group"]:checked').val();
     
-    if (!selectedGroupId) {
+    if (!selectedGroupNumber) {
       Swal.fire({
         icon: 'warning',
         title: 'No Group Selected',
@@ -1691,26 +1738,28 @@ $(document).ready(function () {
       return;
     }
     
-    // Get selected group data robustly
-    const selectedGroup = $('.group-selection-item.selected');
-    const h6Text = selectedGroup.find('h6').text().trim();
-    const [groupLabel, activityType] = h6Text.split(' - ');
-    const groupNum = groupLabel.replace('Group ', '').trim();
-    const timeText = selectedGroup.find('.text-muted').eq(0).text().trim();
-    const [startTime, endTime] = timeText.split(' - ').map(s => s.trim());
-    const dayOfWeek = selectedGroup.find('.text-muted').eq(1).text().replace(/.*\s/, '').trim();
+    // Get selected group data from the cached response
+    const cachedGroups = $('#groupSelectionModal').data('groups') || [];
+    const selectedGroup = cachedGroups.find(g => g.group == selectedGroupNumber);
+    
+    if (!selectedGroup) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Group Data Not Found',
+        text: 'Could not find group data. Please try again.',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
 
     const groupData = {
       course_id: courseId,
-      group_id: selectedGroupId,
+      group_number: selectedGroupNumber,
+      group_activities: selectedGroup.activities,
       course: originalCoursesData.find(c => c.available_course_id == courseId),
       schedule: {
-        id: selectedGroupId,
-        group: groupNum,
-        activity_type: activityType,
-        start_time: startTime,
-        end_time: endTime,
-        day_of_week: dayOfWeek
+        group: selectedGroupNumber,
+        activities: selectedGroup.activities
       }
     };
     
@@ -1719,11 +1768,17 @@ $(document).ready(function () {
     
     // Update course item to show selected group
     const groupInfo = $(`#groupInfo_${courseId}`);
-    groupInfo.find('.group-name').text(`Group ${groupData.schedule.group}`);
+    groupInfo.find('.group-name').text(`Group ${selectedGroupNumber}`);
+    
+    // Create summary of activities
+    let activitiesSummary = selectedGroup.activities.map(activity => 
+      `<span class="badge bg-secondary me-1">${activity.activity_type.charAt(0).toUpperCase() + activity.activity_type.slice(1)}</span>`
+    ).join('');
+    
     groupInfo.find('.group-details').html(`
+      <div class="mb-1">${activitiesSummary}</div>
       <small class="text-muted">
-        <i class="bx bx-time me-1"></i>${groupData.schedule.start_time} - ${groupData.schedule.end_time} | 
-        <i class="bx bx-calendar me-1"></i>${groupData.schedule.day_of_week}
+        <i class="bx bx-info-circle me-1"></i>Group contains ${selectedGroup.activities.length} activity type(s)
       </small>
     `);
     groupInfo.show();
@@ -1793,13 +1848,17 @@ $(document).ready(function () {
     formData.append('term_id', $('#term_id').val());
     formData.append('_token', '{{ csrf_token() }}');
 
-    // Add selected courses and their groups
+    // Add selected courses and their group activities
     $('.course-checkbox:checked').each(function() {
       const courseId = $(this).val();
       const groupData = selectedCourseGroups.get(courseId);
-      if (groupData) {
+      if (groupData && groupData.group_activities) {
         formData.append('available_course_ids[]', courseId);
-        formData.append(`schedule_ids[${courseId}]`, groupData.group_id);
+        // For now, just send the first activity ID as the backend expects single schedule per course
+        // TODO: Update backend to handle multiple schedule assignments per enrollment
+        if (groupData.group_activities.length > 0) {
+          formData.append(`schedule_ids[${courseId}]`, groupData.group_activities[0].id);
+        }
       }
     });
 

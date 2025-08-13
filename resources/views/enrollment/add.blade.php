@@ -579,7 +579,7 @@
 /* Weekly Schedule Improvements */
 .schedule-grid {
   display: grid;
-  grid-template-columns: 120px repeat(7, 1fr);
+  grid-template-columns: 140px repeat(7, 1fr);
   gap: 2px;
   background-color: #dee2e6;
   border-radius: 0.5rem;
@@ -689,7 +689,7 @@
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   .schedule-grid {
-    grid-template-columns: 80px repeat(7, 1fr);
+    grid-template-columns: 100px repeat(7, 1fr);
     font-size: 0.7rem;
   }
   
@@ -1202,8 +1202,14 @@ function updateWeeklySchedule() {
 function generateScheduleGrid(selectedCourses) {
   const days = ['Time', 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
   const timeSlots = [
-    '08:00', '09:00', '10:00', '11:00', '12:00', 
-    '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'
+    '09:00 – 09:50',
+    '09:50 – 10:40', 
+    '10:40 – 11:30',
+    '11:30 – 12:20',
+    '12:20 – 01:10',
+    '01:10 – 02:00',
+    '02:00 – 02:50',
+    '02:50 – 03:40'
   ];
   
   let html = '';
@@ -1236,7 +1242,7 @@ function generateScheduleGrid(selectedCourses) {
                           (dayName === 'thursday' && (scheduleDays.includes('thu') || scheduleDays.includes('th'))) ||
                           (dayName === 'friday' && (scheduleDays.includes('fri') || scheduleDays.includes('f')));
         
-        return dayMatches && isTimeInRange(timeSlot, course.schedule.start_time, course.schedule.end_time);
+        return dayMatches && isTimeSlotInRange(timeSlot, course.schedule.start_time, course.schedule.end_time);
       });
       
       if (classAtThisTime) {
@@ -1262,7 +1268,25 @@ function generateScheduleGrid(selectedCourses) {
 }
 
 /**
- * Checks if a time slot falls within a class time range
+ * Checks if a time slot overlaps with a class time range
+ */
+function isTimeSlotInRange(timeSlot, startTime, endTime) {
+  if (!startTime || !endTime) return false;
+  
+  // Extract start and end times from the time slot range
+  const [slotStart, slotEnd] = timeSlot.split(' – ').map(t => t.trim());
+  
+  const slotStartTime = parseTime(slotStart);
+  const slotEndTime = parseTime(slotEnd);
+  const classStartTime = parseTime(startTime);
+  const classEndTime = parseTime(endTime);
+  
+  // Check if there's any overlap between the slot and class times
+  return (slotStartTime < classEndTime && slotEndTime > classStartTime);
+}
+
+/**
+ * Checks if a time slot falls within a class time range (legacy function)
  */
 function isTimeInRange(timeSlot, startTime, endTime) {
   if (!startTime || !endTime) return false;
@@ -1280,11 +1304,21 @@ function isTimeInRange(timeSlot, startTime, endTime) {
 function parseTime(timeStr) {
   if (!timeStr) return 0;
   
-  const timeParts = timeStr.split(':');
+  // Handle different time formats
+  let cleanTime = timeStr.replace(/[^\d:]/g, ''); // Remove non-digit and non-colon characters
+  
+  const timeParts = cleanTime.split(':');
   if (timeParts.length < 2) return 0;
   
-  const hours = parseInt(timeParts[0]) || 0;
+  let hours = parseInt(timeParts[0]) || 0;
   const minutes = parseInt(timeParts[1]) || 0;
+  
+  // Convert 12-hour format to 24-hour if needed
+  if (timeStr.toLowerCase().includes('pm') && hours !== 12) {
+    hours += 12;
+  } else if (timeStr.toLowerCase().includes('am') && hours === 12) {
+    hours = 0;
+  }
   
   return hours * 60 + minutes;
 }

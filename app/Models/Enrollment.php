@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Scopes\AcademicAdvisorScope;
 use Illuminate\Database\Eloquent\Attributes\ScopedBy;
@@ -59,5 +60,13 @@ class Enrollment extends Model
     public function term(): BelongsTo
     {
         return $this->belongsTo(Term::class);
+    }
+
+    /**
+     * Get the student schedule assignments for the enrollment.
+     */
+    public function studentScheduleAssignments(): HasMany
+    {
+        return $this->hasMany(StudentScheduleAssignment::class);
     }
 }

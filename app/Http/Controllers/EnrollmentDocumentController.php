@@ -50,12 +50,6 @@ class EnrollmentDocumentController extends Controller
                 ];
             })->toArray();
 
-            // Log the data used for debugging
-            \Log::info('EnrollmentDocumentController@downloadEnrollmentDocument', [
-                'studentData' => $studentData,
-                'enrollments' => $enrollments
-            ]);
-
             return $this->enrollmentTemplateService->streamEnrollmentDocument(
                 $studentData,
                 $enrollments,

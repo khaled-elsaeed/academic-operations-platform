@@ -227,10 +227,6 @@
                 <i class="bx bx-calendar-week me-2 text-primary"></i>
                 <h5 class="mb-0 text-dark">Weekly Schedule Preview</h5>
               </div>
-              <button type="button" class="btn btn-outline-primary btn-sm" id="downloadScheduleBtn" onclick="downloadSchedulePDF()">
-                <i class="bx bx-download me-1"></i>
-                Download Schedule
-              </button>
             </div>
           </div>
           <div class="card-body">
@@ -1997,7 +1993,7 @@ $(document).ready(function () {
     groupInfo.find('.group-details').html(`
       <div class="mb-1">${activitiesSummary}</div>
       <small class="text-muted">
-        <i class="bx bx-info-circle me-1"></i>Group contains ${selectedGroup.activities.length} activity type(s)
+        <i class="bx bx-info-circle me-1"></i>Group contains ${selectedGroup.activities.length} activity
       </small>
     `);
     groupInfo.show();
@@ -2232,78 +2228,6 @@ function resetEnrollmentForm() {
   loadAvailableCourses(currentStudentId, currentTermId);
 }
 
-/**
- * Downloads the current schedule as PDF
- */
-function downloadSchedulePDF() {
-  if (!currentStudentId || !currentTermId) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Missing Information',
-      text: 'Please select a student and term first.',
-      confirmButtonText: 'OK'
-    });
-    return;
-  }
-
-  // Check if there are any selected courses
-  const selectedCount = $('.course-checkbox:checked').length;
-  if (selectedCount === 0) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'No Courses Selected',
-      text: 'Please select at least one course to generate the schedule.',
-      confirmButtonText: 'OK'
-    });
-    return;
-  }
-
-  // Show loading state
-  const downloadBtn = $('#downloadScheduleBtn');
-  const originalText = downloadBtn.html();
-  downloadBtn.html('<i class="bx bx-loader-alt bx-spin me-1"></i>Generating...').prop('disabled', true);
-
-  // Generate PDF with current selections
-  const url = `{{ route('students.download.pdf', ':id') }}?term_id=${currentTermId}&preview=true`.replace(':id', currentStudentId);
-  
-  $.ajax({
-    url: url,
-    method: 'GET',
-    success: function(response) {
-      const fileUrl = response.url || (response.data && response.data.url);
-      if (fileUrl) {
-        // Open PDF in new tab
-        window.open(fileUrl, '_blank');
-        
-        Swal.fire({
-          icon: 'success',
-          title: 'Schedule Downloaded',
-          text: 'Your schedule has been generated and opened in a new tab.',
-          showConfirmButton: false,
-          timer: 3000
-        });
-      } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Download Failed',
-          text: 'Could not generate the schedule PDF. Please try again.',
-          confirmButtonText: 'OK'
-        });
-      }
-    },
-    error: function(xhr) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Download Failed',
-        text: xhr.responseJSON?.message || 'Failed to generate schedule PDF.',
-        confirmButtonText: 'Try Again'
-      });
-    },
-    complete: function() {
-      downloadBtn.html(originalText).prop('disabled', false);
-    }
-  });
-}
 
 // Global function to show missing prerequisites (called from onclick)
 function showMissingPrerequisites(missingPrereqs) {

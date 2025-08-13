@@ -21,7 +21,7 @@
     <div class="card-body">
       <form id="findStudentForm">
         <div class="row align-items-end">
-          <div class="col-md-8">
+          <div class="col-12 col-md-8 mb-3 mb-md-0">
             <label for="identifier" class="form-label fw-semibold text-dark">National ID or Academic ID</label>
             <div class="input-group">
               <span class="input-group-text bg-light border-primary">
@@ -31,7 +31,7 @@
                      placeholder="Enter National ID or Academic ID">
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-12 col-md-4">
             <button type="submit" class="btn btn-primary w-100 shadow-sm">
               <i class="bx bx-search me-1"></i>
               Find Student
@@ -66,7 +66,7 @@
       </div>
       <div class="card-body">
         <div class="row">
-          <div class="col-md-8">
+          <div class="col-12 col-md-8">
             <label for="term_id" class="form-label fw-semibold text-dark">
               <i class="bx bx-calendar-alt me-1"></i> Academic Term <span class="text-danger">*</span>
             </label>
@@ -145,15 +145,15 @@
     <div class="row">
       
       <!-- Enrollment History -->
-      <div class="col-lg-4 mb-4">
+      <div class="col-12 col-lg-4 mb-4">
         <div class="card h-100 shadow-sm">
           <div class="card-header bg-light">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <div class="d-flex align-items-center">
+            <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between mb-2">
+              <div class="d-flex align-items-center mb-2 mb-sm-0">
                 <i class="bx bx-history me-2 text-primary"></i>
                 <h5 class="mb-0 text-dark">Enrollment History</h5>
+                <span class="badge bg-primary text-white ms-2" id="historyCount">0</span>
               </div>
-              <span class="badge bg-primary text-white" id="historyCount">0</span>
             </div>
             <div class="input-group input-group-sm">
               <span class="input-group-text bg-light border-primary">
@@ -176,15 +176,15 @@
       </div>
 
       <!-- Available Courses -->
-      <div class="col-lg-8 mb-4">
+      <div class="col-12 col-lg-8 mb-4">
         <div class="card h-100 shadow-sm">
           <div class="card-header bg-light">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <div class="d-flex align-items-center">
+            <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between mb-2">
+              <div class="d-flex align-items-center mb-2 mb-sm-0">
                 <i class="bx bx-book me-2 text-primary"></i>
                 <h5 class="mb-0 text-dark">Available Courses</h5>
+                <span class="badge bg-primary text-white ms-2" id="coursesCount">0</span>
               </div>
-              <span class="badge bg-primary text-white" id="coursesCount">0</span>
             </div>
             <div class="input-group input-group-sm">
               <span class="input-group-text bg-light border-primary">
@@ -222,8 +222,8 @@
       <div class="col-12">
         <div class="card shadow-sm" id="weeklyScheduleCard" style="display:none;">
           <div class="card-header bg-light">
-            <div class="d-flex align-items-center justify-content-between">
-              <div class="d-flex align-items-center">
+            <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between">
+              <div class="d-flex align-items-center mb-2 mb-sm-0">
                 <i class="bx bx-calendar-week me-2 text-primary"></i>
                 <h5 class="mb-0 text-dark">Weekly Schedule Preview</h5>
               </div>
@@ -248,28 +248,28 @@
         <div id="creditHoursSummary" style="display:none;">
           <div class="alert alert-info mb-0 p-3 shadow-sm">
             <div class="row text-center">
-              <div class="col-md-3">
+              <div class="col-6 col-md-3 mb-3 mb-md-0">
                 <div class="credit-hours-item">
                   <i class="bx bx-book-open text-primary mb-1"></i>
                   <div class="credit-hours-label">Current Enrollment</div>
                   <div class="credit-hours-value" id="currentEnrollmentHours">0</div>
                 </div>
               </div>
-              <div class="col-md-3">
+              <div class="col-6 col-md-3 mb-3 mb-md-0">
                 <div class="credit-hours-item">
                   <i class="bx bx-plus-circle text-success mb-1"></i>
                   <div class="credit-hours-label">Selected Additional</div>
                   <div class="credit-hours-value" id="selectedCH">0</div>
                 </div>
               </div>
-              <div class="col-md-3">
+              <div class="col-6 col-md-3 mb-3 mb-md-0">
                 <div class="credit-hours-item">
                   <i class="bx bx-target-lock text-warning mb-1"></i>
                   <div class="credit-hours-label">Max Allowed</div>
                   <div class="credit-hours-value" id="maxCH">0</div>
                 </div>
               </div>
-              <div class="col-md-3">
+              <div class="col-6 col-md-3">
                 <div class="credit-hours-item">
                   <i class="bx bx-time text-info mb-1"></i>
                   <div class="credit-hours-label">Remaining</div>
@@ -297,7 +297,7 @@
 
 <!-- Group Selection Modal -->
 <div class="modal fade" id="groupSelectionModal" tabindex="-1" aria-labelledby="groupSelectionModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content shadow">
       <div class="modal-header bg-light">
         <h5 class="modal-title text-dark" id="groupSelectionModalLabel">
@@ -327,7 +327,7 @@
 
 <!-- Prerequisites Modal -->
 <div class="modal fade" id="prerequisitesModal" tabindex="-1" aria-labelledby="prerequisitesModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content shadow">
       <div class="modal-header bg-light">
         <h5 class="modal-title text-dark" id="prerequisitesModalLabel">
@@ -714,12 +714,111 @@
   }
   
   .credit-hours-item {
-    padding: 0.75rem;
+    padding: 0.75rem 0.5rem;
     margin-bottom: 1rem;
   }
   
   .credit-hours-value {
     font-size: 1.25rem;
+  }
+  
+  /* Improve cards spacing on mobile */
+  .card {
+    margin-bottom: 1rem;
+  }
+  
+  /* Better button sizing on mobile */
+  .btn {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+  
+  /* Course item improvements */
+  .course-item {
+    padding: 0.75rem;
+  }
+  
+  /* Modal improvements */
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+  
+  /* Input group improvements */
+  .input-group-text {
+    padding: 0.75rem;
+  }
+  
+  /* Card header improvements */
+  .card-header {
+    padding: 0.75rem;
+  }
+  
+  .card-header .d-flex {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  
+  .card-header .d-flex .input-group {
+    margin-top: 0.5rem;
+    width: 100%;
+  }
+  
+  /* Group selection improvements */
+  .group-selection-item {
+    padding: 0.75rem;
+  }
+}
+
+/* Tablet responsiveness */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .schedule-grid {
+    grid-template-columns: 100px repeat(7, 1fr);
+    font-size: 0.8rem;
+  }
+  
+  .credit-hours-item {
+    padding: 0.875rem;
+  }
+  
+  .course-item {
+    padding: 0.875rem;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 576px) {
+  .container-xxl {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  .card {
+    border-radius: 0.375rem;
+  }
+  
+  .btn {
+    font-size: 0.8rem;
+    padding: 0.625rem 0.875rem;
+  }
+  
+  .credit-hours-label {
+    font-size: 0.7rem;
+  }
+  
+  .credit-hours-value {
+    font-size: 1.1rem;
+  }
+  
+  /* Stack card headers on very small screens */
+  .card-header .d-flex.justify-content-between {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  
+  .card-header .badge,
+  .card-header .btn {
+    margin-top: 0.5rem;
+    align-self: flex-start;
   }
 }
 
@@ -1230,11 +1329,11 @@ function displayCourseGroups(groups) {
     // Display each activity type in the group
     group.activities.forEach(function(activity) {
       html += `
-        <div class="col-md-6 mb-2">
+        <div class="col-12 col-md-6 mb-2">
           <div class="card border-light">
             <div class="card-body p-2">
-              <div class="d-flex justify-content-between align-items-start">
-                <div>
+              <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start">
+                <div class="flex-grow-1 mb-2 mb-sm-0">
                   <h6 class="mb-1 text-dark">
                     <i class="bx ${activity.activity_type === 'lecture' ? 'bx-book-open' : 'bx-edit'} me-1"></i>
                     ${activity.activity_type.charAt(0).toUpperCase() + activity.activity_type.slice(1)}
@@ -1713,7 +1812,7 @@ $(document).ready(function () {
         $('#student_id').val(s.id);
         
         let studentInfoHtml = `
-          <div class="col-md-4">
+          <div class="col-12 col-md-4 mb-3 mb-md-0">
             <div class="student-info-item">
               <small class="text-muted">Full Name (English)</small>
               <h6 class="mb-0 text-dark">${s.name_en}</h6>
@@ -1731,7 +1830,7 @@ $(document).ready(function () {
               <h6 class="mb-0 text-dark">${s.program ? s.program.name : 'Not Assigned'}</h6>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-12 col-md-4 mb-3 mb-md-0">
             <div class="student-info-item">
               <small class="text-muted">Academic ID</small>
               <h6 class="mb-0 text-dark">${s.academic_id}</h6>
@@ -1749,7 +1848,7 @@ $(document).ready(function () {
               <h6 class="mb-0 text-dark">${s.cgpa || 'N/A'}</h6>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-12 col-md-4">
             <div class="student-info-item">
               <small class="text-muted">Total Units Taken</small>
               <h6 class="mb-0 text-dark">${s.taken_hours || 0} Units</h6>

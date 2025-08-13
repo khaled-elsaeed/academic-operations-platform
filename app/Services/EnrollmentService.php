@@ -8,7 +8,7 @@ use App\Models\Course;
 use App\Models\Term;
 use App\Models\AvailableCourse;
 use App\Models\CreditHoursException;
-use App\Models\StudentScheduleAssignment;
+use App\Models\EnrollmentSchedule;
 use App\Imports\EnrollmentsImport;
 use App\Exports\EnrollmentsTemplateExport;
 use App\Exceptions\BusinessValidationException;
@@ -105,11 +105,9 @@ class EnrollmentService
                         $scheduleIds = json_decode($courseMapping[$courseId], true);
                         if (is_array($scheduleIds)) {
                             foreach ($scheduleIds as $scheduleId) {
-                                StudentScheduleAssignment::create([
-                                    'student_id' => $data['student_id'],
+                                EnrollmentSchedule::create([
                                     'enrollment_id' => $enrollment->id,
                                     'available_course_schedule_id' => $scheduleId,
-                                    'term_id' => $data['term_id'],
                                     'status' => 'active'
                                 ]);
                             }

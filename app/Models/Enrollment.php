@@ -63,10 +63,10 @@ class Enrollment extends Model
     }
 
     /**
-     * Get the student schedule assignments for the enrollment.
+     * Get the enrollment schedules for the enrollment.
      */
-    public function studentScheduleAssignments(): HasMany
+    public function enrollmentSchedules(): HasMany
     {
-        return $this->hasMany(StudentScheduleAssignment::class);
+        return $this->hasMany(EnrollmentSchedule::class);
     }
 }

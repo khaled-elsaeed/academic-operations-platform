@@ -11,20 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('student_schedule_assignments', function (Blueprint $table) {
+        Schema::create('enrollment_schedules', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('student_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
             $table->foreignId('enrollment_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
             $table->foreignId('available_course_schedule_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
-            $table->foreignId('term_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
             $table->enum('status', ['active', 'dropped', 'completed'])->default('active');
             $table->timestamps();
 
             // Unique constraint to prevent duplicate assignments
-            $table->unique(['student_id', 'available_course_schedule_id', 'term_id'], 'unique_student_schedule');
+            $table->unique(['enrollment_id', 'available_course_schedule_id'], 'unique_enrollment_schedule');
             
             // Index for better performance
-            $table->index(['student_id', 'term_id']);
+            $table->index(['enrollment_id', 'status']);
         });
     }
 
@@ -33,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('student_schedule_assignments');
+        Schema::dropIfExists('enrollment_schedules');
     }
 };

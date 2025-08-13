@@ -13,24 +13,26 @@
   </x-ui.page-header>
 
   <!-- Student Search Section -->
-  <div class="card mb-4">
-    <div class="card-header d-flex align-items-center">
-      <i class="bx bx-search me-2"></i>
-      <h5 class="mb-0">Find Student</h5>
+  <div class="card mb-4 shadow-sm">
+    <div class="card-header bg-light d-flex align-items-center">
+      <i class="bx bx-search me-2 text-primary"></i>
+      <h5 class="mb-0 text-dark">Find Student</h5>
     </div>
     <div class="card-body">
       <form id="findStudentForm">
         <div class="row align-items-end">
           <div class="col-md-8">
-            <label for="identifier" class="form-label fw-semibold">National ID or Academic ID</label>
+            <label for="identifier" class="form-label fw-semibold text-dark">National ID or Academic ID</label>
             <div class="input-group">
-              <span class="input-group-text"><i class="bx bx-id-card"></i></span>
-              <input type="text" class="form-control" id="identifier" name="identifier" required 
+              <span class="input-group-text bg-light border-primary">
+                <i class="bx bx-id-card text-primary"></i>
+              </span>
+              <input type="text" class="form-control border-primary" id="identifier" name="identifier" required 
                      placeholder="Enter National ID or Academic ID">
             </div>
           </div>
           <div class="col-md-4">
-            <button type="submit" class="btn btn-primary w-100">
+            <button type="submit" class="btn btn-primary w-100 shadow-sm">
               <i class="bx bx-search me-1"></i>
               Find Student
             </button>
@@ -44,10 +46,10 @@
   <div id="studentDetails" style="display:none;">
     
     <!-- Student Information Card -->
-    <div class="card mb-4">
-      <div class="card-header d-flex align-items-center">
-        <i class="bx bx-user me-2"></i>
-        <h5 class="mb-0">Student Information</h5>
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header bg-light d-flex align-items-center">
+        <i class="bx bx-user me-2 text-primary"></i>
+        <h5 class="mb-0 text-dark">Student Information</h5>
       </div>
       <div class="card-body">
         <div id="studentInfo" class="row">
@@ -57,19 +59,19 @@
     </div>
 
     <!-- Term Selection -->
-    <div class="card mb-4">
-      <div class="card-header d-flex align-items-center">
-        <i class="bx bx-calendar me-2"></i>
-        <h5 class="mb-0">Academic Term</h5>
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header bg-light d-flex align-items-center">
+        <i class="bx bx-calendar me-2 text-primary"></i>
+        <h5 class="mb-0 text-dark">Academic Term</h5>
       </div>
       <div class="card-body">
         <div class="row">
           <div class="col-md-8">
-            <label for="term_id" class="form-label fw-semibold">
+            <label for="term_id" class="form-label fw-semibold text-dark">
               <i class="bx bx-calendar-alt me-1"></i> Academic Term <span class="text-danger">*</span>
             </label>
             <small class="form-text text-muted mb-2 d-block">Please select the academic term for enrollment.</small>
-            <select class="form-select select2-term" id="term_id" name="term_id" required aria-label="Academic Term">
+            <select class="form-select select2-term border-primary" id="term_id" name="term_id" required aria-label="Academic Term">
               <option value="">Please select an academic term</option>
             </select>
           </div>
@@ -78,63 +80,63 @@
     </div>
 
     <!-- Credit Hour Info Box -->
-    <div id="chInfoBox" class="alert alert-info mt-3" style="display:none;">
-      <strong>Maximum Allowed Credit Hours (CH):</strong>
-      <table class="table table-bordered table-sm mb-0" style="background:white;">
-        <thead>
+    <div id="chInfoBox" class="alert alert-info shadow-sm mt-3" style="display:none;">
+      <strong class="text-dark">Maximum Allowed Credit Hours (CH):</strong>
+      <table class="table table-bordered table-sm mb-0 mt-2" style="background:white;">
+        <thead class="table-light">
           <tr>
-            <th>Season</th>
-            <th>CGPA</th>
-            <th>Max CH</th>
-            <th>For Graduation</th>
+            <th class="text-dark">Season</th>
+            <th class="text-dark">CGPA</th>
+            <th class="text-dark">Max CH</th>
+            <th class="text-dark">For Graduation</th>
           </tr>
         </thead>
         <tbody>
           <tr class="ch-row" data-season="Fall" data-cgpa="lt2">
-            <td>Fall</td>
-            <td>&lt;2</td>
-            <td>14</td>
-            <td>+3</td>
+            <td class="text-dark">Fall</td>
+            <td class="text-dark">&lt;2</td>
+            <td class="text-dark fw-bold">14</td>
+            <td class="text-dark">+3</td>
           </tr>
           <tr class="ch-row" data-season="Fall" data-cgpa="2to3">
-            <td>Fall</td>
-            <td>&ge;2 and &lt;3</td>
-            <td>18</td>
-            <td>+3</td>
+            <td class="text-dark">Fall</td>
+            <td class="text-dark">&ge;2 and &lt;3</td>
+            <td class="text-dark fw-bold">18</td>
+            <td class="text-dark">+3</td>
           </tr>
           <tr class="ch-row" data-season="Fall" data-cgpa="gte3">
-            <td>Fall</td>
-            <td>&ge;3</td>
-            <td>21</td>
-            <td>+3</td>
+            <td class="text-dark">Fall</td>
+            <td class="text-dark">&ge;3</td>
+            <td class="text-dark fw-bold">21</td>
+            <td class="text-dark">+3</td>
           </tr>
           <tr class="ch-row" data-season="Spring" data-cgpa="lt2">
-            <td>Spring</td>
-            <td>&lt;2</td>
-            <td>14</td>
-            <td>+3</td>
+            <td class="text-dark">Spring</td>
+            <td class="text-dark">&lt;2</td>
+            <td class="text-dark fw-bold">14</td>
+            <td class="text-dark">+3</td>
           </tr>
           <tr class="ch-row" data-season="Spring" data-cgpa="2to3">
-            <td>Spring</td>
-            <td>&ge;2 and &lt;3</td>
-            <td>18</td>
-            <td>+3</td>
+            <td class="text-dark">Spring</td>
+            <td class="text-dark">&ge;2 and &lt;3</td>
+            <td class="text-dark fw-bold">18</td>
+            <td class="text-dark">+3</td>
           </tr>
           <tr class="ch-row" data-season="Spring" data-cgpa="gte3">
-            <td>Spring</td>
-            <td>&ge;3</td>
-            <td>21</td>
-            <td>+3</td>
+            <td class="text-dark">Spring</td>
+            <td class="text-dark">&ge;3</td>
+            <td class="text-dark fw-bold">21</td>
+            <td class="text-dark">+3</td>
           </tr>
           <tr class="ch-row" data-season="Summer" data-cgpa="any">
-            <td>Summer</td>
-            <td>Any</td>
-            <td>9</td>
-            <td>+3</td>
+            <td class="text-dark">Summer</td>
+            <td class="text-dark">Any</td>
+            <td class="text-dark fw-bold">9</td>
+            <td class="text-dark">+3</td>
           </tr>
         </tbody>
       </table>
-      <div class="mt-2 small text-muted">
+      <div class="mt-2 small text-dark">
         <strong>Note:</strong> To exceed the maximum credit hours for graduation, an administrator must grant permission.
       </div>
     </div>
@@ -144,26 +146,28 @@
       
       <!-- Enrollment History -->
       <div class="col-lg-4 mb-4">
-        <div class="card h-100">
-          <div class="card-header">
+        <div class="card h-100 shadow-sm">
+          <div class="card-header bg-light">
             <div class="d-flex align-items-center justify-content-between mb-2">
               <div class="d-flex align-items-center">
-                <i class="bx bx-history me-2"></i>
-                <h5 class="mb-0">Enrollment History</h5>
+                <i class="bx bx-history me-2 text-primary"></i>
+                <h5 class="mb-0 text-dark">Enrollment History</h5>
               </div>
-              <span class="badge bg-label-secondary" id="historyCount">0</span>
+              <span class="badge bg-primary text-white" id="historyCount">0</span>
             </div>
             <div class="input-group input-group-sm">
-              <span class="input-group-text"><i class="bx bx-search"></i></span>
-              <input type="text" class="form-control" id="historySearch" placeholder="Search courses, terms, or grades...">
+              <span class="input-group-text bg-light border-primary">
+                <i class="bx bx-search text-primary"></i>
+              </span>
+              <input type="text" class="form-control border-primary" id="historySearch" placeholder="Search courses, terms, or grades...">
             </div>
           </div>
           <div class="card-body">
             <div id="enrollmentHistoryBox" class="enrollment-history-container">
               <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
                 <div class="text-center text-muted">
-                  <i class="bx bx-search-alt-2 display-4 mb-3"></i>
-                  <p>Find a student to view enrollment history</p>
+                  <i class="bx bx-search-alt-2 display-4 mb-3 text-primary"></i>
+                  <p class="text-dark">Find a student to view enrollment history</p>
                 </div>
               </div>
             </div>
@@ -173,18 +177,20 @@
 
       <!-- Available Courses -->
       <div class="col-lg-8 mb-4">
-        <div class="card h-100">
-          <div class="card-header">
+        <div class="card h-100 shadow-sm">
+          <div class="card-header bg-light">
             <div class="d-flex align-items-center justify-content-between mb-2">
               <div class="d-flex align-items-center">
-                <i class="bx bx-book me-2"></i>
-                <h5 class="mb-0">Available Courses</h5>
+                <i class="bx bx-book me-2 text-primary"></i>
+                <h5 class="mb-0 text-dark">Available Courses</h5>
               </div>
-              <span class="badge bg-label-primary" id="coursesCount">0</span>
+              <span class="badge bg-primary text-white" id="coursesCount">0</span>
             </div>
             <div class="input-group input-group-sm">
-              <span class="input-group-text"><i class="bx bx-search"></i></span>
-              <input type="text" class="form-control" id="coursesSearch" placeholder="Search course names or codes...">
+              <span class="input-group-text bg-light border-primary">
+                <i class="bx bx-search text-primary"></i>
+              </span>
+              <input type="text" class="form-control border-primary" id="coursesSearch" placeholder="Search course names or codes...">
             </div>
           </div>
           <div class="card-body">
@@ -193,13 +199,13 @@
               <div id="coursesBox" class="courses-container">
                 <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
                   <div class="text-center text-muted">
-                    <i class="bx bx-book-bookmark display-4 mb-3"></i>
-                    <p>Select a term to view available courses</p>
+                    <i class="bx bx-book-bookmark display-4 mb-3 text-primary"></i>
+                    <p class="text-dark">Select a term to view available courses</p>
                   </div>
                 </div>
               </div>
               <div class="mt-3">
-                <button type="submit" class="btn btn-secondary w-100" id="enrollBtn" style="display: none;">
+                <button type="submit" class="btn btn-success w-100 shadow-sm" id="enrollBtn" style="display: none;">
                   <i class="bx bx-plus me-1"></i>
                   Enroll Selected Courses
                 </button>
@@ -214,11 +220,11 @@
     <!-- Weekly Schedule Visualization -->
     <div class="row mt-4">
       <div class="col-12">
-        <div class="card" id="weeklyScheduleCard" style="display:none;">
-          <div class="card-header">
+        <div class="card shadow-sm" id="weeklyScheduleCard" style="display:none;">
+          <div class="card-header bg-light">
             <div class="d-flex align-items-center">
-              <i class="bx bx-calendar-week me-2"></i>
-              <h5 class="mb-0">Weekly Schedule Preview</h5>
+              <i class="bx bx-calendar-week me-2 text-primary"></i>
+              <h5 class="mb-0 text-dark">Weekly Schedule Preview</h5>
             </div>
           </div>
           <div class="card-body">
@@ -234,7 +240,7 @@
     <div class="row mt-4">
       <div class="col-12">
         <div id="creditHoursSummary" style="display:none;">
-          <div class="alert alert-info mb-0 p-3">
+          <div class="alert alert-info mb-0 p-3 shadow-sm">
             <div class="row text-center">
               <div class="col-md-3">
                 <div class="credit-hours-item">
@@ -245,7 +251,7 @@
               </div>
               <div class="col-md-3">
                 <div class="credit-hours-item">
-                  <i class="bx bx-plus-circle text-secondary mb-1"></i>
+                  <i class="bx bx-plus-circle text-success mb-1"></i>
                   <div class="credit-hours-label">Selected Additional</div>
                   <div class="credit-hours-value" id="selectedCH">0</div>
                 </div>
@@ -267,11 +273,11 @@
             </div>
             <div class="mt-3">
               <div class="d-flex justify-content-between align-items-center mb-1">
-                <small class="text-muted">Credit Hours Usage</small>
-                <small class="text-muted" id="usagePercentage">0%</small>
+                <small class="text-dark fw-semibold">Credit Hours Usage</small>
+                <small class="text-dark fw-semibold" id="usagePercentage">0%</small>
               </div>
-              <div class="progress" style="height: 8px;">
-                <div class="progress-bar bg-secondary" id="usageProgressBar" role="progressbar" style="width: 0%"></div>
+              <div class="progress" style="height: 10px;">
+                <div class="progress-bar bg-success" id="usageProgressBar" role="progressbar" style="width: 0%"></div>
               </div>
             </div>
           </div>
@@ -286,9 +292,9 @@
 <!-- Group Selection Modal -->
 <div class="modal fade" id="groupSelectionModal" tabindex="-1" aria-labelledby="groupSelectionModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="groupSelectionModalLabel">
+    <div class="modal-content shadow">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title text-dark" id="groupSelectionModalLabel">
           <i class="bx bx-group me-2"></i>
           Select Course Group
         </h5>
@@ -302,7 +308,7 @@
           <!-- Groups will be populated here -->
         </div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer bg-light">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-primary" id="confirmGroupSelection">
           <i class="bx bx-check me-1"></i>
@@ -316,9 +322,9 @@
 <!-- Prerequisites Modal -->
 <div class="modal fade" id="prerequisitesModal" tabindex="-1" aria-labelledby="prerequisitesModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="prerequisitesModalLabel">
+    <div class="modal-content shadow">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title text-dark" id="prerequisitesModalLabel">
           <i class="bx bx-link me-2"></i>
           Missing Prerequisites
         </h5>
@@ -327,13 +333,13 @@
       <div class="modal-body">
         <div class="alert alert-warning">
           <i class="bx bx-error-circle me-2"></i>
-          The following prerequisites are required but not completed:
+          <span class="text-dark">The following prerequisites are required but not completed:</span>
         </div>
         <div id="missingPrerequisitesList">
           <!-- Missing prerequisites will be populated here -->
         </div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer bg-light">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
@@ -341,34 +347,49 @@
 </div>
 
 <style>
+/* Improved styling with better contrast and organization */
+.card {
+  border: 1px solid #dee2e6;
+  transition: box-shadow 0.15s ease-in-out;
+}
+
+.card:hover {
+  box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.15) !important;
+}
+
 .enrollment-history-container {
-  max-height: 350px;
+  max-height: 400px;
   overflow-y: auto;
-  border: 1px solid var(--bs-border-color);
-  border-radius: 0.375rem;
+  border: 2px solid #e3f2fd;
+  border-radius: 0.5rem;
   padding: 1rem;
+  background-color: #fafafa;
 }
 
 .courses-container {
   max-height: 500px;
   overflow-y: auto;
-  border: 1px solid var(--bs-border-color);
-  border-radius: 0.375rem;
+  border: 2px solid #e3f2fd;
+  border-radius: 0.5rem;
   padding: 1rem;
+  background-color: #fafafa;
 }
 
 .course-item {
-  border: 1px solid var(--bs-border-color);
-  border-radius: 0.375rem;
+  border: 2px solid #e9ecef;
+  border-radius: 0.5rem;
   padding: 1rem;
-  margin-bottom: 0.75rem;
-  transition: all 0.2s ease;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
   position: relative;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .course-item:hover {
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   border-color: var(--bs-primary);
+  transform: translateY(-2px);
 }
 
 .course-item:last-child {
@@ -376,23 +397,36 @@
 }
 
 .course-item.selected {
-  border-color: var(--bs-secondary);
-  background-color: rgba(25, 135, 84, 0.05);
+  border-color: var(--bs-success);
+  background-color: rgba(25, 135, 84, 0.08);
+  box-shadow: 0 4px 12px rgba(25, 135, 84, 0.2);
+}
+
+.course-item h6 {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.course-item .text-muted {
+  color: #6c757d !important;
+  font-weight: 500;
 }
 
 .prerequisites-status {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid var(--bs-border-color);
+  border-top: 2px solid #f8f9fa;
 }
 
 .prerequisite-check {
   display: flex;
   align-items: center;
   margin-bottom: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  background-color: rgba(var(--bs-light-rgb), 0.5);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  font-weight: 500;
 }
 
 .prerequisite-check:last-child {
@@ -401,62 +435,79 @@
 
 .prerequisite-check.fulfilled {
   background-color: rgba(25, 135, 84, 0.1);
-  color: var(--bs-secondary);
+  color: #198754;
+  border-color: rgba(25, 135, 84, 0.3);
 }
 
 .prerequisite-check.missing {
   background-color: rgba(220, 53, 69, 0.1);
-  color: var(--bs-danger);
+  color: #dc3545;
+  border-color: rgba(220, 53, 69, 0.3);
   cursor: pointer;
 }
 
 .prerequisite-check.missing:hover {
   background-color: rgba(220, 53, 69, 0.2);
+  border-color: rgba(220, 53, 69, 0.5);
 }
 
 .selected-group-info {
-  margin-top: 0.5rem;
-  padding: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
   background-color: rgba(13, 110, 253, 0.1);
-  border-radius: 0.25rem;
-  border-left: 3px solid var(--bs-primary);
+  border-radius: 0.375rem;
+  border-left: 4px solid var(--bs-primary);
 }
 
 .group-selection-item {
-  border: 1px solid var(--bs-border-color);
-  border-radius: 0.375rem;
+  border: 2px solid #e9ecef;
+  border-radius: 0.5rem;
   padding: 1rem;
   margin-bottom: 0.75rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  background-color: white;
 }
 
 .group-selection-item:hover {
   border-color: var(--bs-primary);
   background-color: rgba(13, 110, 253, 0.05);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .group-selection-item.selected {
-  border-color: var(--bs-secondary);
+  border-color: var(--bs-success);
   background-color: rgba(25, 135, 84, 0.1);
+  box-shadow: 0 4px 8px rgba(25, 135, 84, 0.2);
 }
 
 .history-item {
-  border-left: 3px solid var(--bs-primary);
+  border-left: 4px solid var(--bs-primary);
   padding-left: 1rem;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
+  background-color: white;
+  border-radius: 0 0.375rem 0.375rem 0;
+  padding-right: 1rem;
+  padding-top: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .history-item:last-child {
   margin-bottom: 0;
-  padding-bottom: 0;
+  padding-bottom: 1rem;
+}
+
+.history-item h6 {
+  color: #2c3e50;
+  font-weight: 600;
 }
 
 .student-info-item {
-  border-bottom: 1px solid var(--bs-border-color);
-  padding-bottom: 0.5rem;
-  margin-bottom: 0.75rem;
+  border-bottom: 2px solid #f8f9fa;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .student-info-item:last-child {
@@ -465,8 +516,23 @@
   padding-bottom: 0;
 }
 
+.student-info-item small {
+  color: #6c757d;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.75rem;
+}
+
+.student-info-item h6 {
+  color: #2c3e50;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
 .capacity-badge {
   font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .loading-spinner {
@@ -475,50 +541,50 @@
 }
 
 .credit-hours-item {
-  padding: 0.5rem;
-  border-radius: 0.375rem;
-  background: rgba(255, 255, 255, 0.7);
-  transition: all 0.2s ease;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
 }
 
 .credit-hours-item:hover {
-  background: rgba(255, 255, 255, 0.9);
-  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-3px);
+  border-color: rgba(13, 110, 253, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .credit-hours-item i {
-  font-size: 1.5rem;
+  font-size: 2rem;
   display: block;
 }
 
 .credit-hours-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--bs-gray-600);
-  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #495057;
+  margin-bottom: 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .credit-hours-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--bs-dark);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #2c3e50;
   line-height: 1;
 }
 
-.credit-hours-item .bx {
-  font-size: 1.75rem;
-}
-
-/* Weekly Schedule Styles */
+/* Weekly Schedule Improvements */
 .schedule-grid {
   display: grid;
-  grid-template-columns: 100px repeat(6, 1fr);
-  gap: 1px;
-  background-color: var(--bs-border-color);
-  border-radius: 0.375rem;
+  grid-template-columns: 120px repeat(7, 1fr);
+  gap: 2px;
+  background-color: #dee2e6;
+  border-radius: 0.5rem;
   overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .schedule-header,
@@ -526,33 +592,42 @@
   background-color: white;
   padding: 0.75rem 0.5rem;
   text-align: center;
-  min-height: 60px;
+  min-height: 70px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.875rem;
+  color: #2c3e50;
 }
 
 .schedule-header {
-  background-color: var(--bs-light);
-  font-weight: 600;
-  color: var(--bs-dark);
+  background-color: #f8f9fa;
+  font-weight: 700;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.8rem;
 }
 
 .schedule-cell.time-slot {
-  background-color: var(--bs-light);
-  font-weight: 500;
-  color: var(--bs-secondary);
+  background-color: #f1f3f4;
+  font-weight: 600;
+  color: #495057;
+  border-right: 2px solid #dee2e6;
 }
 
 .schedule-cell.has-class {
-  background-color: rgba(13, 110, 253, 0.1);
-  border-left: 3px solid var(--bs-primary);
+  background: linear-gradient(135deg, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.2));
+  border-left: 4px solid var(--bs-primary);
   cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .schedule-cell.has-class:hover {
-  background-color: rgba(13, 110, 253, 0.2);
+  background: linear-gradient(135deg, rgba(13, 110, 253, 0.2), rgba(13, 110, 253, 0.3));
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
 }
 
 .class-info {
@@ -561,21 +636,61 @@
 }
 
 .class-title {
-  font-weight: 600;
-  color: var(--bs-primary);
+  font-weight: 700;
+  color: #0d6efd;
   margin-bottom: 0.25rem;
   font-size: 0.8rem;
-}
-
-.class-details {
-  color: var(--bs-secondary);
-  font-size: 0.7rem;
   line-height: 1.2;
 }
 
+.class-details {
+  color: #495057;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  font-weight: 500;
+}
+
+/* Form Improvements */
+.form-control:focus,
+.form-select:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.btn {
+  font-weight: 600;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.badge {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Table Improvements */
+.table th {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.8rem;
+}
+
+.table-primary {
+  background-color: rgba(13, 110, 253, 0.1) !important;
+}
+
+/* Mobile Responsiveness */
 @media (max-width: 768px) {
   .schedule-grid {
-    font-size: 0.75rem;
+    grid-template-columns: 80px repeat(7, 1fr);
+    font-size: 0.7rem;
   }
   
   .schedule-header,
@@ -583,6 +698,61 @@
     padding: 0.5rem 0.25rem;
     min-height: 50px;
   }
+  
+  .class-title {
+    font-size: 0.7rem;
+  }
+  
+  .class-details {
+    font-size: 0.6rem;
+  }
+  
+  .credit-hours-item {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  
+  .credit-hours-value {
+    font-size: 1.25rem;
+  }
+}
+
+/* Accessibility Improvements */
+.form-check-input:checked {
+  background-color: #198754;
+  border-color: #198754;
+}
+
+.form-check-input:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Dark text for better contrast */
+.text-dark {
+  color: #2c3e50 !important;
+}
+
+/* Enhanced alert styles */
+.alert {
+  border-radius: 0.5rem;
+  border-width: 2px;
+}
+
+.alert-info {
+  background-color: rgba(13, 202, 240, 0.1);
+  border-color: rgba(13, 202, 240, 0.3);
+}
+
+.alert-warning {
+  background-color: rgba(255, 193, 7, 0.1);
+  border-color: rgba(255, 193, 7, 0.3);
+}
+
+.alert-danger {
+  background-color: rgba(220, 53, 69, 0.1);
+  border-color: rgba(220, 53, 69, 0.3);
 }
 </style>
 @endsection
@@ -608,7 +778,7 @@ function showLoading(container, message = 'Loading...') {
         <div class="spinner-border text-primary loading-spinner mb-3" role="status">
           <span class="visually-hidden">Loading...</span>
         </div>
-        <p class="text-muted mb-0">${message}</p>
+        <p class="text-dark mb-0">${message}</p>
       </div>
     </div>
   `);
@@ -622,8 +792,8 @@ function loadEnrollmentHistory(studentId) {
     $('#enrollmentHistoryBox').html(`
       <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
         <div class="text-center text-muted">
-          <i class="bx bx-search-alt-2 display-4 mb-3"></i>
-          <p>Find a student to view enrollment history</p>
+          <i class="bx bx-search-alt-2 display-4 mb-3 text-primary"></i>
+          <p class="text-dark">Find a student to view enrollment history</p>
         </div>
       </div>
     `);
@@ -636,7 +806,7 @@ function loadEnrollmentHistory(studentId) {
     url: '{{ route('enrollments.studentEnrollments') }}',
     method: 'POST',
     data: { student_id: studentId, _token: '{{ csrf_token() }}' },
-    secondary: function(res) {
+    success: function(res) {
       let history = (res.data || []);
       originalHistoryData = history;
       $('#historyCount').text(history.length);
@@ -644,8 +814,8 @@ function loadEnrollmentHistory(studentId) {
         $('#enrollmentHistoryBox').html(`
           <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
             <div class="text-center text-muted">
-              <i class="bx bx-info-circle display-4 mb-3"></i>
-              <p>No enrollment history found</p>
+              <i class="bx bx-info-circle display-4 mb-3 text-primary"></i>
+              <p class="text-dark">No enrollment history found</p>
             </div>
           </div>
         `);
@@ -657,8 +827,8 @@ function loadEnrollmentHistory(studentId) {
       $('#enrollmentHistoryBox').html(`
         <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
           <div class="text-center text-muted">
-            <i class="bx bx-error-circle display-4 mb-3"></i>
-            <p>Could not load enrollment history</p>
+            <i class="bx bx-error-circle display-4 mb-3 text-danger"></i>
+            <p class="text-dark">Could not load enrollment history</p>
           </div>
         </div>
       `);
@@ -676,8 +846,8 @@ function loadAvailableCourses(studentId, termId) {
     $('#coursesBox').html(`
       <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
         <div class="text-center text-muted">
-          <i class="bx bx-book-bookmark display-4 mb-3"></i>
-          <p>Select a term to view available courses</p>
+          <i class="bx bx-book-bookmark display-4 mb-3 text-primary"></i>
+          <p class="text-dark">Select a term to view available courses</p>
         </div>
       </div>
     `);
@@ -695,7 +865,7 @@ function loadAvailableCourses(studentId, termId) {
     url: '{{ route('available_courses.all') }}',
     method: 'GET',
     data: { student_id: studentId, term_id: termId },
-    secondary: function(res) {
+    success: function(res) {
       let courses = (res.courses || []);
       originalCoursesData = courses;
       $('#coursesCount').text(courses.length);
@@ -703,8 +873,8 @@ function loadAvailableCourses(studentId, termId) {
         $('#coursesBox').html(`
           <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
             <div class="text-center text-muted">
-              <i class="bx bx-info-circle display-4 mb-3"></i>
-              <p>No available courses found for this term</p>
+              <i class="bx bx-info-circle display-4 mb-3 text-primary"></i>
+              <p class="text-dark">No available courses found for this term</p>
             </div>
           </div>
         `);
@@ -725,8 +895,8 @@ function loadAvailableCourses(studentId, termId) {
       $('#coursesBox').html(`
         <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
           <div class="text-center text-muted">
-            <i class="bx bx-error-circle display-4 mb-3"></i>
-            <p>Could not load available courses</p>
+            <i class="bx bx-error-circle display-4 mb-3 text-danger"></i>
+            <p class="text-dark">Could not load available courses</p>
           </div>
         </div>
       `);
@@ -754,7 +924,7 @@ function loadCoursesWithPrerequisites(courses) {
       course_ids: courseIds,
       _token: '{{ csrf_token() }}' 
     },
-    secondary: function(res) {
+    success: function(res) {
       const prerequisites = res.data || [];
       displayCoursesWithPrerequisites(courses, prerequisites);
     },
@@ -771,7 +941,7 @@ function displayCoursesWithPrerequisites(courses, prerequisites) {
   let html = '';
   
   courses.forEach(function(course) {
-    const capacityClass = course.remaining_capacity > 10 ? 'secondary' : 
+    const capacityClass = course.remaining_capacity > 10 ? 'success' : 
                         course.remaining_capacity > 5 ? 'warning' : 'danger';
     
     // Get prerequisites for this course
@@ -793,17 +963,17 @@ function displayCoursesWithPrerequisites(courses, prerequisites) {
           <label class="form-check-label w-100" for="course_${course.available_course_id}">
             <div class="d-flex justify-content-between align-items-start">
               <div style="flex: 1;">
-                <h6 class="mb-1">${course.name}</h6>
+                <h6 class="mb-1 text-dark">${course.name}</h6>
                 <p class="text-muted mb-0 small">
                   <i class="bx bx-book me-1"></i>
-                  Course Code: ${course.code || 'N/A'}
-                  <span class="ms-2"><i class="bx bx-timer me-1"></i>Credit Hours: <strong>${course.credit_hours}</strong></span>
+                  Course Code: <strong>${course.code || 'N/A'}</strong>
+                  <span class="ms-2"><i class="bx bx-timer me-1"></i>Credit Hours: <strong class="text-primary">${course.credit_hours}</strong></span>
                 </p>
                 
                 <!-- Prerequisites Status -->
                 ${coursePrereqs.length > 0 ? `
                 <div class="prerequisites-status">
-                  <small class="text-muted fw-semibold mb-2 d-block">
+                  <small class="text-dark fw-semibold mb-2 d-block">
                     <i class="bx bx-link me-1"></i>Prerequisites:
                   </small>
                   ${coursePrereqs.map(prereq => `
@@ -814,7 +984,7 @@ function displayCoursesWithPrerequisites(courses, prerequisites) {
                     </div>
                   `).join('')}
                 </div>
-                ` : '<div class="mt-2"><small class="text-secondary"><i class="bx bx-check me-1"></i>No prerequisites required</small></div>'}
+                ` : '<div class="mt-2"><small class="text-success"><i class="bx bx-check me-1"></i>No prerequisites required</small></div>'}
                 
                 <!-- Selected Group Info -->
                 <div class="selected-group-info" id="groupInfo_${course.available_course_id}" style="display:none;">
@@ -825,11 +995,11 @@ function displayCoursesWithPrerequisites(courses, prerequisites) {
                 </div>
               </div>
               <div class="text-end">
-                <span class="badge bg-label-${capacityClass} capacity-badge mb-2">
+                <span class="badge bg-${capacityClass} capacity-badge mb-2">
                   <i class="bx bx-group me-1"></i>
                   ${course.remaining_capacity} spots left
                 </span>
-                ${!canEnroll ? '<div><span class="badge bg-label-danger"><i class="bx bx-lock me-1"></i>Prerequisites Required</span></div>' : ''}
+                ${!canEnroll ? '<div><span class="badge bg-danger text-white"><i class="bx bx-lock me-1"></i>Prerequisites Required</span></div>' : ''}
               </div>
             </div>
           </label>
@@ -875,10 +1045,10 @@ function showGroupSelectionModal(courseId) {
   
   $('#courseGroupInfo').html(`
     <div class="alert alert-info">
-      <h6 class="mb-1">${course.name}</h6>
-      <p class="mb-0 small">
-        <i class="bx bx-book me-1"></i>Course Code: ${course.code || 'N/A'} | 
-        <i class="bx bx-timer me-1"></i>Credit Hours: ${course.credit_hours}
+      <h6 class="mb-1 text-dark">${course.name}</h6>
+      <p class="mb-0 small text-dark">
+        <i class="bx bx-book me-1"></i>Course Code: <strong>${course.code || 'N/A'}</strong> | 
+        <i class="bx bx-timer me-1"></i>Credit Hours: <strong>${course.credit_hours}</strong>
       </p>
     </div>
   `);
@@ -902,7 +1072,7 @@ function loadCourseGroups(courseId) {
   $.ajax({
     url: '{{ route('available_courses.schedules', ':id') }}'.replace(':id', courseId),
     method: 'GET',
-    secondary: function(res) {
+    success: function(res) {
       const schedules = res.data || [];
       displayCourseGroups(schedules);
     },
@@ -910,7 +1080,7 @@ function loadCourseGroups(courseId) {
       $('#groupsList').html(`
         <div class="alert alert-danger">
           <i class="bx bx-error-circle me-2"></i>
-          Failed to load course groups. Please try again.
+          <span class="text-dark">Failed to load course groups. Please try again.</span>
         </div>
       `);
     }
@@ -925,7 +1095,7 @@ function displayCourseGroups(schedules) {
     $('#groupsList').html(`
       <div class="alert alert-warning">
         <i class="bx bx-info-circle me-2"></i>
-        No groups available for this course.
+        <span class="text-dark">No groups available for this course.</span>
       </div>
     `);
     return;
@@ -942,18 +1112,18 @@ function displayCourseGroups(schedules) {
           <label class="form-check-label w-100" for="group_${schedule.id}">
             <div class="d-flex justify-content-between align-items-start">
               <div>
-                <h6 class="mb-1">Group ${schedule.group} - ${schedule.activity_type}</h6>
+                <h6 class="mb-1 text-dark">Group ${schedule.group} - ${schedule.activity_type}</h6>
                 <p class="text-muted mb-1 small">
                   <i class="bx bx-time me-1"></i>
-                  ${schedule.start_time} - ${schedule.end_time}
+                  <strong>${schedule.start_time} - ${schedule.end_time}</strong>
                 </p>
                 <p class="text-muted mb-0 small">
                   <i class="bx bx-calendar me-1"></i>
-                  ${schedule.day_of_week || 'Schedule TBA'}
+                  <strong>${schedule.day_of_week || 'Schedule TBA'}</strong>
                 </p>
               </div>
               <div class="text-end">
-                <span class="badge bg-label-info">
+                <span class="badge bg-info text-white">
                   <i class="bx bx-users me-1"></i>
                   ${schedule.enrolled_count || 0}/${schedule.max_capacity}
                 </span>
@@ -986,10 +1156,10 @@ function showMissingPrerequisites(missingPrereqs) {
         <div class="d-flex align-items-center">
           <i class="bx bx-x-circle me-3 text-danger" style="font-size: 1.5rem;"></i>
           <div>
-            <h6 class="mb-1">${prereq.course_name}</h6>
-            <p class="mb-0 small">
-              <i class="bx bx-book me-1"></i>Course Code: ${prereq.course_code || 'N/A'} | 
-              <i class="bx bx-timer me-1"></i>Credit Hours: ${prereq.credit_hours || 'N/A'}
+            <h6 class="mb-1 text-dark">${prereq.course_name}</h6>
+            <p class="mb-0 small text-dark">
+              <i class="bx bx-book me-1"></i>Course Code: <strong>${prereq.course_code || 'N/A'}</strong> | 
+              <i class="bx bx-timer me-1"></i>Credit Hours: <strong>${prereq.credit_hours || 'N/A'}</strong>
             </p>
           </div>
         </div>
@@ -1027,13 +1197,13 @@ function updateWeeklySchedule() {
 }
 
 /**
- * Generates the weekly schedule grid
+ * Generates the weekly schedule grid with improved day mapping
  */
 function generateScheduleGrid(selectedCourses) {
-  const days = ['Time', 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+  const days = ['Time', 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
   const timeSlots = [
     '08:00', '09:00', '10:00', '11:00', '12:00', 
-    '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
+    '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'
   ];
   
   let html = '';
@@ -1053,11 +1223,22 @@ function generateScheduleGrid(selectedCourses) {
       const dayName = days[dayIndex].toLowerCase();
       // Check if any selected course has a class at this time and day
       const classAtThisTime = selectedCourses.find(course => {
-        return course.schedule &&
-               course.schedule.day_of_week &&
-               course.schedule.day_of_week.toLowerCase().includes(dayName) &&
-               isTimeInRange(timeSlot, course.schedule.start_time, course.schedule.end_time);
+        if (!course.schedule || !course.schedule.day_of_week) return false;
+        
+        const scheduleDays = course.schedule.day_of_week.toLowerCase();
+        const dayMatches = scheduleDays.includes(dayName) || 
+                          scheduleDays.includes(dayName.substring(0, 3)) ||
+                          (dayName === 'saturday' && (scheduleDays.includes('sat') || scheduleDays.includes('s'))) ||
+                          (dayName === 'sunday' && (scheduleDays.includes('sun') || scheduleDays.includes('u'))) ||
+                          (dayName === 'monday' && (scheduleDays.includes('mon') || scheduleDays.includes('m'))) ||
+                          (dayName === 'tuesday' && (scheduleDays.includes('tue') || scheduleDays.includes('t'))) ||
+                          (dayName === 'wednesday' && (scheduleDays.includes('wed') || scheduleDays.includes('w'))) ||
+                          (dayName === 'thursday' && (scheduleDays.includes('thu') || scheduleDays.includes('th'))) ||
+                          (dayName === 'friday' && (scheduleDays.includes('fri') || scheduleDays.includes('f')));
+        
+        return dayMatches && isTimeInRange(timeSlot, course.schedule.start_time, course.schedule.end_time);
       });
+      
       if (classAtThisTime) {
         html += `
           <div class="schedule-cell has-class" title="${classAtThisTime.course.name} - Group ${classAtThisTime.schedule.group}">
@@ -1084,6 +1265,8 @@ function generateScheduleGrid(selectedCourses) {
  * Checks if a time slot falls within a class time range
  */
 function isTimeInRange(timeSlot, startTime, endTime) {
+  if (!startTime || !endTime) return false;
+  
   const slotTime = parseTime(timeSlot);
   const start = parseTime(startTime);
   const end = parseTime(endTime);
@@ -1095,8 +1278,15 @@ function isTimeInRange(timeSlot, startTime, endTime) {
  * Parses time string to minutes for comparison
  */
 function parseTime(timeStr) {
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  return hours * 60 + (minutes || 0);
+  if (!timeStr) return 0;
+  
+  const timeParts = timeStr.split(':');
+  if (timeParts.length < 2) return 0;
+  
+  const hours = parseInt(timeParts[0]) || 0;
+  const minutes = parseInt(timeParts[1]) || 0;
+  
+  return hours * 60 + minutes;
 }
 
 /**
@@ -1108,9 +1298,10 @@ function updateEnrollButton() {
   if (selectedCount > 0) {
     enrollBtn.html(`
       <i class="bx bx-plus me-1"></i>Enroll Selected Courses (${selectedCount})
-    `).prop('disabled', false);
+    `).prop('disabled', false).removeClass('btn-secondary').addClass('btn-success');
   } else {
-    enrollBtn.html('<i class="bx bx-plus me-1"></i>Enroll Selected Courses').prop('disabled', true);
+    enrollBtn.html('<i class="bx bx-plus me-1"></i>Enroll Selected Courses')
+           .prop('disabled', true).removeClass('btn-success').addClass('btn-secondary');
   }
 }
 
@@ -1130,8 +1321,8 @@ function loadRemainingCreditHours(studentId, termId) {
       term_id: termId, 
       _token: '{{ csrf_token() }}' 
     },
-    secondary: function(res) {
-      if (res.secondary && res.data) {
+    success: function(res) {
+      if (res.success && res.data) {
         const data = res.data;
         
         $('#currentEnrollmentHours').text(data.current_enrollment_hours);
@@ -1147,7 +1338,7 @@ function loadRemainingCreditHours(studentId, termId) {
             <div class="alert alert-warning alert-sm mt-2 mb-0">
               <div class="d-flex align-items-center">
                 <i class="bx bx-shield-check me-2 text-warning"></i>
-                <div>
+                <div class="text-dark">
                   <strong>Admin Exception:</strong> +${data.exception_hours} additional credit hours granted
                 </div>
               </div>
@@ -1231,9 +1422,9 @@ function updateCreditHoursProgress(current, max) {
   progressBar.css('width', percentage + '%');
   percentageText.text(Math.round(percentage) + '%');
   
-  progressBar.removeClass('bg-secondary bg-warning bg-danger');
+  progressBar.removeClass('bg-success bg-warning bg-danger');
   if (percentage < 70) {
-    progressBar.addClass('bg-secondary');
+    progressBar.addClass('bg-success');
   } else if (percentage < 90) {
     progressBar.addClass('bg-warning');
   } else {
@@ -1285,8 +1476,8 @@ function displayFilteredHistory(enrollments) {
     $('#enrollmentHistoryBox').html(`
       <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
         <div class="text-center text-muted">
-          <i class="bx bx-search-alt display-4 mb-3"></i>
-          <p>No enrollments found matching your search</p>
+          <i class="bx bx-search-alt display-4 mb-3 text-primary"></i>
+          <p class="text-dark">No enrollments found matching your search</p>
         </div>
       </div>
     `);
@@ -1297,14 +1488,14 @@ function displayFilteredHistory(enrollments) {
         <div class="history-item">
           <div class="d-flex justify-content-between align-items-start">
             <div>
-              <h6 class="mb-1">${enr.course ? enr.course.name : 'Course #' + enr.course_id}</h6>
+              <h6 class="mb-1 text-dark">${enr.course ? enr.course.name : 'Course #' + enr.course_id}</h6>
               <p class="text-muted mb-1">
                 <i class="bx bx-calendar me-1"></i>
-                ${enr.term ? enr.term.name : 'Term #' + enr.term_id}
+                <strong>${enr.term ? enr.term.name : 'Term #' + enr.term_id}</strong>
               </p>
-              ${enr.grade ? `<div class="mt-1"><span class="badge bg-label-primary"><i class="bx bx-star me-1"></i>Grade: <strong>${enr.grade}</strong></span></div>` : '<div class="mt-1"><span class="badge bg-label-secondary"><i class="bx bx-time me-1"></i>No Grade Yet</span></div>'}
+              ${enr.grade ? `<div class="mt-1"><span class="badge bg-primary text-white"><i class="bx bx-star me-1"></i>Grade: <strong>${enr.grade}</strong></span></div>` : '<div class="mt-1"><span class="badge bg-secondary text-white"><i class="bx bx-time me-1"></i>No Grade Yet</span></div>'}
             </div>
-            <span class="badge bg-label-secondary">Enrolled</span>
+            <span class="badge bg-success text-white">Enrolled</span>
           </div>
         </div>
       `;
@@ -1330,8 +1521,8 @@ function filterAvailableCourses(searchTerm) {
     $('#coursesBox').html(`
       <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
         <div class="text-center text-muted">
-          <i class="bx bx-search-alt display-4 mb-3"></i>
-          <p>No courses found matching your search</p>
+          <i class="bx bx-search-alt display-4 mb-3 text-primary"></i>
+          <p class="text-dark">No courses found matching your search</p>
         </div>
       </div>
     `);
@@ -1350,8 +1541,8 @@ $(document).ready(function () {
     $('#enrollmentHistoryBox').html(`
       <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
         <div class="text-center text-muted">
-          <i class="bx bx-search-alt-2 display-4 mb-3"></i>
-          <p>Find a student to view enrollment history</p>
+          <i class="bx bx-search-alt-2 display-4 mb-3 text-primary"></i>
+          <p class="text-dark">Find a student to view enrollment history</p>
         </div>
       </div>
     `);
@@ -1359,8 +1550,8 @@ $(document).ready(function () {
     $('#coursesBox').html(`
       <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
         <div class="text-center text-muted">
-          <i class="bx bx-book-bookmark display-4 mb-3"></i>
-          <p>Select a term to view available courses</p>
+          <i class="bx bx-book-bookmark display-4 mb-3 text-primary"></i>
+          <p class="text-dark">Select a term to view available courses</p>
         </div>
       </div>
     `);
@@ -1375,7 +1566,7 @@ $(document).ready(function () {
       url: '{{ route('enrollments.findStudent') }}',
       method: 'POST',
       data: { identifier: identifier, _token: '{{ csrf_token() }}' },
-      secondary: function(res) {
+      success: function(res) {
         let s = res.data;
         $('#student_id').val(s.id);
         
@@ -1383,47 +1574,47 @@ $(document).ready(function () {
           <div class="col-md-4">
             <div class="student-info-item">
               <small class="text-muted">Full Name (English)</small>
-              <h6 class="mb-0">${s.name_en}</h6>
+              <h6 class="mb-0 text-dark">${s.name_en}</h6>
             </div>
             <div class="student-info-item">
               <small class="text-muted">Full Name (Arabic)</small>
-              <h6 class="mb-0">${s.name_ar}</h6>
+              <h6 class="mb-0 text-dark">${s.name_ar}</h6>
             </div>
             <div class="student-info-item">
               <small class="text-muted">Academic Email</small>
-              <h6 class="mb-0">${s.academic_email}</h6>
+              <h6 class="mb-0 text-dark">${s.academic_email}</h6>
             </div>
             <div class="student-info-item">
               <small class="text-muted">Program</small>
-              <h6 class="mb-0">${s.program ? s.program.name : 'Not Assigned'}</h6>
+              <h6 class="mb-0 text-dark">${s.program ? s.program.name : 'Not Assigned'}</h6>
             </div>
           </div>
           <div class="col-md-4">
             <div class="student-info-item">
               <small class="text-muted">Academic ID</small>
-              <h6 class="mb-0">${s.academic_id}</h6>
+              <h6 class="mb-0 text-dark">${s.academic_id}</h6>
             </div>
             <div class="student-info-item">
               <small class="text-muted">National ID</small>
-              <h6 class="mb-0">${s.national_id}</h6>
+              <h6 class="mb-0 text-dark">${s.national_id}</h6>
             </div>
             <div class="student-info-item">
               <small class="text-muted">Level</small>
-              <h6 class="mb-0">Level ${s.level.name}</h6>
+              <h6 class="mb-0 text-dark">Level ${s.level.name}</h6>
             </div>
             <div class="student-info-item">
               <small class="text-muted">CGPA</small>
-              <h6 class="mb-0">${s.cgpa || 'N/A'}</h6>
+              <h6 class="mb-0 text-dark">${s.cgpa || 'N/A'}</h6>
             </div>
           </div>
           <div class="col-md-4">
             <div class="student-info-item">
               <small class="text-muted">Total Units Taken</small>
-              <h6 class="mb-0">${s.taken_hours || 0} Units</h6>
+              <h6 class="mb-0 text-dark">${s.taken_hours || 0} Units</h6>
             </div>
             <div class="student-info-item">
               <small class="text-muted">Remaining Hours</small>
-              <h6 class="mb-0">Unknown</h6>
+              <h6 class="mb-0 text-dark">Unknown</h6>
             </div>
           </div>
         `;
@@ -1460,7 +1651,7 @@ $(document).ready(function () {
     $.ajax({
       url: @json(auth()->user() && auth()->user()->hasRole('admin') ? route('terms.all.with_inactive') : route('terms.all')),
       method: 'GET',
-      secondary: function (response) {
+      success: function (response) {
         let $termSelect = $('#term_id');
         $termSelect.empty().append('<option value="">Please select an academic term</option>');
         response.data.forEach(function (term) {
@@ -1623,7 +1814,7 @@ $(document).ready(function () {
       data: formData,
       processData: false,
       contentType: false,
-      secondary: function(res) {
+      success: function(res) {
         // Show loading modal and send AJAX for pdf
         Swal.fire({
           title: 'Generating PDF Document...',
@@ -1636,12 +1827,12 @@ $(document).ready(function () {
             $.ajax({
               url: url,
               method: 'GET',
-              secondary: function(response) {
+              success: function(response) {
                 let fileUrl = response.url || (response.data && response.data.url);
                 if (fileUrl) {
                   window.open(fileUrl, '_blank');
                   Swal.fire({
-                    icon: 'secondary',
+                    icon: 'success',
                     title: 'PDF Ready',
                     html: `<div>Your PDF document is ready for download.</div>`,
                     showConfirmButton: false,
@@ -1705,10 +1896,10 @@ function showMissingPrerequisites(missingPrereqs) {
         <div class="d-flex align-items-center">
           <i class="bx bx-x-circle me-3 text-danger" style="font-size: 1.5rem;"></i>
           <div>
-            <h6 class="mb-1">${prereq.course_name}</h6>
-            <p class="mb-0 small">
-              <i class="bx bx-book me-1"></i>Course Code: ${prereq.course_code || 'N/A'} | 
-              <i class="bx bx-timer me-1"></i>Credit Hours: ${prereq.credit_hours || 'N/A'}
+            <h6 class="mb-1 text-dark">${prereq.course_name}</h6>
+            <p class="mb-0 small text-dark">
+              <i class="bx bx-book me-1"></i>Course Code: <strong>${prereq.course_code || 'N/A'}</strong> | 
+              <i class="bx bx-timer me-1"></i>Credit Hours: <strong>${prereq.credit_hours || 'N/A'}</strong>
             </p>
           </div>
         </div>

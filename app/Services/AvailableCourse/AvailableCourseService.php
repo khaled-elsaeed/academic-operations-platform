@@ -139,7 +139,7 @@ class AvailableCourseService
         }
 
         // Group schedules by group number and organize by activity type
-        $groupedSchedules = $availableCourse->schedules->groupBy('group')->map(function ($schedules, $groupNumber) {
+        $groupedSchedules = $availableCourse->schedules->groupBy('group')->map(function ($schedules, $groupNumber) use ($availableCourse) {
             $groupData = [
                 'group' => $groupNumber,
                 'activities' => []

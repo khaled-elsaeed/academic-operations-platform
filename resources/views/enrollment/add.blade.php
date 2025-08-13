@@ -1996,6 +1996,13 @@ $(document).ready(function () {
     currentTermId = $(this).val();
     selectedCourseGroups.clear();
     $('#weeklyScheduleCard').hide();
+    $('#scheduleConflictAlert').hide();
+    
+    // Refresh enrollment history when term changes
+    if (currentStudentId) {
+      loadEnrollmentHistory(currentStudentId);
+    }
+    
     loadAvailableCourses(currentStudentId, currentTermId);
     
     let selectedText = $('#term_id option:selected').text();

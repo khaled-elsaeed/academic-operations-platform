@@ -230,6 +230,17 @@
             </div>
           </div>
           <div class="card-body">
+            <!-- Conflict Warning Alert -->
+            <div id="scheduleConflictAlert" class="alert alert-warning" style="display:none;">
+              <div class="d-flex align-items-center">
+                <i class="bx bx-error-circle me-2 text-warning"></i>
+                <div>
+                  <strong class="text-dark">Schedule Conflicts Detected!</strong>
+                  <p class="mb-0 small text-dark">Red highlighted time slots indicate overlapping classes. Please review your course selections.</p>
+                </div>
+              </div>
+            </div>
+            
             <div id="weeklySchedule" class="schedule-grid">
               <!-- Schedule will be populated here -->
             </div>
@@ -632,6 +643,22 @@
   box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
 }
 
+.schedule-cell.schedule-conflict {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.2), rgba(220, 53, 69, 0.3)) !important;
+  border-left: 4px solid #dc3545 !important;
+  animation: pulse-conflict 2s infinite;
+}
+
+.schedule-cell.schedule-conflict:hover {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.3), rgba(220, 53, 69, 0.4)) !important;
+}
+
+@keyframes pulse-conflict {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
 .class-info {
   text-align: left;
   width: 100%;
@@ -833,6 +860,19 @@
 /* Dark text for better contrast */
 .text-dark {
   color: #2c3e50 !important;
+}
+
+/* Modal and alert z-index fixes */
+.modal {
+  z-index: 1050;
+}
+
+.swal2-container {
+  z-index: 10000 !important;
+}
+
+.swal2-backdrop-show {
+  z-index: 9999 !important;
 }
 
 /* Enhanced alert styles */
@@ -1218,7 +1258,10 @@ function showTimeConflictWarning(conflicts, onConfirm, onCancel) {
     cancelButtonText: 'Select Different Group',
     confirmButtonColor: '#dc3545',
     cancelButtonColor: '#6c757d',
-    width: '600px'
+    width: '600px',
+    zIndex: 10000, // Ensure it appears above the modal
+    backdrop: true,
+    allowOutsideClick: false
   }).then((result) => {
     if (result.isConfirmed) {
       onConfirm();
@@ -1428,6 +1471,7 @@ function updateWeeklySchedule() {
   
   if (selectedActivities.length === 0) {
     $('#weeklyScheduleCard').hide();
+    $('#scheduleConflictAlert').hide();
     return;
   }
   
@@ -1436,6 +1480,9 @@ function updateWeeklySchedule() {
   
   // Generate schedule grid
   generateScheduleGrid(selectedActivities);
+  
+  // Highlight any conflicts in the schedule
+  highlightScheduleConflicts(selectedActivities);
 }
 
 /**
@@ -1524,6 +1571,48 @@ function parseTime(timeStr) {
   const minutes = parseInt(timeParts[1]) || 0;
   
   return hours * 60 + minutes;
+}
+
+/**
+ * Highlights schedule conflicts in the weekly view
+ */
+function highlightScheduleConflicts(selectedActivities) {
+  // Reset previous conflict styling
+  $('.schedule-cell').removeClass('schedule-conflict');
+  $('#scheduleConflictAlert').hide();
+  
+  // Find conflicts between activities
+  const conflicts = [];
+  for (let i = 0; i < selectedActivities.length; i++) {
+    for (let j = i + 1; j < selectedActivities.length; j++) {
+      if (hasTimeConflict(selectedActivities[i].activity, selectedActivities[j].activity)) {
+        conflicts.push({
+          activity1: selectedActivities[i],
+          activity2: selectedActivities[j]
+        });
+      }
+    }
+  }
+  
+  // If conflicts found, highlight them and show alert
+  if (conflicts.length > 0) {
+    $('#scheduleConflictAlert').show();
+    
+    conflicts.forEach(conflict => {
+      const activities = [conflict.activity1.activity, conflict.activity2.activity];
+      activities.forEach(activity => {
+        // Find the schedule cell and add conflict styling
+        $('.schedule-cell.has-class').each(function() {
+          const cellTitle = $(this).attr('title') || '';
+          if (cellTitle.includes(activity.activity_type) && 
+              cellTitle.includes(activity.start_time) && 
+              cellTitle.includes(activity.end_time)) {
+            $(this).addClass('schedule-conflict');
+          }
+        });
+      });
+    });
+  }
 }
 
 /**
@@ -1907,6 +1996,13 @@ $(document).ready(function () {
     currentTermId = $(this).val();
     selectedCourseGroups.clear();
     $('#weeklyScheduleCard').hide();
+    $('#scheduleConflictAlert').hide();
+    
+    // Refresh enrollment history when term changes
+    if (currentStudentId) {
+      loadEnrollmentHistory(currentStudentId);
+    }
+    
     loadAvailableCourses(currentStudentId, currentTermId);
     
     let selectedText = $('#term_id option:selected').text();
@@ -1981,6 +2077,9 @@ $(document).ready(function () {
     // Store the selection
     selectedCourseGroups.set(courseId, groupData);
     
+    // Ensure checkbox is checked (important for conflict resolution)
+    $(`#course_${courseId}`).prop('checked', true);
+    
     // Update course item to show selected group
     const groupInfo = $(`#groupInfo_${courseId}`);
     groupInfo.find('.group-name').text(`Group ${groupData.group_number}`);
@@ -1993,7 +2092,7 @@ $(document).ready(function () {
     groupInfo.find('.group-details').html(`
       <div class="mb-1">${activitiesSummary}</div>
       <small class="text-muted">
-        <i class="bx bx-info-circle me-1"></i>Group contains ${selectedGroup.activities.length} activity
+        <i class="bx bx-info-circle me-1"></i>Group contains ${selectedGroup.activities.length} activity${selectedGroup.activities.length !== 1 ? 'ies' : ''}
       </small>
     `);
     groupInfo.show();
@@ -2015,9 +2114,11 @@ $(document).ready(function () {
     const courseId = $(this).data('course-id');
     const checkbox = $(`#course_${courseId}`);
     
-    // If no group was selected, uncheck the course
+    // If no group was selected, uncheck the course and reset its styling
     if (!selectedCourseGroups.has(courseId)) {
       checkbox.prop('checked', false);
+      $(`.course-item[data-course-id="${courseId}"]`).removeClass('selected');
+      $(`#groupInfo_${courseId}`).hide();
       updateEnrollButton();
       updateCreditHoursSummary();
       updateWeeklySchedule();
@@ -2119,28 +2220,105 @@ $(document).ready(function () {
           didOpen: () => {
             // Handle PDF download
             document.getElementById('generatePdfBtn').addEventListener('click', function() {
-              this.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Generating...';
-              this.disabled = true;
+              const pdfBtn = this;
+              pdfBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Generating...';
+              pdfBtn.disabled = true;
               
               const url = `{{ route('students.download.pdf', ':id') }}?term_id=${currentTermId}`.replace(':id', currentStudentId);
+              
+              // First try regular AJAX to check if PDF route exists and is working
               $.ajax({
                 url: url,
                 method: 'GET',
-                success: function(response) {
-                  const fileUrl = response.url || (response.data && response.data.url);
-                  if (fileUrl) {
-                    window.open(fileUrl, '_blank');
-                    Swal.close();
-                    resetEnrollmentForm();
-                  } else {
-                    Swal.fire('Error', 'Failed to generate PDF document.', 'error');
-                  }
-                },
-                error: function() {
-                  Swal.fire('Error', 'Failed to generate PDF document.', 'error');
-                }
-              });
-            });
+                                 dataType: 'json',
+                 success: function(response) {
+                   // If we get JSON response, check if it contains a PDF URL
+                   if (response && (response.url || (response.data && response.data.url))) {
+                     const pdfUrl = response.url || response.data.url;
+                     window.open(pdfUrl, '_blank');
+                     
+                     Swal.fire({
+                       icon: 'success',
+                       title: 'PDF Generated',
+                       text: 'Schedule PDF has been opened in a new tab.',
+                       timer: 2000,
+                       showConfirmButton: false
+                     }).then(() => {
+                       Swal.close();
+                       resetEnrollmentForm();
+                     });
+                   } else {
+                     // Try direct download
+                     pdfBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Downloading...';
+                     downloadPdfDirect(url, pdfBtn);
+                   }
+                 },
+                                 error: function(xhr) {
+                   // If JSON fails, try direct blob download
+                   if (xhr.status !== 404) {
+                     pdfBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Trying direct download...';
+                     downloadPdfDirect(url, pdfBtn);
+                   } else {
+                     let errorMessage = 'PDF generation route not found or not working.';
+                     if (xhr.responseJSON && xhr.responseJSON.message) {
+                       errorMessage = xhr.responseJSON.message;
+                     }
+                     Swal.fire('Error', errorMessage, 'error');
+                     pdfBtn.innerHTML = '<i class="bx bx-download me-1"></i>Download Schedule PDF';
+                     pdfBtn.disabled = false;
+                   }
+                 }
+               });
+             });
+             
+             // Helper function to download PDF directly
+             function downloadPdfDirect(url, pdfBtn) {
+               $.ajax({
+                 url: url,
+                 method: 'GET',
+                 xhrFields: {
+                   responseType: 'blob'
+                 },
+                 success: function(blob, status, xhr) {
+                   const contentType = xhr.getResponseHeader('content-type');
+                   if (contentType && contentType.includes('application/pdf')) {
+                     // Create download link for the PDF blob
+                     const blobUrl = window.URL.createObjectURL(blob);
+                     const link = document.createElement('a');
+                     link.href = blobUrl;
+                     link.download = `student_schedule_${currentStudentId}_${currentTermId}.pdf`;
+                     document.body.appendChild(link);
+                     link.click();
+                     document.body.removeChild(link);
+                     window.URL.revokeObjectURL(blobUrl);
+                     
+                     Swal.fire({
+                       icon: 'success',
+                       title: 'PDF Downloaded',
+                       text: 'Schedule PDF has been downloaded successfully.',
+                       timer: 2000,
+                       showConfirmButton: false
+                     }).then(() => {
+                       Swal.close();
+                       resetEnrollmentForm();
+                     });
+                   } else {
+                     Swal.fire('Error', 'Response is not a PDF document.', 'error');
+                   }
+                 },
+                 error: function(xhr) {
+                   let errorMessage = 'Failed to generate PDF document.';
+                   if (xhr.responseJSON && xhr.responseJSON.message) {
+                     errorMessage = xhr.responseJSON.message;
+                   }
+                   Swal.fire('Error', errorMessage, 'error');
+                 },
+                 complete: function() {
+                   pdfBtn.innerHTML = '<i class="bx bx-download me-1"></i>Download Schedule PDF';
+                   pdfBtn.disabled = false;
+                 }
+               });
+             }
             
             // Handle continue without PDF
             document.getElementById('continueBtn').addEventListener('click', function() {

@@ -75,6 +75,9 @@ class EnrollmentController extends Controller
             'term_id' => 'required|exists:terms,id',
             'available_course_ids' => 'required|array|min:1',
             'available_course_ids.*' => 'exists:available_courses,id',
+            'available_course_schedule_ids' => 'array',
+            'available_course_schedule_ids.*' => 'exists:available_course_schedules,id',
+            'course_schedule_mapping' => 'array',
         ]);
 
         try {

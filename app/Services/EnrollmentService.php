@@ -8,6 +8,7 @@ use App\Models\Course;
 use App\Models\Term;
 use App\Models\AvailableCourse;
 use App\Models\CreditHoursException;
+use App\Models\EnrollmentSchedule;
 use App\Imports\EnrollmentsImport;
 use App\Exports\EnrollmentsTemplateExport;
 use App\Exceptions\BusinessValidationException;
@@ -88,11 +89,31 @@ class EnrollmentService
             // Create enrollments only after validation passes
             $enrollments = [];
             foreach ($availableCourses as $availableCourse) {
-                $enrollments[] = $this->createEnrollment([
+                $enrollment = $this->createEnrollment([
                     'student_id' => $data['student_id'],
                     'course_id' => $availableCourse->course_id,
                     'term_id' => $availableCourse->term_id,
                 ]);
+                $enrollments[] = $enrollment;
+                
+                // Create schedule assignments if provided
+                if (isset($data['course_schedule_mapping'])) {
+                    $courseMapping = $data['course_schedule_mapping'];
+                    $courseId = $availableCourse->id;
+                    
+                    if (isset($courseMapping[$courseId])) {
+                        $scheduleIds = json_decode($courseMapping[$courseId], true);
+                        if (is_array($scheduleIds)) {
+                            foreach ($scheduleIds as $scheduleId) {
+                                EnrollmentSchedule::create([
+                                    'enrollment_id' => $enrollment->id,
+                                    'available_course_schedule_id' => $scheduleId,
+                                    'status' => 'active'
+                                ]);
+                            }
+                        }
+                    }
+                }
             }
             return $enrollments;
         });

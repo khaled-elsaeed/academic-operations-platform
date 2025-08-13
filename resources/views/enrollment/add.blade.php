@@ -21,7 +21,7 @@
     <div class="card-body">
       <form id="findStudentForm">
         <div class="row align-items-end">
-          <div class="col-md-8">
+          <div class="col-12 col-md-8 mb-3 mb-md-0">
             <label for="identifier" class="form-label fw-semibold text-dark">National ID or Academic ID</label>
             <div class="input-group">
               <span class="input-group-text bg-light border-primary">
@@ -31,7 +31,7 @@
                      placeholder="Enter National ID or Academic ID">
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-12 col-md-4">
             <button type="submit" class="btn btn-primary w-100 shadow-sm">
               <i class="bx bx-search me-1"></i>
               Find Student
@@ -66,7 +66,7 @@
       </div>
       <div class="card-body">
         <div class="row">
-          <div class="col-md-8">
+          <div class="col-12 col-md-8">
             <label for="term_id" class="form-label fw-semibold text-dark">
               <i class="bx bx-calendar-alt me-1"></i> Academic Term <span class="text-danger">*</span>
             </label>
@@ -145,15 +145,15 @@
     <div class="row">
       
       <!-- Enrollment History -->
-      <div class="col-lg-4 mb-4">
+      <div class="col-12 col-lg-4 mb-4">
         <div class="card h-100 shadow-sm">
           <div class="card-header bg-light">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <div class="d-flex align-items-center">
+            <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between mb-2">
+              <div class="d-flex align-items-center mb-2 mb-sm-0">
                 <i class="bx bx-history me-2 text-primary"></i>
                 <h5 class="mb-0 text-dark">Enrollment History</h5>
+                <span class="badge bg-primary text-white ms-2" id="historyCount">0</span>
               </div>
-              <span class="badge bg-primary text-white" id="historyCount">0</span>
             </div>
             <div class="input-group input-group-sm">
               <span class="input-group-text bg-light border-primary">
@@ -176,15 +176,15 @@
       </div>
 
       <!-- Available Courses -->
-      <div class="col-lg-8 mb-4">
+      <div class="col-12 col-lg-8 mb-4">
         <div class="card h-100 shadow-sm">
           <div class="card-header bg-light">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <div class="d-flex align-items-center">
+            <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between mb-2">
+              <div class="d-flex align-items-center mb-2 mb-sm-0">
                 <i class="bx bx-book me-2 text-primary"></i>
                 <h5 class="mb-0 text-dark">Available Courses</h5>
+                <span class="badge bg-primary text-white ms-2" id="coursesCount">0</span>
               </div>
-              <span class="badge bg-primary text-white" id="coursesCount">0</span>
             </div>
             <div class="input-group input-group-sm">
               <span class="input-group-text bg-light border-primary">
@@ -222,9 +222,15 @@
       <div class="col-12">
         <div class="card shadow-sm" id="weeklyScheduleCard" style="display:none;">
           <div class="card-header bg-light">
-            <div class="d-flex align-items-center">
-              <i class="bx bx-calendar-week me-2 text-primary"></i>
-              <h5 class="mb-0 text-dark">Weekly Schedule Preview</h5>
+            <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between">
+              <div class="d-flex align-items-center mb-2 mb-sm-0">
+                <i class="bx bx-calendar-week me-2 text-primary"></i>
+                <h5 class="mb-0 text-dark">Weekly Schedule Preview</h5>
+              </div>
+              <button type="button" class="btn btn-outline-primary btn-sm" id="downloadScheduleBtn" onclick="downloadSchedulePDF()">
+                <i class="bx bx-download me-1"></i>
+                Download Schedule
+              </button>
             </div>
           </div>
           <div class="card-body">
@@ -242,28 +248,28 @@
         <div id="creditHoursSummary" style="display:none;">
           <div class="alert alert-info mb-0 p-3 shadow-sm">
             <div class="row text-center">
-              <div class="col-md-3">
+              <div class="col-6 col-md-3 mb-3 mb-md-0">
                 <div class="credit-hours-item">
                   <i class="bx bx-book-open text-primary mb-1"></i>
                   <div class="credit-hours-label">Current Enrollment</div>
                   <div class="credit-hours-value" id="currentEnrollmentHours">0</div>
                 </div>
               </div>
-              <div class="col-md-3">
+              <div class="col-6 col-md-3 mb-3 mb-md-0">
                 <div class="credit-hours-item">
                   <i class="bx bx-plus-circle text-success mb-1"></i>
                   <div class="credit-hours-label">Selected Additional</div>
                   <div class="credit-hours-value" id="selectedCH">0</div>
                 </div>
               </div>
-              <div class="col-md-3">
+              <div class="col-6 col-md-3 mb-3 mb-md-0">
                 <div class="credit-hours-item">
                   <i class="bx bx-target-lock text-warning mb-1"></i>
                   <div class="credit-hours-label">Max Allowed</div>
                   <div class="credit-hours-value" id="maxCH">0</div>
                 </div>
               </div>
-              <div class="col-md-3">
+              <div class="col-6 col-md-3">
                 <div class="credit-hours-item">
                   <i class="bx bx-time text-info mb-1"></i>
                   <div class="credit-hours-label">Remaining</div>
@@ -291,7 +297,7 @@
 
 <!-- Group Selection Modal -->
 <div class="modal fade" id="groupSelectionModal" tabindex="-1" aria-labelledby="groupSelectionModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content shadow">
       <div class="modal-header bg-light">
         <h5 class="modal-title text-dark" id="groupSelectionModalLabel">
@@ -321,7 +327,7 @@
 
 <!-- Prerequisites Modal -->
 <div class="modal fade" id="prerequisitesModal" tabindex="-1" aria-labelledby="prerequisitesModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content shadow">
       <div class="modal-header bg-light">
         <h5 class="modal-title text-dark" id="prerequisitesModalLabel">
@@ -708,12 +714,111 @@
   }
   
   .credit-hours-item {
-    padding: 0.75rem;
+    padding: 0.75rem 0.5rem;
     margin-bottom: 1rem;
   }
   
   .credit-hours-value {
     font-size: 1.25rem;
+  }
+  
+  /* Improve cards spacing on mobile */
+  .card {
+    margin-bottom: 1rem;
+  }
+  
+  /* Better button sizing on mobile */
+  .btn {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+  
+  /* Course item improvements */
+  .course-item {
+    padding: 0.75rem;
+  }
+  
+  /* Modal improvements */
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+  
+  /* Input group improvements */
+  .input-group-text {
+    padding: 0.75rem;
+  }
+  
+  /* Card header improvements */
+  .card-header {
+    padding: 0.75rem;
+  }
+  
+  .card-header .d-flex {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  
+  .card-header .d-flex .input-group {
+    margin-top: 0.5rem;
+    width: 100%;
+  }
+  
+  /* Group selection improvements */
+  .group-selection-item {
+    padding: 0.75rem;
+  }
+}
+
+/* Tablet responsiveness */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .schedule-grid {
+    grid-template-columns: 100px repeat(7, 1fr);
+    font-size: 0.8rem;
+  }
+  
+  .credit-hours-item {
+    padding: 0.875rem;
+  }
+  
+  .course-item {
+    padding: 0.875rem;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 576px) {
+  .container-xxl {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  .card {
+    border-radius: 0.375rem;
+  }
+  
+  .btn {
+    font-size: 0.8rem;
+    padding: 0.625rem 0.875rem;
+  }
+  
+  .credit-hours-label {
+    font-size: 0.7rem;
+  }
+  
+  .credit-hours-value {
+    font-size: 1.1rem;
+  }
+  
+  /* Stack card headers on very small screens */
+  .card-header .d-flex.justify-content-between {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  
+  .card-header .badge,
+  .card-header .btn {
+    margin-top: 0.5rem;
+    align-self: flex-start;
   }
 }
 
@@ -1031,6 +1136,103 @@ function displayCoursesWithPrerequisites(courses, prerequisites) {
 }
 
 /**
+ * Checks for time conflicts between selected schedules
+ */
+function checkScheduleConflicts(newGroupData, currentCourseId) {
+  const conflicts = [];
+  
+  // Get all currently selected schedules except the current course
+  selectedCourseGroups.forEach((groupData, courseId) => {
+    if (courseId != currentCourseId && groupData.group_activities) {
+      groupData.group_activities.forEach(currentActivity => {
+        // Check conflict with new group activities
+        newGroupData.group_activities.forEach(newActivity => {
+          if (hasTimeConflict(currentActivity, newActivity)) {
+            conflicts.push({
+              conflictingCourse: groupData.course.name,
+              conflictingActivity: currentActivity,
+              newActivity: newActivity
+            });
+          }
+        });
+      });
+    }
+  });
+  
+  return conflicts;
+}
+
+/**
+ * Checks if two activities have time conflicts
+ */
+function hasTimeConflict(activity1, activity2) {
+  // Check if same day
+  if (!activity1.day_of_week || !activity2.day_of_week) {
+    return false; // Skip if day not specified
+  }
+  
+  if (activity1.day_of_week.toLowerCase() !== activity2.day_of_week.toLowerCase()) {
+    return false; // Different days, no conflict
+  }
+  
+  // Parse times for comparison
+  const start1 = parseTime(activity1.start_time);
+  const end1 = parseTime(activity1.end_time);
+  const start2 = parseTime(activity2.start_time);
+  const end2 = parseTime(activity2.end_time);
+  
+  // Check for overlap: (start1 < end2) && (start2 < end1)
+  return (start1 < end2) && (start2 < end1);
+}
+
+/**
+ * Shows time conflict warning dialog
+ */
+function showTimeConflictWarning(conflicts, onConfirm, onCancel) {
+  let conflictDetails = conflicts.map(conflict => `
+    <div class="alert alert-warning mb-2">
+      <div class="d-flex align-items-start">
+        <i class="bx bx-error-circle me-2 text-warning mt-1"></i>
+        <div>
+          <strong>${conflict.conflictingCourse}</strong><br>
+          <small class="text-muted">
+            ${conflict.conflictingActivity.activity_type} on ${conflict.conflictingActivity.day_of_week}
+            (${conflict.conflictingActivity.start_time} - ${conflict.conflictingActivity.end_time})
+            conflicts with
+            ${conflict.newActivity.activity_type} on ${conflict.newActivity.day_of_week}
+            (${conflict.newActivity.start_time} - ${conflict.newActivity.end_time})
+          </small>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  Swal.fire({
+    icon: 'warning',
+    title: 'Schedule Conflict Detected',
+    html: `
+      <div class="text-start">
+        <p class="mb-3">The selected group has time conflicts with your current enrollments:</p>
+        ${conflictDetails}
+        <p class="mt-3 text-muted"><small>Do you want to proceed anyway? You may need to resolve these conflicts later.</small></p>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Proceed Anyway',
+    cancelButtonText: 'Select Different Group',
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    width: '600px'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      onConfirm();
+    } else {
+      onCancel();
+    }
+  });
+}
+
+/**
  * Shows the group selection modal for a course
  */
 function showGroupSelectionModal(courseId) {
@@ -1127,11 +1329,11 @@ function displayCourseGroups(groups) {
     // Display each activity type in the group
     group.activities.forEach(function(activity) {
       html += `
-        <div class="col-md-6 mb-2">
+        <div class="col-12 col-md-6 mb-2">
           <div class="card border-light">
             <div class="card-body p-2">
-              <div class="d-flex justify-content-between align-items-start">
-                <div>
+              <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start">
+                <div class="flex-grow-1 mb-2 mb-sm-0">
                   <h6 class="mb-1 text-dark">
                     <i class="bx ${activity.activity_type === 'lecture' ? 'bx-book-open' : 'bx-edit'} me-1"></i>
                     ${activity.activity_type.charAt(0).toUpperCase() + activity.activity_type.slice(1)}
@@ -1610,7 +1812,7 @@ $(document).ready(function () {
         $('#student_id').val(s.id);
         
         let studentInfoHtml = `
-          <div class="col-md-4">
+          <div class="col-12 col-md-4 mb-3 mb-md-0">
             <div class="student-info-item">
               <small class="text-muted">Full Name (English)</small>
               <h6 class="mb-0 text-dark">${s.name_en}</h6>
@@ -1628,7 +1830,7 @@ $(document).ready(function () {
               <h6 class="mb-0 text-dark">${s.program ? s.program.name : 'Not Assigned'}</h6>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-12 col-md-4 mb-3 mb-md-0">
             <div class="student-info-item">
               <small class="text-muted">Academic ID</small>
               <h6 class="mb-0 text-dark">${s.academic_id}</h6>
@@ -1646,7 +1848,7 @@ $(document).ready(function () {
               <h6 class="mb-0 text-dark">${s.cgpa || 'N/A'}</h6>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-12 col-md-4">
             <div class="student-info-item">
               <small class="text-muted">Total Units Taken</small>
               <h6 class="mb-0 text-dark">${s.taken_hours || 0} Units</h6>
@@ -1755,12 +1957,37 @@ $(document).ready(function () {
       }
     };
     
+    // Check for time conflicts before storing the selection
+    const conflicts = checkScheduleConflicts(groupData, courseId);
+    
+    if (conflicts.length > 0) {
+      // Show conflict warning and get user confirmation
+      showTimeConflictWarning(conflicts, 
+        // On confirm (proceed anyway)
+        function() {
+          finalizeGroupSelection(courseId, groupData, selectedGroup);
+        },
+        // On cancel (select different group)
+        function() {
+          // Keep modal open, let user select another group
+          $('input[name="selected_group"]:checked').prop('checked', false);
+          $('.group-selection-item').removeClass('selected');
+        }
+      );
+      return;
+    }
+    
+    // No conflicts, proceed with selection
+    finalizeGroupSelection(courseId, groupData, selectedGroup);
+  });
+
+  function finalizeGroupSelection(courseId, groupData, selectedGroup) {
     // Store the selection
     selectedCourseGroups.set(courseId, groupData);
     
     // Update course item to show selected group
     const groupInfo = $(`#groupInfo_${courseId}`);
-    groupInfo.find('.group-name').text(`Group ${selectedGroupNumber}`);
+    groupInfo.find('.group-name').text(`Group ${groupData.group_number}`);
     
     // Create summary of activities
     let activitiesSummary = selectedGroup.activities.map(activity => 
@@ -1785,7 +2012,7 @@ $(document).ready(function () {
     updateEnrollButton();
     updateCreditHoursSummary();
     updateWeeklySchedule();
-  });
+  }
 
   // Handle modal close without selection
   $('#groupSelectionModal').on('hidden.bs.modal', function() {
@@ -1840,17 +2067,21 @@ $(document).ready(function () {
     formData.append('term_id', $('#term_id').val());
     formData.append('_token', '{{ csrf_token() }}');
 
-    // Add selected courses and their group activities
+    // Add selected courses and their schedule IDs
     $('.course-checkbox:checked').each(function() {
       const courseId = $(this).val();
       const groupData = selectedCourseGroups.get(courseId);
       if (groupData && groupData.group_activities) {
         formData.append('available_course_ids[]', courseId);
-        // For now, just send the first activity ID as the backend expects single schedule per course
-        // TODO: Update backend to handle multiple schedule assignments per enrollment
-        if (groupData.group_activities.length > 0) {
-          formData.append(`schedule_ids[${courseId}]`, groupData.group_activities[0].id);
-        }
+        
+        // Send all schedule IDs for this course group
+        groupData.group_activities.forEach(function(activity) {
+          formData.append('available_course_schedule_ids[]', activity.id);
+        });
+        
+        // Also send the mapping of course to its schedule IDs for backend processing
+        const scheduleIds = groupData.group_activities.map(activity => activity.id);
+        formData.append(`course_schedule_mapping[${courseId}]`, JSON.stringify(scheduleIds));
       }
     });
 
@@ -1866,55 +2097,104 @@ $(document).ready(function () {
       processData: false,
       contentType: false,
       success: function(res) {
-        // Show loading modal and send AJAX for pdf
+        // Show detailed success message
+        const enrolledCourses = $('.course-checkbox:checked').length;
+        
         Swal.fire({
-          title: 'Generating PDF Document...',
-          html: '<div class="text-center">Please wait while your PDF document is being generated.</div>',
+          icon: 'success',
+          title: 'Enrollment Successful!',
+          html: `
+            <div class="text-center">
+              <p class="mb-3">Successfully enrolled in <strong>${enrolledCourses}</strong> course(s).</p>
+              <div class="d-flex justify-content-center gap-2">
+                <button type="button" class="btn btn-primary btn-sm" id="generatePdfBtn">
+                  <i class="bx bx-download me-1"></i>
+                  Download Schedule PDF
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="continueBtn">
+                  <i class="bx bx-check me-1"></i>
+                  Continue
+                </button>
+              </div>
+            </div>
+          `,
+          showConfirmButton: false,
           allowOutsideClick: false,
-          allowEscapeKey: false,
           didOpen: () => {
-            Swal.showLoading();
-            let url = `{{ route('students.download.pdf', ':id') }}?term_id=${currentTermId}`.replace(':id', currentStudentId);
-            $.ajax({
-              url: url,
-              method: 'GET',
-              success: function(response) {
-                let fileUrl = response.url || (response.data && response.data.url);
-                if (fileUrl) {
-                  window.open(fileUrl, '_blank');
-                  Swal.fire({
-                    icon: 'success',
-                    title: 'PDF Ready',
-                    html: `<div>Your PDF document is ready for download.</div>`,
-                    showConfirmButton: false,
-                    timer: 5000
-                  });
-                } else {
-                  Swal.fire('Error', 'No file URL returned from server.', 'error');
+            // Handle PDF download
+            document.getElementById('generatePdfBtn').addEventListener('click', function() {
+              this.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Generating...';
+              this.disabled = true;
+              
+              const url = `{{ route('students.download.pdf', ':id') }}?term_id=${currentTermId}`.replace(':id', currentStudentId);
+              $.ajax({
+                url: url,
+                method: 'GET',
+                success: function(response) {
+                  const fileUrl = response.url || (response.data && response.data.url);
+                  if (fileUrl) {
+                    window.open(fileUrl, '_blank');
+                    Swal.close();
+                    resetEnrollmentForm();
+                  } else {
+                    Swal.fire('Error', 'Failed to generate PDF document.', 'error');
+                  }
+                },
+                error: function() {
+                  Swal.fire('Error', 'Failed to generate PDF document.', 'error');
                 }
-              },
-              error: function() {
-                Swal.fire('Error', 'Failed to generate PDF document.', 'error');
-              }
+              });
+            });
+            
+            // Handle continue without PDF
+            document.getElementById('continueBtn').addEventListener('click', function() {
+              Swal.close();
+              resetEnrollmentForm();
             });
           }
         });
-        
-        // Reset form and reload data
-        $('.course-checkbox').prop('checked', false);
-        selectedCourseGroups.clear();
-        $('.course-item').removeClass('selected');
-        $('.selected-group-info').hide();
-        $('#weeklyScheduleCard').hide();
-        loadEnrollmentHistory(currentStudentId);
-        loadAvailableCourses(currentStudentId, currentTermId);
       },
       error: function(xhr) {
+        let errorMessage = 'An error occurred during enrollment. Please try again.';
+        let errorDetails = '';
+        
+        if (xhr.responseJSON) {
+          errorMessage = xhr.responseJSON.message || errorMessage;
+          
+          // Handle specific error types
+          if (xhr.status === 422) {
+            // Validation errors
+            const errors = xhr.responseJSON.errors;
+            if (errors) {
+              errorDetails = '<ul class="text-start mt-2">';
+              Object.keys(errors).forEach(field => {
+                errors[field].forEach(error => {
+                  errorDetails += `<li>${error}</li>`;
+                });
+              });
+              errorDetails += '</ul>';
+            }
+          } else if (xhr.status === 400) {
+            // Business logic errors (like credit hour limits)
+            errorDetails = `<div class="text-start mt-2"><small class="text-muted">${errorMessage}</small></div>`;
+          }
+        }
+        
         Swal.fire({
           icon: 'error',
           title: 'Enrollment Failed',
-          text: xhr.responseJSON?.message || 'An error occurred during enrollment. Please try again.',
-          confirmButtonText: 'Try Again'
+          html: `
+            <div class="text-center">
+              <p class="mb-2">${errorMessage}</p>
+              ${errorDetails}
+              <div class="mt-3">
+                <small class="text-muted">Please review your selections and try again.</small>
+              </div>
+            </div>
+          `,
+          confirmButtonText: 'Understand',
+          confirmButtonColor: '#dc3545',
+          width: '500px'
         });
       },
       complete: function() {
@@ -1937,6 +2217,93 @@ $(document).ready(function () {
 
   Utils.hidePageLoader();
 });
+
+/**
+ * Resets the enrollment form after successful enrollment
+ */
+function resetEnrollmentForm() {
+  // Reset form and reload data
+  $('.course-checkbox').prop('checked', false);
+  selectedCourseGroups.clear();
+  $('.course-item').removeClass('selected');
+  $('.selected-group-info').hide();
+  $('#weeklyScheduleCard').hide();
+  loadEnrollmentHistory(currentStudentId);
+  loadAvailableCourses(currentStudentId, currentTermId);
+}
+
+/**
+ * Downloads the current schedule as PDF
+ */
+function downloadSchedulePDF() {
+  if (!currentStudentId || !currentTermId) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Missing Information',
+      text: 'Please select a student and term first.',
+      confirmButtonText: 'OK'
+    });
+    return;
+  }
+
+  // Check if there are any selected courses
+  const selectedCount = $('.course-checkbox:checked').length;
+  if (selectedCount === 0) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'No Courses Selected',
+      text: 'Please select at least one course to generate the schedule.',
+      confirmButtonText: 'OK'
+    });
+    return;
+  }
+
+  // Show loading state
+  const downloadBtn = $('#downloadScheduleBtn');
+  const originalText = downloadBtn.html();
+  downloadBtn.html('<i class="bx bx-loader-alt bx-spin me-1"></i>Generating...').prop('disabled', true);
+
+  // Generate PDF with current selections
+  const url = `{{ route('students.download.pdf', ':id') }}?term_id=${currentTermId}&preview=true`.replace(':id', currentStudentId);
+  
+  $.ajax({
+    url: url,
+    method: 'GET',
+    success: function(response) {
+      const fileUrl = response.url || (response.data && response.data.url);
+      if (fileUrl) {
+        // Open PDF in new tab
+        window.open(fileUrl, '_blank');
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Schedule Downloaded',
+          text: 'Your schedule has been generated and opened in a new tab.',
+          showConfirmButton: false,
+          timer: 3000
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Download Failed',
+          text: 'Could not generate the schedule PDF. Please try again.',
+          confirmButtonText: 'OK'
+        });
+      }
+    },
+    error: function(xhr) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Download Failed',
+        text: xhr.responseJSON?.message || 'Failed to generate schedule PDF.',
+        confirmButtonText: 'Try Again'
+      });
+    },
+    complete: function() {
+      downloadBtn.html(originalText).prop('disabled', false);
+    }
+  });
+}
 
 // Global function to show missing prerequisites (called from onclick)
 function showMissingPrerequisites(missingPrereqs) {

@@ -184,6 +184,44 @@ class AvailableCourseService
     }
 
     /**
+     * Get eligibilities for a specific available course.
+     *
+     * @param int $availableCourseId
+     * @return array
+     * @throws BusinessValidationException
+     */
+    public function getEligibilities(int $availableCourseId): array
+    {
+        $availableCourse = AvailableCourse::with(['eligibilities.program', 'eligibilities.level'])->find($availableCourseId);
+
+        if (!$availableCourse) {
+            throw new BusinessValidationException('Available course not found.');
+        }
+
+        // Check if it's universal mode
+        if ($availableCourse->mode === AvailableCourse::MODE_UNIVERSAL) {
+            return [
+                [
+                    'program_name' => 'All Programs',
+                    'level_name' => 'All Levels',
+                    'combined' => 'All Programs / All Levels'
+                ]
+            ];
+        }
+
+        // Get eligibilities with program and level names
+        $eligibilities = $availableCourse->eligibilities->map(function ($eligibility) {
+            return [
+                'program_name' => $eligibility->program->name ?? 'Unknown Program',
+                'level_name' => $eligibility->level->name ?? 'Unknown Level',
+                'combined' => ($eligibility->program->name ?? 'Unknown Program') . ' / ' . ($eligibility->level->name ?? 'Unknown Level')
+            ];
+        })->toArray();
+
+        return $eligibilities;
+    }
+
+    /**
      * Get DataTables JSON response for available courses.
      *
      * @return JsonResponse
@@ -235,11 +273,10 @@ class AvailableCourseService
                     return e($pairs->first());
                 }
                 return sprintf(
-                    '<button type="button" class="btn btn-outline-info btn-sm show-eligibility-modal position-relative group-hover-parent" data-eligibility-pairs="%s" data-ac-id="%d" title="View Eligibility Schedules" style="position: relative;">
+                    '<button type="button" class="btn btn-outline-info btn-sm show-eligibility-modal position-relative group-hover-parent" data-id="%d" title="View Eligibility Requirements" style="position: relative;">
                         <i class="bx bx-list-ul"></i> Eligibility 
                         <span class="badge bg-info eligibility-badge-hover" style="transition: background-color 0.2s, color 0.2s;">%d</span>
                     </button>',
-                    e(json_encode($pairs->toArray())),
                     $availableCourse->id,
                     $count
                 );

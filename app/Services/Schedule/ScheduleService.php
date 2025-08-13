@@ -75,11 +75,13 @@ class ScheduleService
      */
     public function getDaysAndSlots(int $scheduleId): array
     {
-        // Fetch slots for the schedule, ordered by day and slot order
+        // Fetch slots for the schedule, ordered by slot order
         $slots = ScheduleSlot::where('schedule_id', $scheduleId)
-            ->orderBy('day_of_week')
             ->orderBy('slot_order')
             ->get();
+
+        // Define the correct day order (Saturday first as per frontend expectation)
+        $dayOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 
         // Group slots by day_of_week
         $days = [];
@@ -100,11 +102,15 @@ class ScheduleService
             ];
         }
 
-        // Re-index days numerically (0=Sunday, 6=Saturday)
-        ksort($days);
+        // Sort days according to the correct weekly order
+        $sortedDays = [];
+        foreach ($dayOrder as $day) {
+            if (isset($days[$day])) {
+                $sortedDays[] = $days[$day];
+            }
+        }
 
-        // Optionally, you can return as a numerically indexed array
-        return array_values($days);
+        return $sortedDays;
     }
 
     /**

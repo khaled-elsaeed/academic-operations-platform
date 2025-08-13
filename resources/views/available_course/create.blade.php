@@ -695,9 +695,9 @@ const ScheduleDetailsCardManager = {
       
       if (response && Array.isArray(response.data) && response.data.length > 0) {
         $daySelect.empty().append('<option value="">Select Day</option>');
-        response.data.forEach((dayObj, index) => {
+        response.data.forEach((dayObj) => {
           const dayName = dayObj.day_of_week.charAt(0).toUpperCase() + dayObj.day_of_week.slice(1);
-          $daySelect.append(`<option value="${index}">${dayName}</option>`);
+          $daySelect.append(`<option value="${dayObj.day_of_week}">${dayName}</option>`);
         });
         
         $daySelect.prop('disabled', false);
@@ -710,24 +710,28 @@ const ScheduleDetailsCardManager = {
     }
   },
 
-  loadScheduleSlots(scheduleId, dayIndex, $slotSelect) {
+  loadScheduleSlots(scheduleId, selectedDay, $slotSelect) {
     $slotSelect.empty().prop('disabled', true);
 
-    if (!scheduleId || dayIndex === "") return;
+    if (!scheduleId || selectedDay === "") return;
 
     const daysData = this.scheduleDaysCache[scheduleId];
-    if (daysData && daysData[dayIndex]) {
-      const slots = daysData[dayIndex].slots || [];
-      slots.forEach(slot => {
-        const label = slot.label || `${slot.start_time} - ${slot.end_time}`;
-        $slotSelect.append(`<option value="${slot.id}" data-order="${slot.slot_order}">Slot ${slot.slot_order}: ${label}</option>`);
-      });
-      $slotSelect.prop('disabled', false);
-      
-      // Add event listener for consecutive slot validation
-      $slotSelect.off('change.consecutiveValidation').on('change.consecutiveValidation', function() {
-        ScheduleDetailsCardManager.validateConsecutiveSlots($(this));
-      });
+    if (daysData) {
+      // Find the day data by matching day_of_week
+      const dayData = daysData.find(day => day.day_of_week === selectedDay);
+      if (dayData) {
+        const slots = dayData.slots || [];
+        slots.forEach(slot => {
+          const label = slot.label || `${slot.start_time} - ${slot.end_time}`;
+          $slotSelect.append(`<option value="${slot.id}" data-order="${slot.slot_order}">Slot ${slot.slot_order}: ${label}</option>`);
+        });
+        $slotSelect.prop('disabled', false);
+        
+        // Add event listener for consecutive slot validation
+        $slotSelect.off('change.consecutiveValidation').on('change.consecutiveValidation', function() {
+          ScheduleDetailsCardManager.validateConsecutiveSlots($(this));
+        });
+      }
     }
 
     Utils.initSelect2($slotSelect, { 
@@ -971,10 +975,10 @@ const FormManager = {
     $(document).on('change', '.schedule-day-select', function() {
       const $card = $(this).closest('.schedule-detail-card');
       const scheduleId = $card.find('.schedule-select').val();
-      const dayIndex = $(this).val();
+      const selectedDay = $(this).val();
       const $slotSelect = $card.find('.schedule-slot-select');
 
-      ScheduleDetailsCardManager.loadScheduleSlots(scheduleId, dayIndex, $slotSelect);
+      ScheduleDetailsCardManager.loadScheduleSlots(scheduleId, selectedDay, $slotSelect);
     });
 
     // Form submission

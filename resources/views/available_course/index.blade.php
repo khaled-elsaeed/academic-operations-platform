@@ -92,7 +92,7 @@
     </x-ui.modal>
 
     {{-- Schedules Modal --}}
-    <x-ui.modal id="schedulesModal" title="Schedules" size="md" :scrollable="false" class="schedules-modal">
+    <x-ui.modal id="schedulesModal" title="Course Schedules" size="xl" :scrollable="true" class="schedules-modal">
       <x-slot name="slot">
         <div id="schedulesContent"><!-- Content will be filled by JS --></div>
       </x-slot>
@@ -163,7 +163,8 @@ const ROUTES = {
     template: '{{ route('available_courses.template') }}',
     destroy: '{{ route('available_courses.destroy', ':id') }}',
     terms: "{{ route('terms.all') }}",
-    schedules: "{{ route('available_courses.schedules', ':id') }}"
+    schedules: "{{ route('available_courses.schedules', ':id') }}",
+    eligibilities: "{{ route('available_courses.eligibilities', ':id') }}"
   }
 };
 const SELECTORS = {
@@ -232,7 +233,8 @@ const ApiService = {
   importAvailableCourses(formData) { return this.request({ url: ROUTES.availableCourses.import, method: 'POST', data: formData, processData: false, contentType: false }); },
   fetchTerms() { return this.request({ url: ROUTES.availableCourses.terms, method: 'GET' }); },
   downloadTemplate() { return this.request({ url: ROUTES.availableCourses.template, method: 'GET', xhrFields: { responseType: 'blob' } }); },
-  fetchSchedules(availableCourseId) { return this.request({ url: Utils.replaceRouteId(ROUTES.availableCourses.schedules, availableCourseId), method: 'GET' }); }
+  fetchSchedules(availableCourseId) { return this.request({ url: Utils.replaceRouteId(ROUTES.availableCourses.schedules, availableCourseId), method: 'GET' }); },
+  fetchEligibilities(availableCourseId) { return this.request({ url: Utils.replaceRouteId(ROUTES.availableCourses.eligibilities, availableCourseId), method: 'GET' }); }
 };
 // ===========================
 // DROPDOWN MANAGEMENT
@@ -486,11 +488,31 @@ const SearchManager = {
 const EligibilityModalManager = {
   handleShowEligibilityModal() {
     $(document).on('click', '.show-eligibility-modal', function () {
-      const eligibilities = $(this).data('eligibility-pairs');
-      EligibilityModalManager.renderEligibilityContent(eligibilities);
+      const availableCourseId = $(this).data('id');
+      EligibilityModalManager.renderEligibilityLoading();
       const modal = new bootstrap.Modal(document.getElementById('eligibilityModal'));
       modal.show();
+
+      ApiService.fetchEligibilities(availableCourseId)
+        .done(function(response) {
+          EligibilityModalManager.renderEligibilityContent(response.data);
+        })
+        .fail(function(xhr) {
+          let message = 'Failed to load eligibilities.';
+          if (xhr.responseJSON && xhr.responseJSON.message) {
+            message = xhr.responseJSON.message;
+          }
+          EligibilityModalManager.renderEligibilityError(message);
+        });
     });
+  },
+  renderEligibilityLoading() {
+    const $content = $('#eligibilityContent');
+    $content.html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+  },
+  renderEligibilityError(message) {
+    const $content = $('#eligibilityContent');
+    $content.html(`<div class="alert alert-danger">${message}</div>`);
   },
   renderEligibilityContent(eligibilities) {
     const $content = $('#eligibilityContent');
@@ -498,18 +520,38 @@ const EligibilityModalManager = {
     if (Array.isArray(eligibilities) && eligibilities.length > 0) {
       if (eligibilities.length === 1) {
         $content.append('<div class="mb-2"><strong>Program / Level:</strong></div>');
-        $content.append(`<div class="alert alert-info">${eligibilities[0]}</div>`);
+        $content.append(`<div class="alert alert-info p-3">
+          <div class="d-flex align-items-center">
+            <i class="bx bx-check-circle text-success me-2 fs-5"></i>
+            <div>
+              <strong>${eligibilities[0].program_name} / ${eligibilities[0].level_name}</strong>
+            </div>
+          </div>
+        </div>`);
       } else {
-        $content.append('<div class="mb-2"><strong>Programs & Levels:</strong></div>');
-        let table = `<table class="table table-bordered table-sm"><thead><tr><th>#</th><th>Program / Level</th></tr></thead><tbody>`;
-        eligibilities.forEach((pair, idx) => {
-          table += `<tr><td>${idx + 1}</td><td>${pair}</td></tr>`;
+        $content.append('<div class="mb-3"><strong>Eligible Programs & Levels:</strong></div>');
+        let table = `<div class="table-responsive">
+          <table class="table table-bordered table-striped table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 50px;">#</th>
+                <th style="width: 45%;">Program</th>
+                <th style="width: 45%;">Level</th>
+              </tr>
+            </thead>
+            <tbody>`;
+        eligibilities.forEach((eligibility, idx) => {
+          table += `<tr>
+            <td class="text-center fw-bold">${idx + 1}</td>
+            <td>${eligibility.program_name}</td>
+            <td>${eligibility.level_name}</td>
+          </tr>`;
         });
-        table += '</tbody></table>';
+        table += '</tbody></table></div>';
         $content.append(table);
       }
     } else {
-      $content.append('<div class="alert alert-warning">No eligibility found.</div>');
+      $content.append('<div class="alert alert-warning d-flex align-items-center"><i class="bx bx-info-circle me-2 fs-5"></i>No eligibility requirements found.</div>');
     }
   }
 };
@@ -545,68 +587,104 @@ const SchedulesModalManager = {
     const $content = $('#schedulesContent');
     $content.html(`<div class="alert alert-danger">${message}</div>`);
   },
-  renderSchedulesContent(schedules) {
+  renderSchedulesContent(groups) {
     const $content = $('#schedulesContent');
     $content.empty();
-    if (Array.isArray(schedules) && schedules.length > 0) {
-      $content.append('<div class="mb-2"><strong>Schedules:</strong></div>');
-      schedules.forEach((schedule, idx) => {
-        const group = schedule.group ?? '';
-        const activityType = schedule.activity_type ?? '';
-        const minCapacity = schedule.min_capacity ?? '';
-        const maxCapacity = schedule.max_capacity ?? '';
-        // Render assignments (schedule_assignments)
-        let assignmentsHtml = '';
-        if (Array.isArray(schedule.schedule_assignments) && schedule.schedule_assignments.length > 0) {
-          assignmentsHtml += '<ul class="list-group mb-2">';
-          schedule.schedule_assignments.forEach(assignment => {
-            const slot = assignment.schedule_slot || {};
-            // Format times to HH:mm (local time)
-            let startTime = slot.start_time ? new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-            let endTime = slot.end_time ? new Date(slot.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-            // Fallback: if end_time is not in slot, try assignment.end_time
-            if (!endTime && assignment.end_time) {
-              endTime = new Date(assignment.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            }
-            // Fallback: if start_time is not in slot, try assignment.start_time
-            if (!startTime && assignment.start_time) {
-              startTime = new Date(assignment.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            }
-            const dayOfWeek = slot.day_of_week ?? '';
-            assignmentsHtml += `<li class="list-group-item py-1 px-2">
-              <span class="fw-bold">Day:</span> ${dayOfWeek} 
-              <span class="ms-3 fw-bold">Start:</span> ${startTime} 
-              <span class="ms-3 fw-bold">End:</span> ${endTime}
-            </li>`;
-          });
-          assignmentsHtml += '</ul>';
-        } else {
-          assignmentsHtml = '<span class="text-muted">No assignments</span>';
-        }
-
-        // Render schedule as a card/box
+    
+    if (Array.isArray(groups) && groups.length > 0) {
+      $content.append('<div class="mb-3"><strong>Course Schedules by Groups:</strong></div>');
+      
+      groups.forEach((group, groupIdx) => {
+        const groupNumber = group.group ?? 'N/A';
+        const activities = group.activities ?? [];
+        
+        // Create group container
         $content.append(`
-          <div class="card mb-3 shadow-sm">
-            <div class="card-body p-3">
-              <div class="mb-2">
-                <span class="badge bg-secondary me-2">#${idx + 1}</span>
-                <span class="fw-bold">Group:</span> ${group}
-                <span class="ms-3 fw-bold">Activity Type:</span> ${activityType}
-              </div>
-              <div class="mb-2">
-                <span class="fw-bold">Min Capacity:</span> ${minCapacity}
-                <span class="ms-3 fw-bold">Max Capacity:</span> ${maxCapacity}
-              </div>
-              <div>
-                <span class="fw-bold">Assignments:</span>
-                <div>${assignmentsHtml}</div>
-              </div>
+          <div class="card mb-4 shadow-sm group-card">
+            <div class="card-header bg-primary text-white py-2">
+              <h6 class="mb-0 d-flex align-items-center">
+                <i class="bx bx-group me-2"></i>
+                Group ${groupNumber}
+                <span class="badge bg-light text-dark ms-2">${activities.length} Activities</span>
+              </h6>
+            </div>
+            <div class="card-body p-0" id="group-${groupIdx}-activities">
             </div>
           </div>
         `);
+        
+        const $activitiesContainer = $(`#group-${groupIdx}-activities`);
+        
+        if (activities.length > 0) {
+          activities.forEach((activity, activityIdx) => {
+            const activityType = activity.activity_type ?? 'N/A';
+            const location = activity.location ?? 'TBA';
+            const minCapacity = activity.min_capacity ?? '0';
+            const maxCapacity = activity.max_capacity ?? '0';
+            const enrolledCount = activity.enrolled_count ?? '0';
+            const dayOfWeek = activity.day_of_week ?? 'TBA';
+            const startTime = activity.start_time ?? 'TBA';
+            const endTime = activity.end_time ?? 'TBA';
+            
+            // Calculate enrollment percentage
+            const enrollmentPercentage = maxCapacity > 0 ? Math.round((enrolledCount / maxCapacity) * 100) : 0;
+            const progressBarClass = enrollmentPercentage >= 90 ? 'bg-danger' : (enrollmentPercentage >= 70 ? 'bg-warning' : 'bg-success');
+            
+            $activitiesContainer.append(`
+              <div class="border-bottom ${activityIdx === activities.length - 1 ? 'border-0' : ''} p-3">
+                <div class="row align-items-center">
+                  <div class="col-md-8">
+                    <div class="d-flex align-items-center mb-2">
+                      <span class="badge bg-info me-2">${activityType}</span>
+                      <i class="bx bx-map-pin text-muted me-1"></i>
+                      <small class="text-muted">${location}</small>
+                    </div>
+                    <div class="row text-sm">
+                      <div class="col-sm-6">
+                        <i class="bx bx-calendar text-primary me-1"></i>
+                        <strong>Day:</strong> ${dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1)}
+                      </div>
+                      <div class="col-sm-6">
+                        <i class="bx bx-time text-primary me-1"></i>
+                        <strong>Time:</strong> ${startTime} - ${endTime}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="text-center">
+                      <div class="small text-muted mb-1">Enrollment</div>
+                      <div class="fw-bold mb-1">${enrolledCount} / ${maxCapacity}</div>
+                      <div class="progress" style="height: 6px;">
+                        <div class="progress-bar ${progressBarClass}" role="progressbar" 
+                             style="width: ${enrollmentPercentage}%" 
+                             aria-valuenow="${enrollmentPercentage}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                        </div>
+                      </div>
+                      <small class="text-muted">${enrollmentPercentage}% Full</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `);
+          });
+        } else {
+          $activitiesContainer.append(`
+            <div class="p-3 text-center text-muted">
+              <i class="bx bx-info-circle me-1"></i>
+              No activities scheduled for this group
+            </div>
+          `);
+        }
       });
     } else {
-      $content.append('<div class="alert alert-warning">No schedules found.</div>');
+      $content.append(`
+        <div class="alert alert-warning d-flex align-items-center">
+          <i class="bx bx-info-circle me-2 fs-5"></i>
+          No schedules found for this course.
+        </div>
+      `);
     }
   }
 };

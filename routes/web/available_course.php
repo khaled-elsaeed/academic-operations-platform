@@ -42,6 +42,7 @@ Route::middleware(['auth'])
         Route::get('{availableCourse}/programs', 'programs')->name('programs')->middleware('can:course.view');
         Route::get('{availableCourse}/levels', 'levels')->name('levels')->middleware('can:course.view');
 
-        // ===== Schedules AJAX Route =====
+        // ===== Schedules & Eligibilities AJAX Routes =====
         Route::get('{availableCourse}/schedules', 'schedules')->name('schedules')->middleware('can:course.view');
+        Route::get('{availableCourse}/eligibilities', 'eligibilities')->name('eligibilities')->middleware('can:course.view');
     });

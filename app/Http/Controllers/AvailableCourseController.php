@@ -268,6 +268,25 @@ class AvailableCourseController extends Controller
     }
 
     /**
+     * Get the eligibilities for a specific available course.
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function eligibilities($id): JsonResponse
+    {
+        try {
+            $eligibilities = $this->availableCourseService->getEligibilities($id);
+            return successResponse('Eligibilities fetched successfully.', $eligibilities);
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('AvailableCourseController@eligibilities', $e, ['id' => $id]);
+            return errorResponse('Failed to fetch eligibilities.', [], 500);
+        }
+    }
+
+    /**
      * Get available course statistics for stat2 cards.
      *
      * @return JsonResponse

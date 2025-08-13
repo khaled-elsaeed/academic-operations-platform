@@ -359,6 +359,71 @@
   </div>
 </div>
 
+<!-- Schedule Conflict Modal -->
+<div class="modal fade" id="scheduleConflictModal" tabindex="-1" aria-labelledby="scheduleConflictModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content shadow">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="scheduleConflictModalLabel">
+          <i class="bx bx-error-circle me-2"></i>
+          Schedule Conflict Detected
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger">
+          <div class="d-flex align-items-start">
+            <i class="bx bx-error-circle me-2 text-danger mt-1" style="font-size: 1.5rem;"></i>
+            <div>
+              <strong class="text-dark">Time Conflict Warning!</strong>
+              <p class="mb-0 text-dark">The selected schedule has conflicts with your current course selections. Please review the details below:</p>
+            </div>
+          </div>
+        </div>
+        
+        <div id="conflictDetailsList">
+          <!-- Conflict details will be populated here -->
+        </div>
+        
+        <div class="alert alert-info mt-3">
+          <div class="d-flex align-items-start">
+            <i class="bx bx-info-circle me-2 text-info mt-1"></i>
+            <div class="text-dark">
+              <strong>What should you do?</strong>
+              <ul class="mb-0 mt-2">
+                <li>You can <strong>proceed anyway</strong> if this is intentional (e.g., makeup classes, special arrangements)</li>
+                <li>You can <strong>select a different group</strong> for one of the conflicting courses</li>
+                <li>You can <strong>unselect one of the conflicting courses</strong> entirely</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Conflict Resolution Table -->
+        <div class="mt-4">
+          <h6 class="text-dark mb-3">
+            <i class="bx bx-calendar-week me-2"></i>
+            Weekly Schedule Overview (Conflicting Time Slots)
+          </h6>
+          <div id="conflictScheduleTable" class="table-responsive">
+            <!-- Conflict schedule table will be populated here -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="bx bx-x me-1"></i>
+          Select Different Group
+        </button>
+        <button type="button" class="btn btn-danger" id="proceedWithConflictBtn">
+          <i class="bx bx-check me-1"></i>
+          Proceed Anyway
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <style>
 /* Improved styling with better contrast and organization */
 .card {
@@ -895,6 +960,225 @@
   background-color: rgba(220, 53, 69, 0.1);
   border-color: rgba(220, 53, 69, 0.3);
 }
+
+/* Conflict Detection Styles */
+.conflict-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  animation: pulse-warning 2s infinite;
+}
+
+.conflict-indicator i {
+  font-size: 1.2rem;
+  color: #dc3545;
+  text-shadow: 0 0 4px rgba(220, 53, 69, 0.4);
+}
+
+@keyframes pulse-warning {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.schedule-cell.has-conflict {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.15), rgba(220, 53, 69, 0.25)) !important;
+  border: 2px solid #dc3545 !important;
+  position: relative;
+}
+
+.schedule-cell.has-conflict:hover {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.25), rgba(220, 53, 69, 0.35)) !important;
+  cursor: pointer;
+}
+
+.schedule-cell.has-conflict::before {
+  content: "⚠️";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 0.8rem;
+  z-index: 2;
+}
+
+/* Group Selection Conflict Warning */
+.group-selection-item.has-conflict {
+  border-color: #dc3545 !important;
+  background-color: rgba(220, 53, 69, 0.05);
+}
+
+.group-selection-item.has-conflict .card {
+  border-color: #dc3545 !important;
+}
+
+.conflict-warning-badge {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  animation: pulse-conflict 2s infinite;
+}
+
+@keyframes pulse-conflict {
+  0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
+
+/* Prerequisite Enhancement Styles */
+.prerequisite-check.missing {
+  background-color: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  border-color: rgba(220, 53, 69, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.prerequisite-check.missing:hover {
+  background-color: rgba(220, 53, 69, 0.2);
+  border-color: rgba(220, 53, 69, 0.5);
+  transform: translateX(2px);
+}
+
+.course-item.disabled {
+  opacity: 0.6;
+  background-color: rgba(108, 117, 125, 0.1) !important;
+  border-color: #6c757d !important;
+}
+
+.course-item.disabled .course-checkbox {
+  cursor: not-allowed;
+}
+
+.course-item.disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Schedule Time Display Improvements */
+.schedule-time-display {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  background: rgba(13, 110, 253, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  border-left: 3px solid #0d6efd;
+}
+
+.schedule-time-range {
+  color: #0d6efd;
+  font-weight: 700;
+}
+
+.schedule-location {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Conflict Details Table */
+.conflict-table {
+  background: white;
+  border: 2px solid #dc3545;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.conflict-table th {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+  font-weight: 700;
+  text-align: center;
+  padding: 0.75rem;
+  border: none;
+}
+
+.conflict-table td {
+  padding: 0.5rem;
+  text-align: center;
+  border: 1px solid #dee2e6;
+  vertical-align: middle;
+}
+
+.conflict-table .conflict-slot {
+  background: rgba(220, 53, 69, 0.1);
+  font-weight: 600;
+  color: #dc3545;
+}
+
+.conflict-table .normal-slot {
+  background: rgba(13, 110, 253, 0.1);
+  color: #0d6efd;
+}
+
+/* Modal Enhancements */
+.modal-xl {
+  max-width: 90%;
+}
+
+@media (min-width: 1200px) {
+  .modal-xl {
+    max-width: 1140px;
+  }
+}
+
+.modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Improved Schedule Grid for Conflicts */
+.conflict-schedule-grid {
+  display: grid;
+  grid-template-columns: 120px repeat(7, 1fr);
+  gap: 1px;
+  background-color: #dc3545;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  font-size: 0.8rem;
+}
+
+.conflict-schedule-cell {
+  background-color: white;
+  padding: 0.5rem 0.25rem;
+  text-align: center;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.conflict-schedule-header {
+  background-color: #dc3545;
+  color: white;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.conflict-schedule-time {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.7rem;
+}
+
+.conflict-schedule-occupied {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.8), rgba(220, 53, 69, 0.9));
+  color: white;
+  font-weight: 600;
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.conflict-schedule-normal {
+  background: linear-gradient(135deg, rgba(13, 110, 253, 0.2), rgba(13, 110, 253, 0.3));
+  color: #0d6efd;
+  font-weight: 500;
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
 </style>
 @endsection
 
@@ -1094,13 +1378,13 @@ function displayCoursesWithPrerequisites(courses, prerequisites) {
     const canEnroll = !hasUnfulfilledPrereqs;
     
     html += `
-      <div class="course-item" data-course-id="${course.available_course_id}">
+      <div class="course-item ${!canEnroll ? 'disabled' : ''}" data-course-id="${course.available_course_id}">
         <div class="form-check">
           <input class="form-check-input course-checkbox" type="checkbox" 
                  name="available_course_ids[]" value="${course.available_course_id}" 
                  data-credit-hours="${course.credit_hours}" 
                  id="course_${course.available_course_id}"
-                 ${!canEnroll ? 'disabled' : ''}>
+                 ${!canEnroll ? 'disabled title="Prerequisites required"' : ''}>
           <label class="form-check-label w-100" for="course_${course.available_course_id}">
             <div class="d-flex justify-content-between align-items-start">
               <div style="flex: 1;">
@@ -1119,11 +1403,39 @@ function displayCoursesWithPrerequisites(courses, prerequisites) {
                   </small>
                   ${coursePrereqs.map(prereq => `
                     <div class="prerequisite-check ${prereq.is_enrolled ? 'fulfilled' : 'missing'}" 
-                         ${!prereq.is_enrolled ? `onclick="showMissingPrerequisites([${JSON.stringify(prereq).replace(/"/g, '&quot;')}])"` : ''}>
+                         ${!prereq.is_enrolled ? `onclick="showMissingPrerequisites([${JSON.stringify(prereq).replace(/"/g, '&quot;')}])"` : ''}
+                         title="${prereq.is_enrolled ? 'Prerequisite completed' : 'Click to view details - Prerequisite not completed'}">
                       <i class="bx ${prereq.is_enrolled ? 'bx-check-circle' : 'bx-x-circle'} me-2"></i>
-                      <span class="small">${prereq.course_name} (${prereq.course_code})</span>
+                      <span class="small">
+                        <strong>${prereq.course_name}</strong> 
+                        <span class="text-muted">(${prereq.course_code})</span>
+                        ${prereq.is_enrolled ? 
+                          '<span class="badge bg-success ms-2">✓ Completed</span>' : 
+                          '<span class="badge bg-danger ms-2">✗ Missing</span>'
+                        }
+                      </span>
                     </div>
                   `).join('')}
+                  
+                  ${hasUnfulfilledPrereqs ? `
+                    <div class="alert alert-warning mt-2 mb-0 py-2">
+                      <div class="d-flex align-items-center">
+                        <i class="bx bx-error-circle me-2 text-warning"></i>
+                        <small class="text-dark">
+                          <strong>Enrollment Blocked:</strong> Complete all prerequisites before enrolling in this course.
+                        </small>
+                      </div>
+                    </div>
+                  ` : `
+                    <div class="alert alert-success mt-2 mb-0 py-2">
+                      <div class="d-flex align-items-center">
+                        <i class="bx bx-check-circle me-2 text-success"></i>
+                        <small class="text-dark">
+                          <strong>All Prerequisites Met:</strong> You can enroll in this course.
+                        </small>
+                      </div>
+                    </div>
+                  `}
                 </div>
                 ` : '<div class="mt-2"><small class="text-success"><i class="bx bx-check me-1"></i>No prerequisites required</small></div>'}
                 
@@ -1222,53 +1534,205 @@ function hasTimeConflict(activity1, activity2) {
 }
 
 /**
- * Shows time conflict warning dialog
+ * Parses time string to minutes for comparison
+ */
+function parseTime(timeStr) {
+  if (!timeStr) return 0;
+  
+  const timeParts = timeStr.split(':');
+  if (timeParts.length < 2) return 0;
+  
+  const hours = parseInt(timeParts[0]) || 0;
+  const minutes = parseInt(timeParts[1]) || 0;
+  
+  return hours * 60 + minutes;
+}
+
+/**
+ * Shows time conflict warning dialog with enhanced details
  */
 function showTimeConflictWarning(conflicts, onConfirm, onCancel) {
-  let conflictDetails = conflicts.map(conflict => `
-    <div class="alert alert-warning mb-2">
-      <div class="d-flex align-items-start">
-        <i class="bx bx-error-circle me-2 text-warning mt-1"></i>
-        <div>
-          <strong>${conflict.conflictingCourse}</strong><br>
-          <small class="text-muted">
-            ${conflict.conflictingActivity.activity_type} on ${conflict.conflictingActivity.day_of_week}
-            (${conflict.conflictingActivity.start_time} - ${conflict.conflictingActivity.end_time})
-            conflicts with
-            ${conflict.newActivity.activity_type} on ${conflict.newActivity.day_of_week}
-            (${conflict.newActivity.start_time} - ${conflict.newActivity.end_time})
-          </small>
+  // Populate conflict details
+  let conflictDetailsHtml = '';
+  let conflictTableData = [];
+  
+  conflicts.forEach((conflict, index) => {
+    conflictDetailsHtml += `
+      <div class="alert alert-warning mb-3">
+        <div class="d-flex align-items-start">
+          <div class="conflict-indicator me-3">
+            <i class="bx bx-error-circle"></i>
+          </div>
+          <div class="flex-grow-1">
+            <h6 class="mb-2 text-dark">
+              <i class="bx bx-book me-1"></i>
+              Conflict #${index + 1}: ${conflict.conflictingCourse} vs New Selection
+            </h6>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="card border-danger">
+                  <div class="card-header bg-danger text-white">
+                    <small><i class="bx bx-clock me-1"></i>Existing Course</small>
+                  </div>
+                  <div class="card-body">
+                    <strong class="text-dark">${conflict.conflictingCourse}</strong><br>
+                    <div class="schedule-time-display mt-2">
+                      <i class="bx bx-time me-1"></i>
+                      <span class="schedule-time-range">${conflict.conflictingActivity.start_time} - ${conflict.conflictingActivity.end_time}</span><br>
+                      <i class="bx bx-calendar me-1"></i>
+                      ${conflict.conflictingActivity.day_of_week}<br>
+                      <i class="bx bx-chalkboard me-1"></i>
+                      ${conflict.conflictingActivity.activity_type.charAt(0).toUpperCase() + conflict.conflictingActivity.activity_type.slice(1)}
+                      ${conflict.conflictingActivity.location ? '<br><i class="bx bx-map me-1"></i>' + conflict.conflictingActivity.location : ''}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card border-warning">
+                  <div class="card-header bg-warning text-dark">
+                    <small><i class="bx bx-plus me-1"></i>New Selection</small>
+                  </div>
+                  <div class="card-body">
+                    <strong class="text-dark">New Course Selection</strong><br>
+                    <div class="schedule-time-display mt-2">
+                      <i class="bx bx-time me-1"></i>
+                      <span class="schedule-time-range">${conflict.newActivity.start_time} - ${conflict.newActivity.end_time}</span><br>
+                      <i class="bx bx-calendar me-1"></i>
+                      ${conflict.newActivity.day_of_week}<br>
+                      <i class="bx bx-chalkboard me-1"></i>
+                      ${conflict.newActivity.activity_type.charAt(0).toUpperCase() + conflict.newActivity.activity_type.slice(1)}
+                      ${conflict.newActivity.location ? '<br><i class="bx bx-map me-1"></i>' + conflict.newActivity.location : ''}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  `).join('');
-
-  Swal.fire({
-    icon: 'warning',
-    title: 'Schedule Conflict Detected',
-    html: `
-      <div class="text-start">
-        <p class="mb-3">The selected group has time conflicts with your current enrollments:</p>
-        ${conflictDetails}
-        <p class="mt-3 text-muted"><small>Do you want to proceed anyway? You may need to resolve these conflicts later.</small></p>
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: 'Proceed Anyway',
-    cancelButtonText: 'Select Different Group',
-    confirmButtonColor: '#dc3545',
-    cancelButtonColor: '#6c757d',
-    width: '600px',
-    zIndex: 10000, // Ensure it appears above the modal
-    backdrop: true,
-    allowOutsideClick: false
-  }).then((result) => {
-    if (result.isConfirmed) {
-      onConfirm();
-    } else {
+    `;
+    
+    // Collect data for conflict table
+    conflictTableData.push({
+      day: conflict.conflictingActivity.day_of_week,
+      time: `${conflict.conflictingActivity.start_time} - ${conflict.conflictingActivity.end_time}`,
+      existing: conflict.conflictingCourse,
+      new: 'New Selection',
+      activity1: conflict.conflictingActivity.activity_type,
+      activity2: conflict.newActivity.activity_type
+    });
+  });
+  
+  // Generate conflict table
+  let conflictTableHtml = generateConflictScheduleTable(conflictTableData);
+  
+  // Populate modal content
+  $('#conflictDetailsList').html(conflictDetailsHtml);
+  $('#conflictScheduleTable').html(conflictTableHtml);
+  
+  // Set up modal event handlers
+  $('#proceedWithConflictBtn').off('click').on('click', function() {
+    $('#scheduleConflictModal').modal('hide');
+    onConfirm();
+  });
+  
+  $('#scheduleConflictModal').off('hidden.bs.modal').on('hidden.bs.modal', function() {
+    // Only call onCancel if the proceed button wasn't clicked
+    if (!$(this).data('proceeded')) {
       onCancel();
     }
   });
+  
+  // Track when proceed button is clicked
+  $('#proceedWithConflictBtn').on('click', function() {
+    $('#scheduleConflictModal').data('proceeded', true);
+  });
+  
+  // Reset the proceeded flag when modal is shown
+  $('#scheduleConflictModal').on('show.bs.modal', function() {
+    $(this).data('proceeded', false);
+  });
+  
+  // Show the modal
+  $('#scheduleConflictModal').modal('show');
+}
+
+/**
+ * Generates a detailed conflict schedule table
+ */
+function generateConflictScheduleTable(conflictData) {
+  if (conflictData.length === 0) return '';
+  
+  const days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const timeSlots = [
+    '9:00 – 9:50', '9:50 – 10:40', '10:40 – 11:30', '11:30 – 12:20', 
+    '12:20 – 1:10', '1:10 – 2:00', '2:00 – 2:50', '2:50 – 3:40'
+  ];
+  
+  let html = `
+    <table class="table conflict-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          ${days.map(day => `<th>${day}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  
+  timeSlots.forEach(timeSlot => {
+    html += `<tr><td class="conflict-schedule-time">${timeSlot}</td>`;
+    
+    days.forEach(day => {
+      // Check if there's a conflict in this time slot and day
+      const conflict = conflictData.find(c => 
+        c.day.toLowerCase() === day.toLowerCase() && 
+        isTimeInTimeSlot(timeSlot, c.time)
+      );
+      
+      if (conflict) {
+        html += `
+          <td class="conflict-slot">
+            <div style="font-size: 0.7rem; line-height: 1.2;">
+              <strong>⚠️ CONFLICT</strong><br>
+              <span style="color: #dc3545;">${conflict.existing}</span><br>
+              <span style="color: #856404;">+ New Course</span>
+            </div>
+          </td>
+        `;
+      } else {
+        html += `<td class="normal-slot">-</td>`;
+      }
+    });
+    
+    html += '</tr>';
+  });
+  
+  html += `
+      </tbody>
+    </table>
+  `;
+  
+  return html;
+}
+
+/**
+ * Checks if a time range falls within a time slot
+ */
+function isTimeInTimeSlot(timeSlot, timeRange) {
+  const slotParts = timeSlot.split('–').map(t => t.trim());
+  const rangeParts = timeRange.split('-').map(t => t.trim());
+  
+  if (slotParts.length < 2 || rangeParts.length < 2) return false;
+  
+  const slotStart = parseTime(slotParts[0]);
+  const slotEnd = parseTime(slotParts[1]);
+  const rangeStart = parseTime(rangeParts[0]);
+  const rangeEnd = parseTime(rangeParts[1]);
+  
+  // Check for overlap
+  return (rangeStart < slotEnd) && (slotStart < rangeEnd);
 }
 
 /**
@@ -1348,6 +1812,9 @@ function displayCourseGroups(groups) {
   groups.forEach(function(group) {
     if (!group.activities || group.activities.length === 0) return;
     
+    // Calculate schedule summary for this group
+    const scheduleSummary = calculateGroupScheduleSummary(group.activities);
+    
     // Create a group selection card
     html += `
       <div class="group-selection-item mb-3 border rounded p-3" data-group-number="${group.group}">
@@ -1360,6 +1827,20 @@ function displayCourseGroups(groups) {
               <h5 class="mb-1 text-primary">
                 <i class="bx bx-group me-2"></i>Group ${group.group}
               </h5>
+              
+              <!-- Schedule Summary -->
+              <div class="schedule-summary mb-2">
+                <div class="d-flex align-items-center mb-1">
+                  <i class="bx bx-time me-2 text-muted"></i>
+                  <span class="schedule-time-display">
+                    <span class="schedule-time-range">${scheduleSummary.timeRange}</span>
+                  </span>
+                </div>
+                <div class="d-flex align-items-center">
+                  <i class="bx bx-calendar me-2 text-muted"></i>
+                  <span class="small text-muted">${scheduleSummary.daysText}</span>
+                </div>
+              </div>
             </div>
             
             <div class="row">
@@ -1367,6 +1848,10 @@ function displayCourseGroups(groups) {
     
     // Display each activity type in the group
     group.activities.forEach(function(activity) {
+      const activityIcon = activity.activity_type === 'lecture' ? 'bx-book-open' : 
+                          activity.activity_type === 'lab' ? 'bx-flask' : 
+                          activity.activity_type === 'tutorial' ? 'bx-edit' : 'bx-chalkboard';
+      
       html += `
         <div class="col-12 col-md-6 mb-2">
           <div class="card border-light">
@@ -1374,21 +1859,21 @@ function displayCourseGroups(groups) {
               <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start">
                 <div class="flex-grow-1 mb-2 mb-sm-0">
                   <h6 class="mb-1 text-dark">
-                    <i class="bx ${activity.activity_type === 'lecture' ? 'bx-book-open' : 'bx-edit'} me-1"></i>
+                    <i class="bx ${activityIcon} me-1"></i>
                     ${activity.activity_type.charAt(0).toUpperCase() + activity.activity_type.slice(1)}
                   </h6>
                   <p class="text-muted mb-1 small">
                     <i class="bx bx-time me-1"></i>
-                    <strong>${activity.start_time} - ${activity.end_time}</strong>
+                    <strong>${formatTimeRange(activity.start_time, activity.end_time)}</strong>
                   </p>
                   <p class="text-muted mb-1 small">
                     <i class="bx bx-calendar me-1"></i>
                     <strong>${activity.day_of_week || 'Schedule TBA'}</strong>
                   </p>
                   ${activity.location ? `
-                    <p class="text-muted mb-0 small">
+                    <p class="text-muted mb-0 small schedule-location">
                       <i class="bx bx-map me-1"></i>
-                      <strong>${activity.location}</strong>
+                      ${activity.location}
                     </p>
                   ` : ''}
                 </div>
@@ -1421,6 +1906,103 @@ function displayCourseGroups(groups) {
     $(this).addClass('selected');
     $(this).find('.group-radio').prop('checked', true);
   });
+}
+
+/**
+ * Calculates schedule summary for a group
+ */
+function calculateGroupScheduleSummary(activities) {
+  if (!activities || activities.length === 0) {
+    return { timeRange: 'TBA', daysText: 'TBA' };
+  }
+  
+  // Parse all times and find range
+  let earliestTime = null;
+  let latestTime = null;
+  const days = new Set();
+  
+  activities.forEach(activity => {
+    if (activity.start_time && activity.end_time) {
+      const startMinutes = parseTime(activity.start_time);
+      const endMinutes = parseTime(activity.end_time);
+      
+      if (earliestTime === null || startMinutes < earliestTime) {
+        earliestTime = startMinutes;
+      }
+      if (latestTime === null || endMinutes > latestTime) {
+        latestTime = endMinutes;
+      }
+    }
+    
+    if (activity.day_of_week) {
+      days.add(activity.day_of_week);
+    }
+  });
+  
+  // Format time range
+  let timeRange = 'TBA';
+  if (earliestTime !== null && latestTime !== null) {
+    const startTime = formatMinutesToTime(earliestTime);
+    const endTime = formatMinutesToTime(latestTime);
+    timeRange = `${startTime} - ${endTime}`;
+  }
+  
+  // Format days
+  const daysArray = Array.from(days).sort((a, b) => {
+    const dayOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    return dayOrder.indexOf(a.toLowerCase()) - dayOrder.indexOf(b.toLowerCase());
+  });
+  
+  let daysText = daysArray.length > 0 ? daysArray.join(', ') : 'TBA';
+  if (daysArray.length > 3) {
+    daysText = `${daysArray.slice(0, 2).join(', ')} + ${daysArray.length - 2} more`;
+  }
+  
+  return { timeRange, daysText };
+}
+
+/**
+ * Formats a time range for better display
+ */
+function formatTimeRange(startTime, endTime) {
+  if (!startTime || !endTime) return 'TBA';
+  
+  // Ensure consistent format
+  const formattedStart = formatTime(startTime);
+  const formattedEnd = formatTime(endTime);
+  
+  return `${formattedStart} - ${formattedEnd}`;
+}
+
+/**
+ * Formats time string to consistent format
+ */
+function formatTime(timeStr) {
+  if (!timeStr) return 'TBA';
+  
+  // Handle various time formats
+  let cleanTime = timeStr.trim();
+  
+  // If already in HH:MM format, return as is
+  if (/^\d{1,2}:\d{2}$/.test(cleanTime)) {
+    return cleanTime;
+  }
+  
+  // Handle 24-hour format with seconds
+  if (/^\d{1,2}:\d{2}:\d{2}$/.test(cleanTime)) {
+    return cleanTime.substring(0, 5); // Remove seconds
+  }
+  
+  return cleanTime;
+}
+
+/**
+ * Converts minutes to HH:MM format
+ */
+function formatMinutesToTime(minutes) {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 }
 
 /**
@@ -1491,8 +2073,8 @@ function updateWeeklySchedule() {
 function generateScheduleGrid(selectedActivities) {
   const days = ['Time', 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
   const timeSlots = [
-    '9:00 – 9:50', '9:50 – 10:40', '10:40 – 11:30', '11:30 – 12:20', 
-    '12:20 – 1:10', '1:10 – 2:00', '2:00 – 2:50', '2:50 – 3:40'
+    '8:00 – 8:50', '9:00 – 9:50', '9:50 – 10:40', '10:40 – 11:30', '11:30 – 12:20', 
+    '12:20 – 1:10', '1:10 – 2:00', '2:00 – 2:50', '2:50 – 3:40', '3:40 – 4:30', '4:30 – 5:20'
   ];
   
   let html = '';
@@ -1510,8 +2092,8 @@ function generateScheduleGrid(selectedActivities) {
     // Day columns
     for (let dayIndex = 1; dayIndex < days.length; dayIndex++) {
       const dayName = days[dayIndex].toLowerCase();
-      // Check if any selected activity has a class at this time and day
-      const classAtThisTime = selectedActivities.find(item => {
+      // Find all activities that occur in this time slot and day
+      const activitiesInSlot = selectedActivities.filter(item => {
         if (!item.activity || !item.activity.day_of_week) return false;
         
         const scheduleDayOfWeek = item.activity.day_of_week.toLowerCase();
@@ -1520,18 +2102,38 @@ function generateScheduleGrid(selectedActivities) {
         return dayMatches && isTimeInRange(timeSlot, item.activity.start_time, item.activity.end_time);
       });
       
-      if (classAtThisTime) {
-        html += `
-          <div class="schedule-cell has-class" title="${classAtThisTime.course.name} - Group ${classAtThisTime.group} (${classAtThisTime.activity.activity_type})">
-            <div class="class-info">
-              <div class="class-title">${classAtThisTime.course.name}</div>
+      if (activitiesInSlot.length > 0) {
+        // Handle multiple activities in the same slot (conflicts)
+        const isConflict = activitiesInSlot.length > 1;
+        const cellClasses = `schedule-cell has-class ${isConflict ? 'has-conflict' : ''}`;
+        
+        let cellContent = '';
+        activitiesInSlot.forEach((classItem, index) => {
+          const activity = classItem.activity;
+          const course = classItem.course;
+          
+          if (index > 0) cellContent += '<hr class="my-1" style="margin: 2px 0; border-color: rgba(255,255,255,0.3);">';
+          
+          cellContent += `
+            <div class="class-info ${index > 0 ? 'mt-1' : ''}">
+              <div class="class-title">${course.name}</div>
               <div class="class-details">
-                Group ${classAtThisTime.group}<br>
-                ${classAtThisTime.activity.activity_type}<br>
-                ${classAtThisTime.activity.start_time}-${classAtThisTime.activity.end_time}
-                ${classAtThisTime.activity.location ? '<br>' + classAtThisTime.activity.location : ''}
+                Group ${classItem.group} | ${activity.activity_type.charAt(0).toUpperCase() + activity.activity_type.slice(1)}<br>
+                <span class="schedule-time-range">${formatTimeRange(activity.start_time, activity.end_time)}</span>
+                ${activity.location ? '<br><span class="schedule-location">' + activity.location + '</span>' : ''}
               </div>
             </div>
+          `;
+        });
+        
+        const tooltipContent = activitiesInSlot.map(item => 
+          `${item.course.name} - Group ${item.group} (${item.activity.activity_type}) ${formatTimeRange(item.activity.start_time, item.activity.end_time)}${item.activity.location ? ' @ ' + item.activity.location : ''}`
+        ).join(' | ');
+        
+        html += `
+          <div class="${cellClasses}" title="${tooltipContent}" data-bs-toggle="tooltip" data-bs-placement="top">
+            ${cellContent}
+            ${isConflict ? '<div class="conflict-indicator position-absolute top-0 end-0 mt-1 me-1"><i class="bx bx-error-circle text-warning"></i></div>' : ''}
           </div>
         `;
       } else {
@@ -1541,36 +2143,79 @@ function generateScheduleGrid(selectedActivities) {
   });
   
   $('#weeklySchedule').html(html);
+  
+  // Initialize tooltips for better hover information
+  $('[data-bs-toggle="tooltip"]').tooltip({
+    html: true,
+    container: 'body'
+  });
+  
+  // Add click handlers for schedule cells
+  $('.schedule-cell.has-class').on('click', function() {
+    const tooltip = $(this).attr('title');
+    if (tooltip) {
+      showScheduleCellDetails(tooltip, $(this).hasClass('has-conflict'));
+    }
+  });
 }
 
 /**
- * Checks if a time slot falls within a class time range
+ * Shows detailed information about a schedule cell
+ */
+function showScheduleCellDetails(tooltipContent, isConflict) {
+  const activities = tooltipContent.split(' | ');
+  let detailsHtml = '';
+  
+  activities.forEach((activity, index) => {
+    const alertClass = isConflict ? 'alert-warning' : 'alert-info';
+    detailsHtml += `
+      <div class="alert ${alertClass} mb-2">
+        <div class="d-flex align-items-center">
+          <i class="bx ${isConflict ? 'bx-error-circle text-warning' : 'bx-info-circle text-info'} me-2"></i>
+          <strong>${activity}</strong>
+        </div>
+      </div>
+    `;
+  });
+  
+  if (isConflict) {
+    detailsHtml = `
+      <div class="alert alert-danger mb-3">
+        <div class="d-flex align-items-center">
+          <i class="bx bx-error-circle me-2"></i>
+          <strong>Time Conflict Detected!</strong>
+        </div>
+      </div>
+    ` + detailsHtml;
+  }
+  
+  Swal.fire({
+    title: isConflict ? 'Schedule Conflict' : 'Schedule Details',
+    html: detailsHtml,
+    icon: isConflict ? 'warning' : 'info',
+    confirmButtonText: 'OK',
+    width: '500px'
+  });
+}
+
+/**
+ * Enhanced time slot checking with better accuracy
  */
 function isTimeInRange(timeSlot, startTime, endTime) {
   if (!startTime || !endTime) return false;
   
-  // Extract start time from slot range (e.g., "9:00 – 9:50" -> "9:00")
-  const slotStartTime = timeSlot.split('–')[0].trim();
-  const slotTime = parseTime(slotStartTime);
-  const start = parseTime(startTime);
-  const end = parseTime(endTime);
+  // Extract start and end times from slot range (e.g., "9:00 – 9:50")
+  const slotParts = timeSlot.split(/[–-]/).map(t => t.trim());
+  if (slotParts.length < 2) return false;
   
-  return slotTime >= start && slotTime < end;
-}
-
-/**
- * Parses time string to minutes for comparison
- */
-function parseTime(timeStr) {
-  if (!timeStr) return 0;
+  const slotStart = parseTime(slotParts[0]);
+  const slotEnd = parseTime(slotParts[1]);
+  const activityStart = parseTime(startTime);
+  const activityEnd = parseTime(endTime);
   
-  const timeParts = timeStr.split(':');
-  if (timeParts.length < 2) return 0;
-  
-  const hours = parseInt(timeParts[0]) || 0;
-  const minutes = parseInt(timeParts[1]) || 0;
-  
-  return hours * 60 + minutes;
+  // Check if activity overlaps with this time slot
+  // An activity overlaps if: activity_start < slot_end AND activity_end > slot_start
+  return (activityStart < slotEnd) && (activityEnd > slotStart);
 }
 
 /**
@@ -1578,10 +2223,144 @@ function parseTime(timeStr) {
  */
 function highlightScheduleConflicts(selectedActivities) {
   // Reset previous conflict styling
-  $('.schedule-cell').removeClass('schedule-conflict');
+  $('.schedule-cell').removeClass('schedule-conflict has-conflict');
   $('#scheduleConflictAlert').hide();
   
   // Find conflicts between activities
+  const conflicts = [];
+  const conflictedCells = new Set();
+  
+  for (let i = 0; i < selectedActivities.length; i++) {
+    for (let j = i + 1; j < selectedActivities.length; j++) {
+      if (hasTimeConflict(selectedActivities[i].activity, selectedActivities[j].activity)) {
+        conflicts.push({
+          activity1: selectedActivities[i],
+          activity2: selectedActivities[j]
+        });
+        
+        // Mark both activities as conflicted
+        conflictedCells.add(`${selectedActivities[i].activity.day_of_week}-${selectedActivities[i].activity.start_time}-${selectedActivities[i].activity.end_time}`);
+        conflictedCells.add(`${selectedActivities[j].activity.day_of_week}-${selectedActivities[j].activity.start_time}-${selectedActivities[j].activity.end_time}`);
+      }
+    }
+  }
+  
+  // If conflicts found, highlight them and show alert
+  if (conflicts.length > 0) {
+    $('#scheduleConflictAlert').show();
+    
+    // Add click handler to conflict alert to show detailed modal
+    $('#scheduleConflictAlert').off('click').on('click', function() {
+      showDetailedConflictModal(conflicts);
+    }).css('cursor', 'pointer');
+    
+    // Highlight all conflicted cells
+    $('.schedule-cell.has-class').each(function() {
+      const cellTitle = $(this).attr('title') || '';
+      const cellContent = $(this).text();
+      
+      // Check if this cell represents a conflicted activity
+      conflicts.forEach(conflict => {
+        const activities = [conflict.activity1.activity, conflict.activity2.activity];
+        activities.forEach(activity => {
+          if (cellTitle.includes(activity.activity_type) && 
+              cellTitle.includes(activity.start_time) && 
+              cellTitle.includes(activity.end_time)) {
+            
+            $(this).addClass('schedule-conflict has-conflict');
+            
+            // Add conflict indicator if not already present
+            if (!$(this).find('.conflict-indicator').length) {
+              $(this).append(`
+                <div class="conflict-indicator" title="Click for conflict details">
+                  <i class="bx bx-error-circle"></i>
+                </div>
+              `);
+            }
+            
+            // Add click handler to show conflict details
+            $(this).off('click.conflict').on('click.conflict', function(e) {
+              e.stopPropagation();
+              showDetailedConflictModal(conflicts);
+            });
+          }
+        });
+      });
+    });
+    
+    // Update the main conflict alert text
+    const conflictCount = conflicts.length;
+    const cellCount = conflictedCells.size;
+    $('#scheduleConflictAlert').html(`
+      <div class="d-flex align-items-center">
+        <i class="bx bx-error-circle me-2 text-warning"></i>
+        <div class="flex-grow-1">
+          <strong class="text-dark">Schedule Conflicts Detected!</strong>
+          <p class="mb-0 small text-dark">
+            Found ${conflictCount} conflict${conflictCount !== 1 ? 's' : ''} affecting ${cellCount} time slot${cellCount !== 1 ? 's' : ''}. 
+            <strong class="text-primary">Click here or on any ⚠️ icon for details.</strong>
+          </p>
+        </div>
+        <div class="ms-3">
+          <button class="btn btn-sm btn-outline-danger" onclick="showDetailedConflictModal(getScheduleConflicts())">
+            <i class="bx bx-info-circle me-1"></i>
+            View Details
+          </button>
+        </div>
+      </div>
+    `);
+  } else {
+    // Remove all conflict indicators when no conflicts
+    $('.conflict-indicator').remove();
+    $('.schedule-cell').off('click.conflict');
+  }
+}
+
+/**
+ * Shows detailed conflict modal with comprehensive information
+ */
+function showDetailedConflictModal(conflicts) {
+  if (!conflicts || conflicts.length === 0) return;
+  
+  // Transform conflicts to the format expected by showTimeConflictWarning
+  const formattedConflicts = conflicts.map(conflict => ({
+    conflictingCourse: conflict.activity1.course.name,
+    conflictingActivity: conflict.activity1.activity,
+    newActivity: conflict.activity2.activity
+  }));
+  
+  // Show the enhanced conflict modal
+  showTimeConflictWarning(formattedConflicts, 
+    function() {
+      // On proceed - just close modal, conflicts are accepted
+      console.log('User chose to proceed with conflicts');
+    },
+    function() {
+      // On cancel - could show guidance to resolve conflicts
+      console.log('User chose to resolve conflicts');
+    }
+  );
+}
+
+/**
+ * Gets current schedule conflicts for global access
+ */
+function getScheduleConflicts() {
+  const selectedActivities = [];
+  $('.course-checkbox:checked').each(function() {
+    const courseId = $(this).val();
+    const groupData = selectedCourseGroups.get(courseId);
+    if (groupData && groupData.group_activities) {
+      groupData.group_activities.forEach(activity => {
+        selectedActivities.push({
+          course: groupData.course,
+          activity: activity,
+          group: groupData.group_number
+        });
+      });
+    }
+  });
+  
   const conflicts = [];
   for (let i = 0; i < selectedActivities.length; i++) {
     for (let j = i + 1; j < selectedActivities.length; j++) {
@@ -1594,25 +2373,7 @@ function highlightScheduleConflicts(selectedActivities) {
     }
   }
   
-  // If conflicts found, highlight them and show alert
-  if (conflicts.length > 0) {
-    $('#scheduleConflictAlert').show();
-    
-    conflicts.forEach(conflict => {
-      const activities = [conflict.activity1.activity, conflict.activity2.activity];
-      activities.forEach(activity => {
-        // Find the schedule cell and add conflict styling
-        $('.schedule-cell.has-class').each(function() {
-          const cellTitle = $(this).attr('title') || '';
-          if (cellTitle.includes(activity.activity_type) && 
-              cellTitle.includes(activity.start_time) && 
-              cellTitle.includes(activity.end_time)) {
-            $(this).addClass('schedule-conflict');
-          }
-        });
-      });
-    });
-  }
+  return conflicts;
 }
 
 /**
@@ -1943,492 +2704,4 @@ $(document).ready(function () {
               <h6 class="mb-0 text-dark">Unknown</h6>
             </div>
           </div>
-        `;
-        
-        $('#studentInfo').html(studentInfoHtml);
-        $('#studentDetails').show();
-        currentStudentId = s.id;
-        currentTermId = null;
-        
-        loadEnrollmentHistory(currentStudentId);
-      },
-      error: function(xhr) {
-        $('#studentDetails').hide();
-        Swal.fire({
-          icon: 'error',
-          title: 'Student Not Found',
-          text: xhr.responseJSON?.message || 'Could not find student with the provided identifier',
-          confirmButtonText: 'Try Again'
-        });
-      }
-    });
-  });
-
-  // Initialize Select2
-  $('#term_id').select2({
-    theme: 'bootstrap-5',
-    placeholder: 'Please select an academic term',
-    allowClear: true,
-    width: '100%'
-  });
-
-  // Load terms
-  function loadTerms() {
-    $.ajax({
-      url: @json(auth()->user() && auth()->user()->hasRole('admin') ? route('terms.all.with_inactive') : route('terms.all')),
-      method: 'GET',
-      success: function (response) {
-        let $termSelect = $('#term_id');
-        $termSelect.empty().append('<option value="">Please select an academic term</option>');
-        response.data.forEach(function (term) {
-          $termSelect.append(`<option value="${term.id}">${term.name}</option>`);
-        });
-      },
-      error: function() {
-        console.error('Failed to load terms');
-      }
-    });
-  }
-  
-  loadTerms();
-
-  $('#term_id').on('change', function() {
-    currentTermId = $(this).val();
-    selectedCourseGroups.clear();
-    $('#weeklyScheduleCard').hide();
-    $('#scheduleConflictAlert').hide();
-    
-    // Refresh enrollment history when term changes
-    if (currentStudentId) {
-      loadEnrollmentHistory(currentStudentId);
-    }
-    
-    loadAvailableCourses(currentStudentId, currentTermId);
-    
-    let selectedText = $('#term_id option:selected').text();
-    updateChInfoBox(selectedText);
-  });
-
-  // Group selection modal handlers
-  $('#confirmGroupSelection').on('click', function() {
-    const courseId = $('#groupSelectionModal').data('course-id');
-    const selectedGroupNumber = $('input[name="selected_group"]:checked').val();
-    
-    if (!selectedGroupNumber) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'No Group Selected',
-        text: 'Please select a group for this course.',
-        confirmButtonText: 'OK'
-      });
-      return;
-    }
-    
-    // Get selected group data from the cached response
-    const cachedGroups = $('#groupSelectionModal').data('groups') || [];
-    const selectedGroup = cachedGroups.find(g => g.group == selectedGroupNumber);
-    
-    if (!selectedGroup) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Group Data Not Found',
-        text: 'Could not find group data. Please try again.',
-        confirmButtonText: 'OK'
-      });
-      return;
-    }
-
-    const groupData = {
-      course_id: courseId,
-      group_number: selectedGroupNumber,
-      group_activities: selectedGroup.activities,
-      course: originalCoursesData.find(c => c.available_course_id == courseId),
-      schedule: {
-        group: selectedGroupNumber,
-        activities: selectedGroup.activities
-      }
-    };
-    
-    // Check for time conflicts before storing the selection
-    const conflicts = checkScheduleConflicts(groupData, courseId);
-    
-    if (conflicts.length > 0) {
-      // Show conflict warning and get user confirmation
-      showTimeConflictWarning(conflicts, 
-        // On confirm (proceed anyway)
-        function() {
-          finalizeGroupSelection(courseId, groupData, selectedGroup);
-        },
-        // On cancel (select different group)
-        function() {
-          // Keep modal open, let user select another group
-          $('input[name="selected_group"]:checked').prop('checked', false);
-          $('.group-selection-item').removeClass('selected');
-        }
-      );
-      return;
-    }
-    
-    // No conflicts, proceed with selection
-    finalizeGroupSelection(courseId, groupData, selectedGroup);
-  });
-
-  function finalizeGroupSelection(courseId, groupData, selectedGroup) {
-    // Store the selection
-    selectedCourseGroups.set(courseId, groupData);
-    
-    // Ensure checkbox is checked (important for conflict resolution)
-    $(`#course_${courseId}`).prop('checked', true);
-    
-    // Update course item to show selected group
-    const groupInfo = $(`#groupInfo_${courseId}`);
-    groupInfo.find('.group-name').text(`Group ${groupData.group_number}`);
-    
-    // Create summary of activities
-    let activitiesSummary = selectedGroup.activities.map(activity => 
-      `<span class="badge bg-secondary me-1">${activity.activity_type.charAt(0).toUpperCase() + activity.activity_type.slice(1)}</span>`
-    ).join('');
-    
-    groupInfo.find('.group-details').html(`
-      <div class="mb-1">${activitiesSummary}</div>
-      <small class="text-muted">
-        <i class="bx bx-info-circle me-1"></i>Group contains ${selectedGroup.activities.length} activity${selectedGroup.activities.length !== 1 ? 'ies' : ''}
-      </small>
-    `);
-    groupInfo.show();
-    
-    // Mark course as selected
-    $(`.course-item[data-course-id="${courseId}"]`).addClass('selected');
-    
-    // Close modal
-    $('#groupSelectionModal').modal('hide');
-    
-    // Update schedule and summary
-    updateEnrollButton();
-    updateCreditHoursSummary();
-    updateWeeklySchedule();
-  }
-
-  // Handle modal close without selection
-  $('#groupSelectionModal').on('hidden.bs.modal', function() {
-    const courseId = $(this).data('course-id');
-    const checkbox = $(`#course_${courseId}`);
-    
-    // If no group was selected, uncheck the course and reset its styling
-    if (!selectedCourseGroups.has(courseId)) {
-      checkbox.prop('checked', false);
-      $(`.course-item[data-course-id="${courseId}"]`).removeClass('selected');
-      $(`#groupInfo_${courseId}`).hide();
-      updateEnrollButton();
-      updateCreditHoursSummary();
-      updateWeeklySchedule();
-    }
-  });
-
-  $('#enrollForm').on('submit', function(e) {
-    e.preventDefault();
-    
-    const selectedCourses = $('.course-checkbox:checked').length;
-    if (selectedCourses === 0) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'No Courses Selected',
-        text: 'Please select at least one course to enroll the student.',
-        confirmButtonText: 'OK'
-      });
-      return;
-    }
-    
-    // Check if all selected courses have groups selected
-    let missingGroups = [];
-    $('.course-checkbox:checked').each(function() {
-      const courseId = $(this).val();
-      if (!selectedCourseGroups.has(courseId)) {
-        const courseName = originalCoursesData.find(c => c.available_course_id == courseId)?.name || 'Unknown Course';
-        missingGroups.push(courseName);
-      }
-    });
-    
-    if (missingGroups.length > 0) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Groups Not Selected',
-        text: `Please select groups for: ${missingGroups.join(', ')}`,
-        confirmButtonText: 'OK'
-      });
-      return;
-    }
-    
-    let formData = new FormData();
-    formData.append('student_id', $('#student_id').val());
-    formData.append('term_id', $('#term_id').val());
-    formData.append('_token', '{{ csrf_token() }}');
-
-    // Add selected courses and their schedule IDs
-    $('.course-checkbox:checked').each(function() {
-      const courseId = $(this).val();
-      const groupData = selectedCourseGroups.get(courseId);
-      if (groupData && groupData.group_activities) {
-        formData.append('available_course_ids[]', courseId);
-        
-        // Send all schedule IDs for this course group
-        groupData.group_activities.forEach(function(activity) {
-          formData.append('available_course_schedule_ids[]', activity.id);
-        });
-        
-        // Also send the mapping of course to its schedule IDs for backend processing
-        const scheduleIds = groupData.group_activities.map(activity => activity.id);
-        formData.append(`course_schedule_mapping[${courseId}]`, JSON.stringify(scheduleIds));
-      }
-    });
-
-    // Show loading state
-    const enrollBtn = $('#enrollBtn');
-    const originalText = enrollBtn.html();
-    enrollBtn.html('<i class="bx bx-loader-alt bx-spin me-1"></i>Processing...').prop('disabled', true);
-
-    $.ajax({
-      url: '{{ route('enrollments.store') }}',
-      method: 'POST',
-      data: formData,
-      processData: false,
-      contentType: false,
-      success: function(res) {
-        // Show detailed success message
-        const enrolledCourses = $('.course-checkbox:checked').length;
-        
-        Swal.fire({
-          icon: 'success',
-          title: 'Enrollment Successful!',
-          html: `
-            <div class="text-center">
-              <p class="mb-3">Successfully enrolled in <strong>${enrolledCourses}</strong> course(s).</p>
-              <div class="d-flex justify-content-center gap-2">
-                <button type="button" class="btn btn-primary btn-sm" id="generatePdfBtn">
-                  <i class="bx bx-download me-1"></i>
-                  Download Schedule PDF
-                </button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="continueBtn">
-                  <i class="bx bx-check me-1"></i>
-                  Continue
-                </button>
-              </div>
-            </div>
-          `,
-          showConfirmButton: false,
-          allowOutsideClick: false,
-          didOpen: () => {
-            // Handle PDF download
-            document.getElementById('generatePdfBtn').addEventListener('click', function() {
-              const pdfBtn = this;
-              pdfBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Generating...';
-              pdfBtn.disabled = true;
-              
-              const url = `{{ route('students.download.pdf', ':id') }}?term_id=${currentTermId}`.replace(':id', currentStudentId);
-              
-              // First try regular AJAX to check if PDF route exists and is working
-              $.ajax({
-                url: url,
-                method: 'GET',
-                                 dataType: 'json',
-                 success: function(response) {
-                   // If we get JSON response, check if it contains a PDF URL
-                   if (response && (response.url || (response.data && response.data.url))) {
-                     const pdfUrl = response.url || response.data.url;
-                     window.open(pdfUrl, '_blank');
-                     
-                     Swal.fire({
-                       icon: 'success',
-                       title: 'PDF Generated',
-                       text: 'Schedule PDF has been opened in a new tab.',
-                       timer: 2000,
-                       showConfirmButton: false
-                     }).then(() => {
-                       Swal.close();
-                       resetEnrollmentForm();
-                     });
-                   } else {
-                     // Try direct download
-                     pdfBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Downloading...';
-                     downloadPdfDirect(url, pdfBtn);
-                   }
-                 },
-                                 error: function(xhr) {
-                   // If JSON fails, try direct blob download
-                   if (xhr.status !== 404) {
-                     pdfBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Trying direct download...';
-                     downloadPdfDirect(url, pdfBtn);
-                   } else {
-                     let errorMessage = 'PDF generation route not found or not working.';
-                     if (xhr.responseJSON && xhr.responseJSON.message) {
-                       errorMessage = xhr.responseJSON.message;
-                     }
-                     Swal.fire('Error', errorMessage, 'error');
-                     pdfBtn.innerHTML = '<i class="bx bx-download me-1"></i>Download Schedule PDF';
-                     pdfBtn.disabled = false;
-                   }
-                 }
-               });
-             });
-             
-             // Helper function to download PDF directly
-             function downloadPdfDirect(url, pdfBtn) {
-               $.ajax({
-                 url: url,
-                 method: 'GET',
-                 xhrFields: {
-                   responseType: 'blob'
-                 },
-                 success: function(blob, status, xhr) {
-                   const contentType = xhr.getResponseHeader('content-type');
-                   if (contentType && contentType.includes('application/pdf')) {
-                     // Create download link for the PDF blob
-                     const blobUrl = window.URL.createObjectURL(blob);
-                     const link = document.createElement('a');
-                     link.href = blobUrl;
-                     link.download = `student_schedule_${currentStudentId}_${currentTermId}.pdf`;
-                     document.body.appendChild(link);
-                     link.click();
-                     document.body.removeChild(link);
-                     window.URL.revokeObjectURL(blobUrl);
-                     
-                     Swal.fire({
-                       icon: 'success',
-                       title: 'PDF Downloaded',
-                       text: 'Schedule PDF has been downloaded successfully.',
-                       timer: 2000,
-                       showConfirmButton: false
-                     }).then(() => {
-                       Swal.close();
-                       resetEnrollmentForm();
-                     });
-                   } else {
-                     Swal.fire('Error', 'Response is not a PDF document.', 'error');
-                   }
-                 },
-                 error: function(xhr) {
-                   let errorMessage = 'Failed to generate PDF document.';
-                   if (xhr.responseJSON && xhr.responseJSON.message) {
-                     errorMessage = xhr.responseJSON.message;
-                   }
-                   Swal.fire('Error', errorMessage, 'error');
-                 },
-                 complete: function() {
-                   pdfBtn.innerHTML = '<i class="bx bx-download me-1"></i>Download Schedule PDF';
-                   pdfBtn.disabled = false;
-                 }
-               });
-             }
-            
-            // Handle continue without PDF
-            document.getElementById('continueBtn').addEventListener('click', function() {
-              Swal.close();
-              resetEnrollmentForm();
-            });
-          }
-        });
-      },
-      error: function(xhr) {
-        let errorMessage = 'An error occurred during enrollment. Please try again.';
-        let errorDetails = '';
-        
-        if (xhr.responseJSON) {
-          errorMessage = xhr.responseJSON.message || errorMessage;
-          
-          // Handle specific error types
-          if (xhr.status === 422) {
-            // Validation errors
-            const errors = xhr.responseJSON.errors;
-            if (errors) {
-              errorDetails = '<ul class="text-start mt-2">';
-              Object.keys(errors).forEach(field => {
-                errors[field].forEach(error => {
-                  errorDetails += `<li>${error}</li>`;
-                });
-              });
-              errorDetails += '</ul>';
-            }
-          } else if (xhr.status === 400) {
-            // Business logic errors (like credit hour limits)
-            errorDetails = `<div class="text-start mt-2"><small class="text-muted">${errorMessage}</small></div>`;
-          }
-        }
-        
-        Swal.fire({
-          icon: 'error',
-          title: 'Enrollment Failed',
-          html: `
-            <div class="text-center">
-              <p class="mb-2">${errorMessage}</p>
-              ${errorDetails}
-              <div class="mt-3">
-                <small class="text-muted">Please review your selections and try again.</small>
-              </div>
-            </div>
-          `,
-          confirmButtonText: 'Understand',
-          confirmButtonColor: '#dc3545',
-          width: '500px'
-        });
-      },
-      complete: function() {
-        enrollBtn.html(originalText).prop('disabled', false);
-        updateEnrollButton();
-      }
-    });
-  });
-
-  // Search functionality
-  $('#historySearch').on('input', function() {
-    const searchTerm = $(this).val().toLowerCase();
-    filterEnrollmentHistory(searchTerm);
-  });
-
-  $('#coursesSearch').on('input', function() {
-    const searchTerm = $(this).val().toLowerCase();
-    filterAvailableCourses(searchTerm);
-  });
-
-  Utils.hidePageLoader();
-});
-
-/**
- * Resets the enrollment form after successful enrollment
- */
-function resetEnrollmentForm() {
-  // Reset form and reload data
-  $('.course-checkbox').prop('checked', false);
-  selectedCourseGroups.clear();
-  $('.course-item').removeClass('selected');
-  $('.selected-group-info').hide();
-  $('#weeklyScheduleCard').hide();
-  loadEnrollmentHistory(currentStudentId);
-  loadAvailableCourses(currentStudentId, currentTermId);
-}
-
-
-// Global function to show missing prerequisites (called from onclick)
-function showMissingPrerequisites(missingPrereqs) {
-  let html = '';
-  missingPrereqs.forEach(function(prereq) {
-    html += `
-      <div class="alert alert-danger">
-        <div class="d-flex align-items-center">
-          <i class="bx bx-x-circle me-3 text-danger" style="font-size: 1.5rem;"></i>
-          <div>
-            <h6 class="mb-1 text-dark">${prereq.course_name}</h6>
-            <p class="mb-0 small text-dark">
-              <i class="bx bx-book me-1"></i>Course Code: <strong>${prereq.course_code || 'N/A'}</strong> | 
-              <i class="bx bx-timer me-1"></i>Credit Hours: <strong>${prereq.credit_hours || 'N/A'}</strong>
-            </p>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-  
-  $('#missingPrerequisitesList').html(html);
-  $('#prerequisitesModal').modal('show');
-}
-</script>
-@endpush
+        `

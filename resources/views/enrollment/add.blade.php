@@ -1269,16 +1269,8 @@ function generateScheduleGrid(selectedActivities) {
       const classAtThisTime = selectedActivities.find(item => {
         if (!item.activity || !item.activity.day_of_week) return false;
         
-        const scheduleDays = item.activity.day_of_week.toLowerCase();
-        const dayMatches = scheduleDays.includes(dayName) || 
-                          scheduleDays.includes(dayName.substring(0, 3)) ||
-                          (dayName === 'saturday' && (scheduleDays.includes('sat') || scheduleDays.includes('s'))) ||
-                          (dayName === 'sunday' && (scheduleDays.includes('sun') || scheduleDays.includes('u'))) ||
-                          (dayName === 'monday' && (scheduleDays.includes('mon') || scheduleDays.includes('m'))) ||
-                          (dayName === 'tuesday' && (scheduleDays.includes('tue') || scheduleDays.includes('t'))) ||
-                          (dayName === 'wednesday' && (scheduleDays.includes('wed') || scheduleDays.includes('w'))) ||
-                          (dayName === 'thursday' && (scheduleDays.includes('thu') || scheduleDays.includes('th'))) ||
-                          (dayName === 'friday' && (scheduleDays.includes('fri') || scheduleDays.includes('f')));
+        const scheduleDayOfWeek = item.activity.day_of_week.toLowerCase();
+        const dayMatches = scheduleDayOfWeek === dayName;
         
         return dayMatches && isTimeInRange(timeSlot, item.activity.start_time, item.activity.end_time);
       });

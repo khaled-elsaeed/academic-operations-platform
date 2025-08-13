@@ -124,7 +124,7 @@ class AvailableCourseService
     }
 
     /**
-     * Get all schedules for a given available course.
+     * Get all schedules for a given available course grouped by group number.
      *
      * @param int $availableCourseId
      * @return \Illuminate\Database\Eloquent\Collection
@@ -138,33 +138,49 @@ class AvailableCourseService
             throw new BusinessValidationException('Available course not found.');
         }
 
-        // Each schedule (group/activity_type) may have multiple slots (via assignments)
-        return $availableCourse->schedules->flatMap(function ($schedule) {
-            // Gather all slots for this schedule
-            $slots = $schedule->scheduleAssignments->map(function ($assignment) {
-                return $assignment->scheduleSlot;
-            })->filter();
+        // Group schedules by group number and organize by activity type
+        $groupedSchedules = $availableCourse->schedules->groupBy('group')->map(function ($schedules, $groupNumber) {
+            $groupData = [
+                'group' => $groupNumber,
+                'activities' => []
+            ];
 
-            if ($slots->isEmpty()) {
-                return [];
+            foreach ($schedules as $schedule) {
+                // Gather all slots for this schedule
+                $slots = $schedule->scheduleAssignments->map(function ($assignment) {
+                    return $assignment->scheduleSlot;
+                })->filter();
+
+                if ($slots->isNotEmpty()) {
+                    // Sort slots by start_time
+                    $sortedSlots = $slots->sortBy('start_time')->values();
+                    $firstSlot = $sortedSlots->first();
+                    $lastSlot = $sortedSlots->last();
+
+                    // Calculate enrolled count for this specific schedule
+                    $enrolledCount = \App\Models\Enrollment::join('available_courses', 'enrollments.course_id', '=', 'available_courses.course_id')
+                        ->where('available_courses.id', $availableCourse->id)
+                        ->where('enrollments.term_id', $availableCourse->term_id)
+                        ->count();
+
+                    $groupData['activities'][] = [
+                        'id' => $schedule->id,
+                        'activity_type' => $schedule->activity_type,
+                        'location' => $schedule->location,
+                        'min_capacity' => $schedule->min_capacity,
+                        'max_capacity' => $schedule->max_capacity,
+                        'enrolled_count' => $enrolledCount,
+                        'day_of_week' => $firstSlot?->day_of_week,
+                        'start_time' => formatTime($firstSlot?->start_time),
+                        'end_time' => formatTime($lastSlot?->end_time),
+                    ];
+                }
             }
 
-            // Sort slots by start_time
-            $sortedSlots = $slots->sortBy('start_time')->values();
-            $firstSlot = $sortedSlots->first();
-            $lastSlot = $sortedSlots->last();
-
-            return [[
-                'id' => $schedule->id,
-                'group' => $schedule->group,
-                'activity_type' => $schedule->activity_type,
-                'min_capacity' => $schedule->min_capacity,
-                'max_capacity' => $schedule->max_capacity,
-                'day_of_week' => $firstSlot?->day_of_week,
-                'start_time' => formatTime($firstSlot?->start_time),
-                'end_time' => formatTime($lastSlot?->end_time),
-            ]];
+            return $groupData;
         });
+
+        return $groupedSchedules->values();
     }
 
     /**

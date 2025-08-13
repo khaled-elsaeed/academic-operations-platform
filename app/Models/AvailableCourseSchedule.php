@@ -51,4 +51,5 @@ class AvailableCourseSchedule extends Model
     {
         return $this->hasMany(ScheduleAssignment::class, 'available_course_schedule_id');
     }
+
 }

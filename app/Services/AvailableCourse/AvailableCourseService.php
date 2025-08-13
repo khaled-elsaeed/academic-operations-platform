@@ -138,26 +138,32 @@ class AvailableCourseService
             throw new BusinessValidationException('Available course not found.');
         }
 
-        return $availableCourse->schedules->map(function ($schedule) {
-            return [
+        // Each schedule (group/activity_type) may have multiple slots (via assignments)
+        return $availableCourse->schedules->flatMap(function ($schedule) {
+            // Gather all slots for this schedule
+            $slots = $schedule->scheduleAssignments->map(function ($assignment) {
+                return $assignment->scheduleSlot;
+            })->filter();
+
+            if ($slots->isEmpty()) {
+                return [];
+            }
+
+            // Sort slots by start_time
+            $sortedSlots = $slots->sortBy('start_time')->values();
+            $firstSlot = $sortedSlots->first();
+            $lastSlot = $sortedSlots->last();
+
+            return [[
                 'id' => $schedule->id,
                 'group' => $schedule->group,
                 'activity_type' => $schedule->activity_type,
                 'min_capacity' => $schedule->min_capacity,
                 'max_capacity' => $schedule->max_capacity,
-                'schedule_assignments' => $schedule->scheduleAssignments->map(function ($assignment) {
-                    $slot = $assignment->scheduleSlot;
-                    return [
-                        'id' => $assignment->id,
-                        'schedule_slot' => $slot ? [
-                            'id' => $slot->id,
-                            'day_of_week' => $slot->day_of_week,
-                            'start_time' => $slot->start_time,
-                            'end_time' => $slot->end_time,
-                        ] : null,
-                    ];
-                })->values(),
-            ];
+                'day_of_week' => $firstSlot?->day_of_week,
+                'start_time' => formatTime($firstSlot?->start_time),
+                'end_time' => formatTime($lastSlot?->end_time),
+            ]];
         });
     }
 

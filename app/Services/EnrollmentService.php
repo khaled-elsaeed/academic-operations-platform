@@ -154,22 +154,7 @@ class EnrollmentService
                 return $enrollment->term_season && $enrollment->term_year ? "{$enrollment->term_season} {$enrollment->term_year}" : '-';
             })
             ->addColumn('grade', function($enrollment) {
-                if ($enrollment->grade === null) {
-                    return '<span class="badge bg-label-secondary"><i class="bx bx-time me-1"></i>No Grade</span>';
-                }
-                $badgeClass = match($enrollment->grade) {
-                    'A+', 'A' => 'bg-label-success',
-                    'A-', 'B+', 'B' => 'bg-label-primary',
-                    'B-', 'C+', 'C' => 'bg-label-warning',
-                    'C-', 'D+', 'D' => 'bg-label-info',
-                    'F', 'FL', 'FD' => 'bg-label-danger',
-                    'P' => 'bg-label-success',
-                    'AU' => 'bg-label-info',
-                    'W' => 'bg-label-secondary',
-                    'I' => 'bg-label-warning',
-                    default => 'bg-label-secondary',
-                };
-                return "<span class='badge {$badgeClass}'><i class='bx bx-star me-1'></i>{$enrollment->grade}</span>";
+                return $enrollment->grade ?? "No Grade Yet" ;
             })
             ->addColumn('action', function($enrollment) {
                 return $this->renderActionButtons($enrollment);
@@ -178,7 +163,7 @@ class EnrollmentService
             ->orderColumn('course', 'courses.title $1')
             ->orderColumn('term', 'terms.season $1, terms.year $1')
             ->orderColumn('grade', 'enrollments.grade $1')
-            ->rawColumns(['action', 'grade'])
+            ->rawColumns(['action'])
             ->make(true);
     }
 
@@ -538,20 +523,10 @@ class EnrollmentService
      */
     public function getAvailableCourses(int $studentId, int $termId): array
     {
-        $availableCourses = \App\Models\AvailableCourse::with(['course', 'eligibilities.program', 'eligibilities.level'])
-            ->whereHas('eligibilities', function ($query) use ($studentId) {
-                $query->where('program_id', function ($subQuery) use ($studentId) {
-                    $subQuery->select('program_id')
-                        ->from('students')
-                        ->where('id', $studentId);
-                })->where('level_id', function ($subQuery) use ($studentId) {
-                    $subQuery->select('level_id')
-                        ->from('students')
-                        ->where('id', $studentId);
-                });
-            })
-            ->where('term_id', $termId)
-            ->get()
+        $student = Student::findOrFail($studentId);
+        $studentProgram = $student->program_id;
+        $studentLevel = $student->level_id;
+        $availableCourses = AvailableCourse::available($studentProgram,$studentLevel,$termId)
             ->map(function ($availableCourse) {
                 return [
                     'id' => $availableCourse->id,

@@ -198,15 +198,24 @@ class CourseService
                     ->whereIn('id', $courseIds);
             })
             ->get()
-            ->map(function($prereq) use ($studentId) {
+            ->map(function($prereq) use ($studentId, $courseIds) {
                 $isEnrolled = Enrollment::where('student_id', $studentId)
                     ->where('course_id', $prereq->prerequisite_id)
                     ->exists();
+                
+                // Find the corresponding available_course_id
+                $availableCourseId = \DB::table('available_courses')
+                    ->where('course_id', $prereq->course_id)
+                    ->whereIn('id', $courseIds)
+                    ->value('id');
+                
                 return [
                     'course_name' => $prereq->prerequisiteCourse->name ?? 'Unknown Course',
                     'course_code' => $prereq->prerequisiteCourse->code ?? 'N/A',
                     'credit_hours' => $prereq->prerequisiteCourse->credit_hours ?? 0,
                     'required_for' => $prereq->course->name ?? 'Unknown Course',
+                    'required_for_course_id' => $availableCourseId,
+                    'prerequisite_course_id' => $prereq->prerequisite_id,
                     'is_enrolled' => $isEnrolled,
                 ];
             })->toArray();

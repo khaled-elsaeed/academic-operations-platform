@@ -862,18 +862,6 @@
   color: #2c3e50 !important;
 }
 
-/* Modal and alert z-index fixes */
-.modal {
-  z-index: 1050;
-}
-
-.swal2-container {
-  z-index: 10000 !important;
-}
-
-.swal2-backdrop-show {
-  z-index: 9999 !important;
-}
 
 /* Enhanced alert styles */
 .alert {

@@ -4,6 +4,54 @@
 
 @push('styles')
   <link rel="stylesheet" href="{{ asset('css/enrollment.css') }}">
+  <style>
+    .activity-type-section {
+      border: 1px solid #dee2e6;
+      border-radius: 0.375rem;
+      overflow: hidden;
+    }
+    
+    .activity-type-header {
+      border-bottom: 1px solid #dee2e6;
+    }
+    
+    .activity-type-header.bg-success {
+      border-bottom-color: rgba(255,255,255,0.2);
+    }
+    
+    .activity-option.activity-disabled {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    
+    .activity-option .card {
+      transition: all 0.2s ease;
+    }
+    
+    .activity-option .form-check-input:checked + label .card {
+      background-color: #e7f3ff;
+      border-color: #0d6efd;
+    }
+    
+    .activity-option .form-check-input:disabled + label .card {
+      background-color: #f8f9fa;
+      color: #6c757d;
+    }
+    
+    .schedule-details {
+      font-size: 0.875rem;
+    }
+    
+    .badge.bg-danger {
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+  </style>
 @endpush
 
 @section('page-content')
@@ -304,17 +352,21 @@
       </div>
     </div>
 
-  <!-- Group Selection Modal -->
-  <x-ui.modal id="groupSelectionModal" scrollable="true" size="lg" title="Select Course Group">
-    <div id="courseGroupInfo" class="mb-3">
+  <!-- Activity Type Selection Modal -->
+  <x-ui.modal id="activitySelectionModal" scrollable="true" size="xl" title="Select Course Schedules">
+    <div id="courseActivityInfo" class="mb-3">
       <!-- Course info will be populated here -->
     </div>
-    <div id="groupsList">
-      <!-- Groups will be populated here -->
+    <div class="alert alert-info">
+      <i class="bx bx-info-circle me-2"></i>
+      <strong>Important:</strong> You must select at least one schedule for each activity type. Multiple schedules can be selected if they don't conflict.
+    </div>
+    <div id="activitiesList">
+      <!-- Activity types will be populated here -->
     </div>
     <x-slot name="footer">
       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-      <button type="button" class="btn btn-primary" id="confirmGroupSelection">
+      <button type="button" class="btn btn-primary" id="confirmActivitySelection">
         <i class="bx bx-check me-1"></i>
         Confirm Selection
       </button>
@@ -335,44 +387,7 @@
     </x-slot>
   </x-ui.modal>
 
-  <!-- Schedule Conflict Modal -->
-  <x-ui.modal id="scheduleConflictModal" scrollable="true" size="xl" title="Schedule Conflict Detected">
-    <div class="alert alert-danger">
-      <div class="d-flex align-items-start">
-        <i class="bx bx-error-circle me-2 text-danger mt-1" style="font-size: 1.5rem;"></i>
-        <div>
-          <strong class="text-dark">Time Conflict Warning!</strong>
-          <p class="mb-0 text-dark">The selected schedule has conflicts with your current course selections. Please review the details below:</p>
-        </div>
-      </div>
-    </div>
-    <div id="conflictDetailsList">
-      <!-- Conflict details will be populated here -->
-    </div>
-    <div class="alert alert-info mt-3">
-      <div class="d-flex align-items-start">
-        <i class="bx bx-info-circle me-2 text-info mt-1"></i>
-        <div class="text-dark">
-          <strong>What should you do?</strong>
-          <ul class="mb-0 mt-2">
-            <li>You can <strong>proceed anyway</strong> if this is intentional (e.g., makeup classes, special arrangements)</li>
-            <li>You can <strong>select a different group</strong> for one of the conflicting courses</li>
-            <li>You can <strong>unselect one of the conflicting courses</strong> entirely</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-    <x-slot name="footer">
-      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-        <i class="bx bx-x me-1"></i>
-        Select Different Group
-      </button>
-      <button type="button" class="btn btn-danger" id="proceedWithConflictBtn">
-        <i class="bx bx-check me-1"></i>
-        Proceed Anyway
-      </button>
-    </x-slot>
-  </x-ui.modal>
+
 
   </div>
 </div>
@@ -828,7 +843,13 @@ const CourseModule = {
       );
       
       const hasUnfulfilledPrereqs = coursePrereqs.some(p => !p.is_enrolled);
-      const canEnroll = !hasUnfulfilledPrereqs;
+      
+      // Check for schedule conflicts with this course
+      const hasScheduleConflicts = this.checkCourseConflicts(course.available_course_id);
+      
+      const canEnroll = !hasUnfulfilledPrereqs && !hasScheduleConflicts;
+      const disabledReason = hasUnfulfilledPrereqs ? 'Prerequisites required' : 
+                           hasScheduleConflicts ? 'Schedule conflicts with enrolled courses' : '';
       
       html += `
         <div class="course-item ${!canEnroll ? 'disabled' : ''}" data-course-id="${course.available_course_id}">
@@ -837,7 +858,7 @@ const CourseModule = {
                    name="available_course_ids[]" value="${course.available_course_id}" 
                    data-credit-hours="${course.credit_hours}" 
                    id="course_${course.available_course_id}"
-                   ${!canEnroll ? 'disabled title="Prerequisites required"' : ''}>
+                   ${!canEnroll ? `disabled title="${disabledReason}"` : ''}>
             <label class="form-check-label w-100" for="course_${course.available_course_id}">
               <div class="d-flex justify-content-between align-items-start">
                 <div style="flex: 1;">
@@ -850,9 +871,11 @@ const CourseModule = {
                   
                   ${this.renderPrerequisites(coursePrereqs, hasUnfulfilledPrereqs)}
                   
+                  ${hasScheduleConflicts ? this.renderScheduleConflictWarning() : ''}
+                  
                   <div class="selected-group-info" id="groupInfo_${course.available_course_id}" style="display:none;">
                     <small class="text-primary fw-semibold">
-                      <i class="bx bx-group me-1"></i>Selected Group: <span class="group-name"></span>
+                      <i class="bx bx-chalkboard me-1"></i>Selected Schedules: <span class="group-name"></span>
                     </small>
                     <div class="group-details mt-1"></div>
                   </div>
@@ -862,7 +885,8 @@ const CourseModule = {
                     <i class="bx bx-group me-1"></i>
                     ${course.remaining_capacity} spots left
                   </span>
-                  ${!canEnroll ? '<div><span class="badge bg-danger text-white"><i class="bx bx-lock me-1"></i>Prerequisites Required</span></div>' : ''}
+                  ${hasUnfulfilledPrereqs ? '<div><span class="badge bg-danger text-white"><i class="bx bx-lock me-1"></i>Prerequisites Required</span></div>' : ''}
+                  ${hasScheduleConflicts ? '<div><span class="badge bg-warning text-dark"><i class="bx bx-error-circle me-1"></i>Schedule Conflict</span></div>' : ''}
                 </div>
               </div>
             </label>
@@ -873,6 +897,35 @@ const CourseModule = {
     
     $('#coursesBox').html(html);
     this.attachEventHandlers();
+  },
+
+  checkCourseConflicts(courseId) {
+    // This is a placeholder - we would need to load course schedules to check conflicts
+    // For now, we'll implement basic conflict checking based on enrolled courses
+    // In a real implementation, you would make an AJAX call to check conflicts
+    
+    // Check if any of the current enrolled activities would conflict
+    // This is a simplified implementation - ideally you'd check all possible schedules
+    const existingEnrolledActivities = EnrollmentState.selectedActivities.filter(
+      item => item.source === 'old_schedule'
+    );
+    
+    // For this simplified implementation, we'll return false
+    // In practice, you'd need to load the course schedules and check conflicts
+    return false;
+  },
+
+  renderScheduleConflictWarning() {
+    return `
+      <div class="alert alert-warning mt-2 mb-0 py-2">
+        <div class="d-flex align-items-center">
+          <i class="bx bx-error-circle me-2 text-warning"></i>
+          <small class="text-dark">
+            <strong>Schedule Conflict:</strong> This course has schedules that conflict with your current enrollments.
+          </small>
+        </div>
+      </div>
+    `;
   },
 
   renderPrerequisites(coursePrereqs, hasUnfulfilledPrereqs) {
@@ -932,7 +985,7 @@ const CourseModule = {
       const isChecked = $(this).is(':checked');
       
       if (isChecked) {
-        GroupSelectionModule.show(courseId);
+        ActivitySelectionModule.show(courseId);
       } else {
         EnrollmentState.selectedCourseGroups.delete(courseId);
         $(`#groupInfo_${courseId}`).hide();
@@ -991,19 +1044,19 @@ const PrerequisiteModule = {
 };
 
 // ========================================
-// GROUP SELECTION MODULE
+// ACTIVITY SELECTION MODULE
 // ========================================
-const GroupSelectionModule = {
+const ActivitySelectionModule = {
   show(courseId) {
     const course = EnrollmentState.originalCoursesData.find(c => c.available_course_id == courseId);
     if (!course) return;
     
-    $('#groupSelectionModalLabel').html(`
-      <i class="bx bx-group me-2"></i>
-      Select Group for ${course.name}
+    $('#activitySelectionModalLabel').html(`
+      <i class="bx bx-chalkboard me-2"></i>
+      Select Schedules for ${course.name}
     `);
     
-    $('#courseGroupInfo').html(`
+    $('#courseActivityInfo').html(`
       <div class="alert alert-info">
         <h6 class="mb-1 text-dark">${course.name}</h6>
         <p class="mb-0 small text-dark">
@@ -1013,13 +1066,13 @@ const GroupSelectionModule = {
       </div>
     `);
     
-    this.loadGroups(courseId);
-    $('#groupSelectionModal').data('course-id', courseId);
-    $('#groupSelectionModal').modal('show');
+    this.loadActivities(courseId);
+    $('#activitySelectionModal').data('course-id', courseId);
+    $('#activitySelectionModal').modal('show');
   },
 
-  loadGroups(courseId) {
-    Utils.showLoading('#groupsList', 'Loading course groups...');
+  loadActivities(courseId) {
+    Utils.showLoading('#activitiesList', 'Loading course schedules...');
     
     const url = window.routes.courseSchedules.replace(':id', courseId);
     $.ajax({
@@ -1027,97 +1080,125 @@ const GroupSelectionModule = {
       method: 'GET',
       success: (res) => {
         const groups = res.data || [];
-        $('#groupSelectionModal').data('groups', groups);
-        this.displayGroups(groups);
+        $('#activitySelectionModal').data('groups', groups);
+        this.displayActivities(groups);
       },
       error: () => {
-        $('#groupsList').html(`
+        $('#activitiesList').html(`
           <div class="alert alert-danger">
             <i class="bx bx-error-circle me-2"></i>
-            <span class="text-dark">Failed to load course groups. Please try again.</span>
+            <span class="text-dark">Failed to load course schedules. Please try again.</span>
           </div>
         `);
       }
     });
   },
 
-  displayGroups(groups) {
+  displayActivities(groups) {
     if (groups.length === 0) {
-      $('#groupsList').html(`
+      $('#activitiesList').html(`
         <div class="alert alert-warning">
           <i class="bx bx-info-circle me-2"></i>
-          <span class="text-dark">No groups available for this course.</span>
+          <span class="text-dark">No schedules available for this course.</span>
         </div>
       `);
       return;
     }
     
-    let html = '';
+    // Organize activities by type across all groups
+    const activitiesByType = {};
+    
     groups.forEach((group) => {
       if (!group.activities || group.activities.length === 0) return;
       
-      const scheduleSummary = this.calculateScheduleSummary(group.activities);
+      group.activities.forEach((activity) => {
+        if (!activitiesByType[activity.activity_type]) {
+          activitiesByType[activity.activity_type] = [];
+        }
+        
+        activitiesByType[activity.activity_type].push({
+          ...activity,
+          group_number: group.group
+        });
+      });
+    });
+    
+    let html = '';
+    
+    Object.keys(activitiesByType).forEach((activityType) => {
+      const activities = activitiesByType[activityType];
+      const activityIcon = activityType === 'lecture' ? 'bx-book-open' : 
+                          activityType === 'lab' ? 'bx-flask' : 
+                          activityType === 'tutorial' ? 'bx-edit' : 'bx-chalkboard';
       
       html += `
-        <div class="group-selection-item mb-3 border rounded p-3" data-group-number="${group.group}">
-          <div class="form-check">
-            <input class="form-check-input group-radio" type="radio" 
-                   name="selected_group" value="${group.group}" 
-                   id="group_${group.group}">
-            <label class="form-check-label w-100" for="group_${group.group}">
-              <div class="mb-2">
-                <h5 class="mb-1 text-primary">
-                  <i class="bx bx-group me-2"></i>Group ${group.group}
-                </h5>
-                
-                <div class="schedule-summary mb-2">
-                  <div class="d-flex align-items-center">
-                    <i class="bx bx-calendar me-2 text-muted"></i>
-                    <span class="small text-muted">${scheduleSummary.daysText}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="row">
+        <div class="activity-type-section mb-4" data-activity-type="${activityType}">
+          <div class="activity-type-header bg-light p-3 rounded-top border">
+            <h5 class="mb-0 text-dark">
+              <i class="bx ${activityIcon} me-2"></i>
+              ${activityType.charAt(0).toUpperCase() + activityType.slice(1)} 
+              <span class="badge bg-primary ms-2">${activities.length} option${activities.length !== 1 ? 's' : ''}</span>
+              <span class="badge bg-danger ms-1 text-white" style="font-size: 0.75em;">* Required</span>
+            </h5>
+            <small class="text-muted">Select at least one schedule for this activity type</small>
+          </div>
+          <div class="activity-options border border-top-0 rounded-bottom p-3">
       `;
       
-      // Display each activity type in the group
-      group.activities.forEach((activity) => {
-        const activityIcon = activity.activity_type === 'lecture' ? 'bx-book-open' : 
-                            activity.activity_type === 'lab' ? 'bx-flask' : 
-                            activity.activity_type === 'tutorial' ? 'bx-edit' : 'bx-chalkboard';
+      activities.forEach((activity, index) => {
+        const isConflicting = this.checkActivityConflict(activity);
+        const conflictClass = isConflicting ? 'border-danger' : 'border-light';
+        const disabledAttr = isConflicting ? 'disabled' : '';
+        const disabledClass = isConflicting ? 'activity-disabled' : '';
         
         html += `
-          <div class="col-12 col-md-6 mb-2">
-            <div class="card border-light">
-              <div class="card-body p-2">
-                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start">
-                  <div class="flex-grow-1 mb-2 mb-sm-0">
-                    <h6 class="mb-1 text-dark">
-                      <i class="bx ${activityIcon} me-1"></i>
-                      ${activity.activity_type.charAt(0).toUpperCase() + activity.activity_type.slice(1)}
-                    </h6>
-                    <p class="text-muted mb-1 small">
-                      <i class="bx bx-time me-1"></i>
-                      <strong>${Utils.formatTimeRange(activity.start_time, activity.end_time)}</strong>
-                    </p>
-                    <p class="text-muted mb-1 small">
-                      <i class="bx bx-calendar me-1"></i>
-                      <strong>${activity.day_of_week || 'Schedule TBA'}</strong>
-                    </p>
-                    ${activity.location ? `
-                      <p class="text-muted mb-0 small schedule-location">
-                        <i class="bx bx-map me-1"></i>
-                        ${activity.location}
-                      </p>
-                    ` : ''}
-                  </div>
-                  <div class="text-end">
-                    <span class="badge bg-info text-white small">
-                      <i class="bx bx-users me-1"></i>
-                      ${activity.enrolled_count || 0}/${activity.max_capacity}
-                    </span>
-                  </div>
+          <div class="activity-option mb-2 ${disabledClass}" data-activity-id="${activity.id}">
+            <div class="card ${conflictClass}">
+              <div class="card-body p-3">
+                <div class="form-check">
+                  <input class="form-check-input activity-checkbox" type="checkbox" 
+                         name="selected_activities[]" value="${activity.id}" 
+                         data-activity-type="${activityType}"
+                         data-group-number="${activity.group_number}"
+                         id="activity_${activity.id}" ${disabledAttr}>
+                  <label class="form-check-label w-100" for="activity_${activity.id}">
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div class="flex-grow-1">
+                        <h6 class="mb-1 text-dark">
+                          Group ${activity.group_number} - ${activityType.charAt(0).toUpperCase() + activityType.slice(1)}
+                          ${isConflicting ? '<span class="badge bg-danger ms-2">CONFLICT</span>' : ''}
+                        </h6>
+                        <div class="schedule-details">
+                          <p class="text-muted mb-1 small">
+                            <i class="bx bx-time me-1"></i>
+                            <strong>${Utils.formatTimeRange(activity.start_time, activity.end_time)}</strong>
+                          </p>
+                          <p class="text-muted mb-1 small">
+                            <i class="bx bx-calendar me-1"></i>
+                            <strong>${activity.day_of_week || 'Schedule TBA'}</strong>
+                          </p>
+                          ${activity.location ? `
+                            <p class="text-muted mb-0 small">
+                              <i class="bx bx-map me-1"></i>
+                              ${activity.location}
+                            </p>
+                          ` : ''}
+                          ${isConflicting ? `
+                            <p class="text-danger mb-0 small">
+                              <i class="bx bx-error-circle me-1"></i>
+                              Conflicts with your current schedule
+                            </p>
+                          ` : ''}
+                        </div>
+                      </div>
+                      <div class="text-end">
+                        <span class="badge ${isConflicting ? 'bg-secondary' : 'bg-info'} text-white small">
+                          <i class="bx bx-users me-1"></i>
+                          ${activity.enrolled_count || 0}/${activity.max_capacity}
+                        </span>
+                      </div>
+                    </div>
+                  </label>
                 </div>
               </div>
             </div>
@@ -1126,20 +1207,78 @@ const GroupSelectionModule = {
       });
       
       html += `
-              </div>
-            </label>
           </div>
         </div>
       `;
     });
     
-    $('#groupsList').html(html);
+    $('#activitiesList').html(html);
     
-    // Handle group selection
-    $('.group-selection-item').on('click', function() {
-      $('.group-selection-item').removeClass('selected');
-      $(this).addClass('selected');
-      $(this).find('.group-radio').prop('checked', true);
+    // Handle activity selection
+    $('.activity-checkbox').on('change', this.handleActivitySelection.bind(this));
+  },
+
+  checkActivityConflict(activity) {
+    // Check conflicts with existing enrolled courses
+    const existingEnrolledActivities = EnrollmentState.selectedActivities.filter(
+      item => item.source === 'old_schedule'
+    );
+
+    for (let enrolledItem of existingEnrolledActivities) {
+      if (TimeConflictModule.hasConflict(enrolledItem.activity, activity)) {
+        return true;
+      }
+    }
+
+    // Check conflicts with other selected activities from current course selections
+    for (let [courseId, groupData] of EnrollmentState.selectedCourseGroups) {
+      if (groupData.group_activities) {
+        for (let selectedActivity of groupData.group_activities) {
+          if (TimeConflictModule.hasConflict(selectedActivity, activity)) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  },
+
+  handleActivitySelection() {
+    this.updateConfirmButton();
+  },
+
+  updateConfirmButton() {
+    const allActivityTypes = {};
+    
+    // Collect all activity types and their selection status
+    $('.activity-type-section').each(function() {
+      const activityType = $(this).data('activity-type');
+      const hasSelection = $(this).find('.activity-checkbox:checked').length > 0;
+      allActivityTypes[activityType] = hasSelection;
+    });
+
+    // Check if all activity types have at least one selection
+    const allTypesSelected = Object.values(allActivityTypes).every(hasSelection => hasSelection);
+    
+    $('#confirmActivitySelection').prop('disabled', !allTypesSelected);
+    
+    // Update UI feedback
+    $('.activity-type-header').each(function() {
+      const section = $(this).closest('.activity-type-section');
+      const activityType = section.data('activity-type');
+      const hasSelection = allActivityTypes[activityType];
+      
+      if (hasSelection) {
+        $(this).removeClass('bg-light').addClass('bg-success text-white');
+        $(this).find('.badge.bg-danger').hide();
+        $(this).find('.badge.bg-success').remove();
+        $(this).find('h5').append('<span class="badge bg-success ms-2">✓ Selected</span>');
+      } else {
+        $(this).removeClass('bg-success text-white').addClass('bg-light');
+        $(this).find('.badge.bg-danger').show();
+        $(this).find('.badge.bg-success').remove();
+      }
     });
   },
 
@@ -1170,87 +1309,118 @@ const GroupSelectionModule = {
   },
 
   confirmSelection() {
-    const courseId = $('#groupSelectionModal').data('course-id');
-    const selectedGroupNumber = $('input[name="selected_group"]:checked').val();
+    const courseId = $('#activitySelectionModal').data('course-id');
+    const selectedActivities = $('.activity-checkbox:checked');
     
-    if (!selectedGroupNumber) {
+    if (selectedActivities.length === 0) {
       Swal.fire({
         icon: 'warning',
-        title: 'No Group Selected',
-        text: 'Please select a group for this course.',
-        confirmButtonText: 'OK'
-      });
-      return;
-    }
-    
-    const cachedGroups = $('#groupSelectionModal').data('groups') || [];
-    const selectedGroup = cachedGroups.find(g => g.group == selectedGroupNumber);
-    
-    if (!selectedGroup) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Group Data Not Found',
-        text: 'Could not find group data. Please try again.',
+        title: 'No Activities Selected',
+        text: 'Please select at least one schedule for each activity type.',
         confirmButtonText: 'OK'
       });
       return;
     }
 
-    const groupData = {
-      course_id: courseId,
-      group_number: selectedGroupNumber,
-      group_activities: selectedGroup.activities,
-      course: EnrollmentState.originalCoursesData.find(c => c.available_course_id == courseId),
-      schedule: {
-        group: selectedGroupNumber,
-        activities: selectedGroup.activities
+    // Check if all activity types have at least one selection
+    const allActivityTypes = {};
+    $('.activity-type-section').each(function() {
+      const activityType = $(this).data('activity-type');
+      const hasSelection = $(this).find('.activity-checkbox:checked').length > 0;
+      allActivityTypes[activityType] = hasSelection;
+    });
+
+    const unselectedTypes = Object.keys(allActivityTypes).filter(type => !allActivityTypes[type]);
+    
+    if (unselectedTypes.length > 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Required Selections',
+        html: `Please select at least one schedule for the following activity types:<br><strong>${unselectedTypes.join(', ')}</strong>`,
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+    
+    const cachedGroups = $('#activitySelectionModal').data('groups') || [];
+    const selectedActivityData = [];
+    
+    selectedActivities.each(function() {
+      const activityId = $(this).val();
+      const activityType = $(this).data('activity-type');
+      const groupNumber = $(this).data('group-number');
+      
+      // Find the activity data
+      for (let group of cachedGroups) {
+        const activity = group.activities.find(a => a.id == activityId);
+        if (activity) {
+          selectedActivityData.push({
+            ...activity,
+            group_number: groupNumber
+          });
+          break;
+        }
       }
+    });
+
+    const courseData = {
+      course_id: courseId,
+      selected_activities: selectedActivityData,
+      course: EnrollmentState.originalCoursesData.find(c => c.available_course_id == courseId)
     };
     
-    // Check for time conflicts before storing the selection
-    const conflicts = TimeConflictModule.checkScheduleConflicts(groupData, courseId);
-    
-    if (conflicts.length > 0) {
-      TimeConflictModule.showConflictWarning(conflicts, 
-        () => this.finalizeSelection(courseId, groupData, selectedGroup),
-        () => {
-          $('input[name="selected_group"]:checked').prop('checked', false);
-          $('.group-selection-item').removeClass('selected');
-        }
-      );
-      return;
-    }
-    
-    this.finalizeSelection(courseId, groupData, selectedGroup);
+    this.finalizeSelection(courseId, courseData);
   },
 
-  finalizeSelection(courseId, groupData, selectedGroup) {
+  finalizeSelection(courseId, courseData) {
+    // Store the selected activities in the expected format
+    const groupData = {
+      course_id: courseId,
+      group_activities: courseData.selected_activities,
+      course: courseData.course,
+      selected_activities_by_type: this.organizeActivitiesByType(courseData.selected_activities)
+    };
+    
     EnrollmentState.selectedCourseGroups.set(courseId, groupData);
     
     $(`#course_${courseId}`).prop('checked', true);
     
     const groupInfo = $(`#groupInfo_${courseId}`);
-    groupInfo.find('.group-name').text(`Group ${groupData.group_number}`);
     
-    let activitiesSummary = selectedGroup.activities.map(activity => 
-      `<span class="badge bg-secondary me-1">${activity.activity_type.charAt(0).toUpperCase() + activity.activity_type.slice(1)}</span>`
-    ).join('');
+    // Create summary of selected activities
+    const activitiesByType = this.organizeActivitiesByType(courseData.selected_activities);
+    let activitiesSummary = Object.keys(activitiesByType).map(activityType => {
+      const count = activitiesByType[activityType].length;
+      return `<span class="badge bg-secondary me-1">${activityType.charAt(0).toUpperCase() + activityType.slice(1)} (${count})</span>`;
+    }).join('');
     
+    groupInfo.find('.group-name').text(`${Object.keys(activitiesByType).length} Activity Type${Object.keys(activitiesByType).length !== 1 ? 's' : ''}`);
     groupInfo.find('.group-details').html(`
       <div class="mb-1">${activitiesSummary}</div>
       <small class="text-muted">
-        <i class="bx bx-info-circle me-1"></i>Group contains ${selectedGroup.activities.length} activity${selectedGroup.activities.length !== 1 ? 'ies' : ''}
+        <i class="bx bx-info-circle me-1"></i>Selected ${courseData.selected_activities.length} schedule${courseData.selected_activities.length !== 1 ? 's' : ''} across ${Object.keys(activitiesByType).length} activity type${Object.keys(activitiesByType).length !== 1 ? 's' : ''}
       </small>
     `);
     groupInfo.show();
     
     $(`.course-item[data-course-id="${courseId}"]`).addClass('selected');
     
-    $('#groupSelectionModal').modal('hide');
+    $('#activitySelectionModal').modal('hide');
     
     EnrollmentUIModule.updateEnrollButton();
     CreditHoursModule.updateSummary();
     ScheduleModule.update();
+  },
+
+  organizeActivitiesByType(activities) {
+    const activitiesByType = {};
+    activities.forEach(activity => {
+      if (!activitiesByType[activity.activity_type]) {
+        activitiesByType[activity.activity_type] = [];
+      }
+      activitiesByType[activity.activity_type].push(activity);
+    });
+    return activitiesByType;
   }
 };
 
@@ -2069,13 +2239,13 @@ const EnrollmentApp = {
     // Term selection
     $('#term_id').on('change', this.handleTermChange.bind(this));
 
-    // Group selection modal
-    $('#confirmGroupSelection').on('click', () => {
-      GroupSelectionModule.confirmSelection();
+    // Activity selection modal
+    $('#confirmActivitySelection').on('click', () => {
+      ActivitySelectionModule.confirmSelection();
     });
 
     // Handle modal close without selection
-    $('#groupSelectionModal').on('hidden.bs.modal', this.handleGroupModalClose.bind(this));
+    $('#activitySelectionModal').on('hidden.bs.modal', this.handleActivityModalClose.bind(this));
 
     // Enrollment form submission
     $('#enrollForm').on('submit', this.handleEnrollmentSubmission.bind(this));
@@ -2142,8 +2312,8 @@ const EnrollmentApp = {
     CreditHoursModule.updateInfoBoxByTermName(selectedText);
   },
 
-  handleGroupModalClose() {
-    const courseId = $('#groupSelectionModal').data('course-id');
+  handleActivityModalClose() {
+    const courseId = $('#activitySelectionModal').data('course-id');
     const checkbox = $(`#course_${courseId}`);
     
     if (!EnrollmentState.selectedCourseGroups.has(courseId)) {

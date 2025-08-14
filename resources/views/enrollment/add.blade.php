@@ -728,10 +728,14 @@ const CourseModule = {
     
     $.ajax({
       url: window.routes.availableCourses,
-      method: 'GET',
-      data: { student_id: studentId, term_id: termId },
+      method: 'POST',
+      data: { 
+        student_id: studentId, 
+        term_id: termId,
+        _token: window.csrfToken 
+      },
       success: (res) => {
-        const courses = res.courses || [];
+        const courses = res.data || [];
         EnrollmentState.originalCoursesData = courses;
         $('#coursesCount').text(courses.length);
         
@@ -1920,6 +1924,39 @@ const EnrollmentSubmissionModule = {
       return false;
     }
     
+    // Additional validation: Check if we have valid course and schedule data
+    const selectedCourses = $('.course-checkbox:checked');
+    if (selectedCourses.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Courses Selected',
+        text: 'Please select at least one course to enroll.',
+        confirmButtonText: 'OK'
+      });
+      return false;
+    }
+    
+    // Check if all selected courses have schedules
+    let missingSchedules = [];
+    selectedCourses.each(function() {
+      const courseId = $(this).val();
+      const groupData = EnrollmentState.selectedCourseGroups.get(courseId);
+      if (!groupData || !groupData.group_activities || groupData.group_activities.length === 0) {
+        const courseName = EnrollmentState.originalCoursesData.find(c => c.available_course_id == courseId)?.name || 'Unknown Course';
+        missingSchedules.push(courseName);
+      }
+    });
+    
+    if (missingSchedules.length > 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Schedule Selections',
+        html: `Please select schedules for the following courses:<br><strong>${missingSchedules.join('<br>')}</strong>`,
+        confirmButtonText: 'OK'
+      });
+      return false;
+    }
+    
     return true;
   },
 
@@ -1979,7 +2016,10 @@ const EnrollmentSubmissionModule = {
       studentId: $('#student_id').val(),
       termId: $('#term_id').val(),
       selectedCourses: selectedCourseIds.length,
-      totalSchedules: scheduleIds.length
+      totalSchedules: scheduleIds.length,
+      courseScheduleMapping: courseScheduleMapping,
+      selectedCourseIds: selectedCourseIds,
+      scheduleIds: scheduleIds
     });
 
     // Store request data for potential retry
@@ -2171,10 +2211,14 @@ const EnrollmentSubmissionModule = {
             });
           });
           errorDetails += '</ul></div>';
+          errorDetails += '<div class="alert alert-info text-start mt-2"><small><strong>Tip:</strong> Make sure you have selected courses and their schedules properly before submitting.</small></div>';
         }
       } else if (xhr.status === 400) {
         // Business validation errors
         errorDetails = `<div class="alert alert-warning text-start mt-3"><small>${errorMessage}</small></div>`;
+        if (errorMessage.includes('credit hours')) {
+          errorDetails += '<div class="alert alert-info text-start mt-2"><small><strong>Note:</strong> Check the credit hours limits for the selected term and student CGPA.</small></div>';
+        }
       } else if (xhr.status === 500) {
         // Server errors
         errorMessage = 'Internal server error occurred. Please contact administrator.';
@@ -2320,7 +2364,7 @@ const EnrollmentApp = {
       window.routes = window.routes || {
         findStudent: '{{ route("enrollments.findStudent") }}',
         studentEnrollments: '{{ route("enrollments.studentEnrollments") }}',
-        availableCourses: '{{ route("available-courses.all") }}',
+        availableCourses: '{{ route("enrollments.availableCourses") }}',
         prerequisites: '{{ route("courses.prerequisites") }}',
         courseSchedules: '{{ route("available-courses.schedules", ":id") }}',
         remainingCreditHours: '{{ route("enrollments.remainingCreditHours") }}',
@@ -2336,7 +2380,7 @@ const EnrollmentApp = {
       window.routes = window.routes || {
         findStudent: '/enrollments/find-student',
         studentEnrollments: '/enrollments/student-enrollments',
-        availableCourses: '/available-courses/all',
+        availableCourses: '/enrollments/available-courses',
         prerequisites: '/courses/prerequisites',
         courseSchedules: '/available-courses/:id/schedules',
         remainingCreditHours: '/enrollments/remaining-credit-hours',

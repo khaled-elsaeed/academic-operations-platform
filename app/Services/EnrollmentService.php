@@ -63,6 +63,9 @@ class EnrollmentService
             'student_id' => $data['student_id'],
             'term_id' => $data['term_id'],
             'available_course_ids' => $data['available_course_ids'] ?? [],
+            'available_course_schedule_ids' => $data['available_course_schedule_ids'] ?? [],
+            'course_schedule_mapping' => $data['course_schedule_mapping'] ?? [],
+            'full_data' => $data,
         ]);
         return DB::transaction(function () use ($data) {
             // Get student and term information for credit hours validation
@@ -101,17 +104,46 @@ class EnrollmentService
                     $courseMapping = $data['course_schedule_mapping'];
                     $courseId = $availableCourse->id;
                     
+                    \Log::debug('Processing schedule mapping for course', [
+                        'course_id' => $courseId,
+                        'available_mapping' => isset($courseMapping[$courseId]),
+                        'mapping_data' => $courseMapping[$courseId] ?? null
+                    ]);
+                    
                     if (isset($courseMapping[$courseId])) {
                         $scheduleIds = json_decode($courseMapping[$courseId], true);
-                        if (is_array($scheduleIds)) {
+                        if (is_array($scheduleIds) && !empty($scheduleIds)) {
                             foreach ($scheduleIds as $scheduleId) {
-                                EnrollmentSchedule::create([
-                                    'enrollment_id' => $enrollment->id,
-                                    'available_course_schedule_id' => $scheduleId,
-                                    'status' => 'active'
-                                ]);
+                                // Validate that the schedule exists and belongs to this course
+                                $schedule = \App\Models\AvailableCourseSchedule::where('id', $scheduleId)
+                                    ->where('available_course_id', $availableCourse->id)
+                                    ->first();
+                                    
+                                if ($schedule) {
+                                    EnrollmentSchedule::create([
+                                        'enrollment_id' => $enrollment->id,
+                                        'available_course_schedule_id' => $scheduleId,
+                                        'status' => 'active'
+                                    ]);
+                                    \Log::debug('Created enrollment schedule', [
+                                        'enrollment_id' => $enrollment->id,
+                                        'schedule_id' => $scheduleId
+                                    ]);
+                                } else {
+                                    \Log::warning('Invalid schedule ID for course', [
+                                        'schedule_id' => $scheduleId,
+                                        'course_id' => $courseId
+                                    ]);
+                                }
                             }
+                        } else {
+                            \Log::warning('Invalid or empty schedule data', [
+                                'course_id' => $courseId,
+                                'schedule_data' => $courseMapping[$courseId]
+                            ]);
                         }
+                    } else {
+                        \Log::info('No schedule mapping found for course', ['course_id' => $courseId]);
                     }
                 }
             }
@@ -547,14 +579,25 @@ class EnrollmentService
         $student = Student::findOrFail($studentId);
         $studentProgram = $student->program_id;
         $studentLevel = $student->level_id;
-        $availableCourses = AvailableCourse::available($studentProgram,$studentLevel,$termId)
+        
+        $availableCourses = AvailableCourse::with(['course', 'schedules'])
+            ->available($studentProgram, $studentLevel, $termId)
+            ->get()
             ->map(function ($availableCourse) {
+                // Calculate capacity from schedules
+                $maxCapacity = $availableCourse->schedules->sum('max_capacity') ?: 100;
+                $minCapacity = $availableCourse->schedules->min('min_capacity') ?: 0;
+                $enrollmentCount = $availableCourse->enrollment_count;
+                
                 return [
-                    'id' => $availableCourse->id,
+                    'available_course_id' => $availableCourse->id,
                     'name' => $availableCourse->course->name,
-                    'course_code' => $availableCourse->course->code,
-                    'min_capacity' => $availableCourse->min_capacity,
-                    'max_capacity' => $availableCourse->max_capacity,
+                    'code' => $availableCourse->course->code,
+                    'credit_hours' => $availableCourse->course->credit_hours,
+                    'min_capacity' => $minCapacity,
+                    'max_capacity' => $maxCapacity,
+                    'enrollment_count' => $enrollmentCount,
+                    'remaining_capacity' => max(0, $maxCapacity - $enrollmentCount),
                 ];
             });
 

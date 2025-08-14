@@ -139,10 +139,11 @@ class AvailableCourseService
             throw new BusinessValidationException('Available course not found.');
         }
 
-        $groupedSchedules = $availableCourse->schedules->groupBy('group')->map(function ($schedules, $groupNumber) use ($availableCourseId) {
-            $groupData = [
-                'group' => $groupNumber,
-                'activities' => []
+        // Group schedules by activity type instead of group number
+        $groupedSchedules = $availableCourse->schedules->groupBy('activity_type')->map(function ($schedules, $activityType) use ($availableCourseId) {
+            $activityData = [
+                'activity_type' => $activityType,
+                'schedules' => []
             ];
 
             foreach ($schedules as $schedule) {
@@ -161,8 +162,9 @@ class AvailableCourseService
                         $query->where('id', $schedule->id);
                     })->count();
 
-                    $groupData['activities'][] = [
+                    $activityData['schedules'][] = [
                         'id' => $schedule->id,
+                        'group_number' => $schedule->group,
                         'activity_type' => $schedule->activity_type,
                         'location' => $schedule->location,
                         'min_capacity' => $schedule->min_capacity,
@@ -175,7 +177,7 @@ class AvailableCourseService
                 }
             }
 
-            return $groupData;
+            return $activityData;
         });
 
         return $groupedSchedules->values();

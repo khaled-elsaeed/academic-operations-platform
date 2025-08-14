@@ -597,14 +597,14 @@ const TimeConflictModule = {
     return (start1 < end2) && (start2 < end1);
   },
 
-  checkScheduleConflicts(newGroupData, currentCourseId) {
+  checkScheduleConflicts(newCourseData, currentCourseId) {
     const conflicts = [];
     
     // Check conflicts with other selected courses
     EnrollmentState.selectedCourseGroups.forEach((groupData, courseId) => {
       if (courseId != currentCourseId && groupData.group_activities) {
         groupData.group_activities.forEach(currentActivity => {
-          newGroupData.group_activities.forEach(newActivity => {
+          newCourseData.selected_activities.forEach(newActivity => {
             if (this.hasConflict(currentActivity, newActivity)) {
               conflicts.push({
                 conflictingCourse: groupData.course.name,
@@ -624,7 +624,7 @@ const TimeConflictModule = {
     );
 
     existingEnrolledActivities.forEach(enrolledItem => {
-      newGroupData.group_activities.forEach(newActivity => {
+      newCourseData.selected_activities.forEach(newActivity => {
         if (this.hasConflict(enrolledItem.activity, newActivity)) {
           conflicts.push({
             conflictingCourse: enrolledItem.course.name,
@@ -1079,9 +1079,9 @@ const ActivitySelectionModule = {
       url: url,
       method: 'GET',
       success: (res) => {
-        const groups = res.data || [];
-        $('#activitySelectionModal').data('groups', groups);
-        this.displayActivities(groups);
+        const activityTypes = res.data || [];
+        $('#activitySelectionModal').data('activityTypes', activityTypes);
+        this.displayActivities(activityTypes);
       },
       error: () => {
         $('#activitiesList').html(`
@@ -1094,8 +1094,8 @@ const ActivitySelectionModule = {
     });
   },
 
-  displayActivities(groups) {
-    if (groups.length === 0) {
+  displayActivities(activityTypes) {
+    if (activityTypes.length === 0) {
       $('#activitiesList').html(`
         <div class="alert alert-warning">
           <i class="bx bx-info-circle me-2"></i>
@@ -1105,28 +1105,14 @@ const ActivitySelectionModule = {
       return;
     }
     
-    // Organize activities by type across all groups
-    const activitiesByType = {};
-    
-    groups.forEach((group) => {
-      if (!group.activities || group.activities.length === 0) return;
-      
-      group.activities.forEach((activity) => {
-        if (!activitiesByType[activity.activity_type]) {
-          activitiesByType[activity.activity_type] = [];
-        }
-        
-        activitiesByType[activity.activity_type].push({
-          ...activity,
-          group_number: group.group
-        });
-      });
-    });
-    
     let html = '';
     
-    Object.keys(activitiesByType).forEach((activityType) => {
-      const activities = activitiesByType[activityType];
+    activityTypes.forEach((activityTypeData) => {
+      const activityType = activityTypeData.activity_type;
+      const schedules = activityTypeData.schedules || [];
+      
+      if (schedules.length === 0) return;
+      
       const activityIcon = activityType === 'lecture' ? 'bx-book-open' : 
                           activityType === 'lab' ? 'bx-flask' : 
                           activityType === 'tutorial' ? 'bx-edit' : 'bx-chalkboard';
@@ -1137,7 +1123,7 @@ const ActivitySelectionModule = {
             <h5 class="mb-0 text-dark">
               <i class="bx ${activityIcon} me-2"></i>
               ${activityType.charAt(0).toUpperCase() + activityType.slice(1)} 
-              <span class="badge bg-primary ms-2">${activities.length} option${activities.length !== 1 ? 's' : ''}</span>
+              <span class="badge bg-primary ms-2">${schedules.length} option${schedules.length !== 1 ? 's' : ''}</span>
               <span class="badge bg-danger ms-1 text-white" style="font-size: 0.75em;">* Required</span>
             </h5>
             <small class="text-muted">Select at least one schedule for this activity type</small>
@@ -1145,42 +1131,42 @@ const ActivitySelectionModule = {
           <div class="activity-options border border-top-0 rounded-bottom p-3">
       `;
       
-      activities.forEach((activity, index) => {
-        const isConflicting = this.checkActivityConflict(activity);
+      schedules.forEach((schedule, index) => {
+        const isConflicting = this.checkActivityConflict(schedule);
         const conflictClass = isConflicting ? 'border-danger' : 'border-light';
         const disabledAttr = isConflicting ? 'disabled' : '';
         const disabledClass = isConflicting ? 'activity-disabled' : '';
         
         html += `
-          <div class="activity-option mb-2 ${disabledClass}" data-activity-id="${activity.id}">
+          <div class="activity-option mb-2 ${disabledClass}" data-activity-id="${schedule.id}">
             <div class="card ${conflictClass}">
               <div class="card-body p-3">
                 <div class="form-check">
                   <input class="form-check-input activity-checkbox" type="checkbox" 
-                         name="selected_activities[]" value="${activity.id}" 
+                         name="selected_activities[]" value="${schedule.id}" 
                          data-activity-type="${activityType}"
-                         data-group-number="${activity.group_number}"
-                         id="activity_${activity.id}" ${disabledAttr}>
-                  <label class="form-check-label w-100" for="activity_${activity.id}">
+                         data-group-number="${schedule.group_number}"
+                         id="activity_${schedule.id}" ${disabledAttr}>
+                  <label class="form-check-label w-100" for="activity_${schedule.id}">
                     <div class="d-flex justify-content-between align-items-start">
                       <div class="flex-grow-1">
                         <h6 class="mb-1 text-dark">
-                          Group ${activity.group_number} - ${activityType.charAt(0).toUpperCase() + activityType.slice(1)}
+                          Group ${schedule.group_number} - ${activityType.charAt(0).toUpperCase() + activityType.slice(1)}
                           ${isConflicting ? '<span class="badge bg-danger ms-2">CONFLICT</span>' : ''}
                         </h6>
                         <div class="schedule-details">
                           <p class="text-muted mb-1 small">
                             <i class="bx bx-time me-1"></i>
-                            <strong>${Utils.formatTimeRange(activity.start_time, activity.end_time)}</strong>
+                            <strong>${Utils.formatTimeRange(schedule.start_time, schedule.end_time)}</strong>
                           </p>
                           <p class="text-muted mb-1 small">
                             <i class="bx bx-calendar me-1"></i>
-                            <strong>${activity.day_of_week || 'Schedule TBA'}</strong>
+                            <strong>${schedule.day_of_week || 'Schedule TBA'}</strong>
                           </p>
-                          ${activity.location ? `
+                          ${schedule.location ? `
                             <p class="text-muted mb-0 small">
                               <i class="bx bx-map me-1"></i>
-                              ${activity.location}
+                              ${schedule.location}
                             </p>
                           ` : ''}
                           ${isConflicting ? `
@@ -1194,7 +1180,7 @@ const ActivitySelectionModule = {
                       <div class="text-end">
                         <span class="badge ${isConflicting ? 'bg-secondary' : 'bg-info'} text-white small">
                           <i class="bx bx-users me-1"></i>
-                          ${activity.enrolled_count || 0}/${activity.max_capacity}
+                          ${schedule.enrolled_count || 0}/${schedule.max_capacity}
                         </span>
                       </div>
                     </div>
@@ -1342,7 +1328,7 @@ const ActivitySelectionModule = {
       return;
     }
     
-    const cachedGroups = $('#activitySelectionModal').data('groups') || [];
+    const cachedActivityTypes = $('#activitySelectionModal').data('activityTypes') || [];
     const selectedActivityData = [];
     
     selectedActivities.each(function() {
@@ -1350,14 +1336,11 @@ const ActivitySelectionModule = {
       const activityType = $(this).data('activity-type');
       const groupNumber = $(this).data('group-number');
       
-      // Find the activity data
-      for (let group of cachedGroups) {
-        const activity = group.activities.find(a => a.id == activityId);
-        if (activity) {
-          selectedActivityData.push({
-            ...activity,
-            group_number: groupNumber
-          });
+      // Find the activity data in the new structure
+      for (let activityTypeData of cachedActivityTypes) {
+        const schedule = activityTypeData.schedules.find(s => s.id == activityId);
+        if (schedule) {
+          selectedActivityData.push(schedule);
           break;
         }
       }
@@ -1616,7 +1599,7 @@ const ScheduleModule = {
           EnrollmentState.selectedActivities.push({
             course: groupData.course,
             activity: activity,
-            group: groupData.group_number,
+            group: activity.group_number, // Use the group_number from the activity itself
             source: 'selection',
           });
         });

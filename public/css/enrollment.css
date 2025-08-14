@@ -8,6 +8,69 @@
   box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.15) !important;
 }
 
+/* Activity Type Section Styles */
+.activity-type-section {
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.activity-type-header {
+  border-bottom: 1px solid #dee2e6;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  transition: all 0.3s ease;
+}
+
+.activity-type-header.bg-success {
+  border-bottom-color: rgba(255,255,255,0.2);
+  background-color: #198754 !important;
+  color: white !important;
+}
+
+.activity-option {
+  padding: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.activity-option.activity-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.activity-option .card {
+  transition: all 0.2s ease;
+  border: 1px solid #dee2e6;
+  margin-bottom: 0;
+}
+
+.activity-option .form-check-input:checked + label .card {
+  background-color: #e7f3ff;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.activity-option .form-check-input:disabled + label .card {
+  background-color: #f8f9fa;
+  color: #6c757d;
+}
+
+.schedule-details {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.badge.bg-danger {
+  animation: pulse-danger 2s infinite;
+}
+
+@keyframes pulse-danger {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
 .enrollment-history-container {
   max-height: 400px;
   overflow-y: auto;
@@ -110,28 +173,7 @@
   border-left: 4px solid var(--bs-primary);
 }
 
-.group-selection-item {
-  border: 2px solid #e9ecef;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background-color: white;
-}
-
-.group-selection-item:hover {
-  border-color: var(--bs-primary);
-  background-color: rgba(13, 110, 253, 0.05);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.group-selection-item.selected {
-  border-color: var(--bs-success);
-  background-color: rgba(25, 135, 84, 0.1);
-  box-shadow: 0 4px 8px rgba(25, 135, 84, 0.2);
-}
+/* Group selection styles removed - using activity options instead */
 
 .history-item {
   border-left: 4px solid var(--bs-primary);
@@ -424,9 +466,48 @@
     width: 100%;
   }
   
-  /* Group selection improvements */
-  .group-selection-item {
+  /* Activity type sections on mobile */
+  .activity-type-section {
+    margin-bottom: 1.5rem;
+  }
+  
+  .activity-type-header {
     padding: 0.75rem;
+  }
+  
+  .activity-option {
+    padding: 0.5rem;
+  }
+  
+  .activity-option .card-body {
+    padding: 0.75rem !important;
+  }
+  
+  .schedule-details {
+    font-size: 0.8rem;
+  }
+  
+  /* Modal content responsiveness */
+  .modal-body {
+    padding: 1rem 0.75rem;
+  }
+  
+  .modal-header {
+    padding: 0.75rem;
+  }
+  
+  .modal-footer {
+    padding: 0.75rem;
+  }
+  
+  /* Form improvements */
+  .form-check-label {
+    font-size: 0.875rem;
+  }
+  
+  /* Badge responsiveness */
+  .badge {
+    font-size: 0.7rem;
   }
 }
 
@@ -481,6 +562,42 @@
     margin-top: 0.5rem;
     align-self: flex-start;
   }
+  
+  /* Ultra small screen improvements */
+  .activity-type-header h5 {
+    font-size: 1rem;
+  }
+  
+  .activity-option h6 {
+    font-size: 0.9rem;
+  }
+  
+  .schedule-details p {
+    font-size: 0.75rem !important;
+  }
+  
+  .modal-title {
+    font-size: 1.1rem;
+  }
+  
+  /* Better spacing for form elements */
+  .form-control,
+  .form-select {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  /* Schedule grid ultra compact */
+  .schedule-grid {
+    grid-template-columns: 60px repeat(7, 1fr);
+    font-size: 0.6rem;
+  }
+  
+  .schedule-header,
+  .schedule-cell {
+    padding: 0.25rem 0.1rem;
+    min-height: 40px;
+  }
 }
 
 /* Accessibility Improvements */
@@ -493,6 +610,27 @@
   border-color: #86b7fe;
   outline: 0;
   box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Radio button enhancements */
+.activity-radio {
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-top: 0.125rem;
+}
+
+.activity-radio:checked {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.activity-radio:focus {
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.activity-radio:disabled {
+  background-color: #e9ecef;
+  border-color: #ced4da;
 }
 
 /* Dark text for better contrast */
@@ -563,15 +701,7 @@
   z-index: 2;
 }
 
-/* Group Selection Conflict Warning */
-.group-selection-item.has-conflict {
-  border-color: #dc3545 !important;
-  background-color: rgba(220, 53, 69, 0.05);
-}
-
-.group-selection-item.has-conflict .card {
-  border-color: #dc3545 !important;
-}
+/* Group selection conflict styles removed - using activity options instead */
 
 .conflict-warning-badge {
   background: linear-gradient(135deg, #dc3545, #c82333);

@@ -4,54 +4,6 @@
 
 @push('styles')
   <link rel="stylesheet" href="{{ asset('css/enrollment.css') }}">
-  <style>
-    .activity-type-section {
-      border: 1px solid #dee2e6;
-      border-radius: 0.375rem;
-      overflow: hidden;
-    }
-    
-    .activity-type-header {
-      border-bottom: 1px solid #dee2e6;
-    }
-    
-    .activity-type-header.bg-success {
-      border-bottom-color: rgba(255,255,255,0.2);
-    }
-    
-    .activity-option.activity-disabled {
-      opacity: 0.6;
-      pointer-events: none;
-    }
-    
-    .activity-option .card {
-      transition: all 0.2s ease;
-    }
-    
-    .activity-option .form-check-input:checked + label .card {
-      background-color: #e7f3ff;
-      border-color: #0d6efd;
-    }
-    
-    .activity-option .form-check-input:disabled + label .card {
-      background-color: #f8f9fa;
-      color: #6c757d;
-    }
-    
-    .schedule-details {
-      font-size: 0.875rem;
-    }
-    
-    .badge.bg-danger {
-      animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.7; }
-      100% { opacity: 1; }
-    }
-  </style>
 @endpush
 
 @section('page-content')
@@ -353,13 +305,13 @@
     </div>
 
   <!-- Activity Type Selection Modal -->
-  <x-ui.modal id="activitySelectionModal" scrollable="true" size="xl" title="Select Course Schedules">
+  <x-ui.modal id="activitySelectionModal" scrollable="true" size="xl" title="Select Activity Schedule">
     <div id="courseActivityInfo" class="mb-3">
       <!-- Course info will be populated here -->
     </div>
     <div class="alert alert-info">
       <i class="bx bx-info-circle me-2"></i>
-      <strong>Important:</strong> You must select at least one schedule for each activity type. Multiple schedules can be selected if they don't conflict.
+      <strong>Important:</strong> You can only select one activity from each activity type. Please choose the schedule that works best for you.
     </div>
     <div id="activitiesList">
       <!-- Activity types will be populated here -->
@@ -1053,7 +1005,7 @@ const ActivitySelectionModule = {
     
     $('#activitySelectionModalLabel').html(`
       <i class="bx bx-chalkboard me-2"></i>
-      Select Schedules for ${course.name}
+      Select Activity Schedule for ${course.name}
     `);
     
     $('#courseActivityInfo').html(`
@@ -1126,7 +1078,7 @@ const ActivitySelectionModule = {
               <span class="badge bg-primary ms-2">${schedules.length} option${schedules.length !== 1 ? 's' : ''}</span>
               <span class="badge bg-danger ms-1 text-white" style="font-size: 0.75em;">* Required</span>
             </h5>
-            <small class="text-muted">Select at least one schedule for this activity type</small>
+            <small class="text-muted">Select one schedule for this activity type</small>
           </div>
           <div class="activity-options border border-top-0 rounded-bottom p-3">
       `;
@@ -1142,8 +1094,8 @@ const ActivitySelectionModule = {
             <div class="card ${conflictClass}">
               <div class="card-body p-3">
                 <div class="form-check">
-                  <input class="form-check-input activity-checkbox" type="checkbox" 
-                         name="selected_activities[]" value="${schedule.id}" 
+                  <input class="form-check-input activity-radio" type="radio" 
+                         name="activity_${activityType}" value="${schedule.id}" 
                          data-activity-type="${activityType}"
                          data-group-number="${schedule.group_number}"
                          id="activity_${schedule.id}" ${disabledAttr}>
@@ -1201,7 +1153,7 @@ const ActivitySelectionModule = {
     $('#activitiesList').html(html);
     
     // Handle activity selection
-    $('.activity-checkbox').on('change', this.handleActivitySelection.bind(this));
+    $('.activity-radio').on('change', this.handleActivitySelection.bind(this));
   },
 
   checkActivityConflict(activity) {
@@ -1240,7 +1192,7 @@ const ActivitySelectionModule = {
     // Collect all activity types and their selection status
     $('.activity-type-section').each(function() {
       const activityType = $(this).data('activity-type');
-      const hasSelection = $(this).find('.activity-checkbox:checked').length > 0;
+      const hasSelection = $(this).find('.activity-radio:checked').length > 0;
       allActivityTypes[activityType] = hasSelection;
     });
 
@@ -1296,23 +1248,23 @@ const ActivitySelectionModule = {
 
   confirmSelection() {
     const courseId = $('#activitySelectionModal').data('course-id');
-    const selectedActivities = $('.activity-checkbox:checked');
+    const selectedActivities = $('.activity-radio:checked');
     
     if (selectedActivities.length === 0) {
       Swal.fire({
         icon: 'warning',
         title: 'No Activities Selected',
-        text: 'Please select at least one schedule for each activity type.',
+        text: 'Please select one activity for each activity type.',
         confirmButtonText: 'OK'
       });
       return;
     }
 
-    // Check if all activity types have at least one selection
+    // Check if all activity types have exactly one selection
     const allActivityTypes = {};
     $('.activity-type-section').each(function() {
       const activityType = $(this).data('activity-type');
-      const hasSelection = $(this).find('.activity-checkbox:checked').length > 0;
+      const hasSelection = $(this).find('.activity-radio:checked').length > 0;
       allActivityTypes[activityType] = hasSelection;
     });
 
@@ -1322,7 +1274,7 @@ const ActivitySelectionModule = {
       Swal.fire({
         icon: 'warning',
         title: 'Missing Required Selections',
-        html: `Please select at least one schedule for the following activity types:<br><strong>${unselectedTypes.join(', ')}</strong>`,
+        html: `Please select one activity for the following activity types:<br><strong>${unselectedTypes.join(', ')}</strong>`,
         confirmButtonText: 'OK'
       });
       return;
@@ -1373,15 +1325,15 @@ const ActivitySelectionModule = {
     // Create summary of selected activities
     const activitiesByType = this.organizeActivitiesByType(courseData.selected_activities);
     let activitiesSummary = Object.keys(activitiesByType).map(activityType => {
-      const count = activitiesByType[activityType].length;
-      return `<span class="badge bg-secondary me-1">${activityType.charAt(0).toUpperCase() + activityType.slice(1)} (${count})</span>`;
+      const activity = activitiesByType[activityType][0]; // Only one activity per type now
+      return `<span class="badge bg-success me-1">${activityType.charAt(0).toUpperCase() + activityType.slice(1)} - Group ${activity.group_number}</span>`;
     }).join('');
     
-    groupInfo.find('.group-name').text(`${Object.keys(activitiesByType).length} Activity Type${Object.keys(activitiesByType).length !== 1 ? 's' : ''}`);
+    groupInfo.find('.group-name').text(`${Object.keys(activitiesByType).length} Activity Type${Object.keys(activitiesByType).length !== 1 ? 's' : ''} Selected`);
     groupInfo.find('.group-details').html(`
       <div class="mb-1">${activitiesSummary}</div>
       <small class="text-muted">
-        <i class="bx bx-info-circle me-1"></i>Selected ${courseData.selected_activities.length} schedule${courseData.selected_activities.length !== 1 ? 's' : ''} across ${Object.keys(activitiesByType).length} activity type${Object.keys(activitiesByType).length !== 1 ? 's' : ''}
+        <i class="bx bx-info-circle me-1"></i>Selected ${courseData.selected_activities.length} activity${courseData.selected_activities.length !== 1 ? ' schedules' : ' schedule'} across ${Object.keys(activitiesByType).length} activity type${Object.keys(activitiesByType).length !== 1 ? 's' : ''}
       </small>
     `);
     groupInfo.show();

@@ -601,7 +601,7 @@ const SchedulesModalManager = {
         // Create group container
         $content.append(`
           <div class="card mb-4 shadow-sm group-card">
-            <div class="card-header bg-primary text-white py-2">
+            <div class="card-header py-2">
               <h6 class="mb-0 d-flex align-items-center">
                 <i class="bx bx-group me-2"></i>
                 Group ${groupNumber}

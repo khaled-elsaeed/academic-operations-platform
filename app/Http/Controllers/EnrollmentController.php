@@ -264,14 +264,29 @@ class EnrollmentController extends Controller
                 $validated['student_id'],
                 $validated['term_id']
             );
-
-            return response()->json([
-                'success' => true,
-                'data' => $result,
-            ]);
+            return successResponse('Remaining credit hours fetched successfully.', $result);
         } catch (Exception $e) {
             logError('EnrollmentController@getRemainingCreditHours', $e);
             return errorResponse('Failed to get remaining credit hours.', [], 500);
+        }
+    }
+
+    public function getSchedules(Request $request): JsonResponse
+    {
+        $request->validate([
+            'student_id' => ['required', 'exists:students,id'],
+            'term_id'    => ['required', 'exists:terms,id'],
+        ]);
+
+        try {
+            $schedules = $this->enrollmentService->getSchedules(
+                $request->student_id,
+                $request->term_id
+            );
+            return successResponse('Schedules fetched successfully.', $schedules);
+        } catch (Exception $e) {
+            logError('EnrollmentController@getSchedules', $e);
+            return errorResponse('Failed to get student schedules.', [], 500);
         }
     }
 }

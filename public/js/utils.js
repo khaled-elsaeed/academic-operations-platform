@@ -339,6 +339,67 @@ const Utils = {
         document.documentElement.style.overflow = '';
         document.body.style.overflow = '';
       }
+    },
+
+    showLoading(container, message = 'Loading...') {
+    $(container).html(`
+      <div class="d-flex justify-content-center align-items-center" style="min-height: 100px;">
+        <div class="text-center">
+          <div class="spinner-border text-primary loading-spinner mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="text-dark mb-0">${message}</p>
+        </div>
+      </div>
+    `);
+  },
+    
+  showEmptyState(container, icon, message) {
+    $(container).html(`
+      <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+        <div class="text-center text-muted">
+          <i class="bx ${icon} display-4 mb-3 text-primary"></i>
+          <p class="text-dark">${message}</p>
+        </div>
+      </div>
+    `);
+  },
+
+  showErrorState(container, message = 'An error occurred') {
+    $(container).html(`
+      <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+        <div class="text-center text-muted">
+          <i class="bx bx-error-circle display-4 mb-3 text-danger"></i>
+          <p class="text-dark">${message}</p>
+        </div>
+      </div>
+    `);
+  },
+
+  parseTime(timeStr) {
+    if (!timeStr) return 0;
+    const timeParts = timeStr.split(':');
+    if (timeParts.length < 2) return 0;
+    const hours = parseInt(timeParts[0]) || 0;
+    const minutes = parseInt(timeParts[1]) || 0;
+    return hours * 60 + minutes;
+  },
+
+  formatTime(timeStr) {
+    if (!timeStr) return 'TBA';
+    let cleanTime = timeStr.trim();
+    if (/^\d{1,2}:\d{2}$/.test(cleanTime)) {
+      return cleanTime;
     }
+    if (/^\d{1,2}:\d{2}:\d{2}$/.test(cleanTime)) {
+      return cleanTime.substring(0, 5);
+    }
+    return cleanTime;
+  },
+
+  formatTimeRange(startTime, endTime) {
+    if (!startTime || !endTime) return 'TBA';
+    return `${this.formatTime(startTime)} - ${this.formatTime(endTime)}`;
+  },
 
 };

@@ -22,6 +22,7 @@ Route::middleware(['auth'])
         Route::post('find-student', 'findStudent')->name('findStudent')->middleware('can:enrollment.view');
         Route::post('available-courses', 'availableCourses')->name('availableCourses')->middleware('can:enrollment.view');
         Route::post('student-enrollments', 'studentEnrollments')->name('studentEnrollments')->middleware('can:enrollment.view');
+        Route::get('get-schedules', 'getSchedules')->name('getSchedules')->middleware('can:enrollment.view');
 
         // ===== Import/Export Operations =====
         Route::post('import', 'import')->name('import')->middleware('can:enrollment.import');

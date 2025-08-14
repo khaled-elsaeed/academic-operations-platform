@@ -662,5 +662,77 @@ class EnrollmentService
         return $exception ? $exception->getEffectiveAdditionalHours() : 0;
     }
 
+public function getSchedules(int $studentId, int $termId): array
+{
+    \Log::info("Fetching schedules for term & student : {$termId}, {$studentId}");
+    
+    // Get all enrollment schedules with proper eager loading based on actual model relationships
+    $enrollmentSchedules = EnrollmentSchedule::with([
+        'enrollment.course',           // Get the course info through enrollment
+        'availableCourseSchedule.availableCourse', // Get available course info
+        'availableCourseSchedule.scheduleAssignments.scheduleSlot' // Get schedule slots through assignments
+    ])
+    ->whereHas('enrollment', function ($query) use ($studentId, $termId) {
+        $query->where('student_id', $studentId)
+              ->where('term_id', $termId);
+    })
+    ->get();
+    
+    $schedules = [];
+   
+    foreach ($enrollmentSchedules as $enrollmentSchedule) {
+        $availableCourseSchedule = $enrollmentSchedule->availableCourseSchedule;
+        $availableCourse = $availableCourseSchedule->availableCourse;
+        $course = $enrollmentSchedule->enrollment->course;
+       
+        // Get all schedule slots for this available course schedule
+        $scheduleSlots = $availableCourseSchedule->scheduleAssignments
+            ->pluck('scheduleSlot')
+            ->filter() // Remove null values
+            ->sortBy(['day_of_week', 'start_time']);
+            
+        if ($scheduleSlots->isEmpty()) {
+            \Log::warning("No schedule slots found for available course schedule: {$availableCourseSchedule->id}");
+            continue;
+        }
+        
+        // Calculate enrolled count for this schedule
+        $enrolledCount = EnrollmentSchedule::where('available_course_schedule_id', $availableCourseSchedule->id)->count();
+        
+        // Group by day of week in case course meets multiple days
+        $slotsByDay = $scheduleSlots->groupBy('day_of_week');
+       
+        foreach ($slotsByDay as $dayOfWeek => $daySlotsCollection) {
+            $daySlots = $daySlotsCollection->sortBy('start_time');
+            $firstSlot = $daySlots->first();
+            $lastSlot = $daySlots->last();
+            
+            $schedules[] = [
+                'course' => [
+                    'id' => $course->id,
+                    'name' => $course->name, // From the enrollment->course relationship
+                    'code' => $course->code,
+                    'credit_hours' => $course->credit_hours,
+                    'available_course_id' => $availableCourse->id,
+                    'remaining_capacity' => ($availableCourseSchedule->max_capacity ?? 0) - $enrolledCount,
+                ],
+                'activity' => [
+                    'id' => $availableCourseSchedule->id,
+                    'activity_type' => $availableCourseSchedule->activity_type,
+                    'location' => $availableCourseSchedule->location,
+                    'min_capacity' => $availableCourseSchedule->min_capacity,
+                    'max_capacity' => $availableCourseSchedule->max_capacity,
+                    'enrolled_count' => $enrolledCount,
+                    'day_of_week' => $dayOfWeek,
+                    'start_time' => \Carbon\Carbon::parse($firstSlot->start_time)->format('h:i A'),
+                    'end_time' => \Carbon\Carbon::parse($lastSlot->end_time)->format('h:i A'),
+                ],
+                'group' => $availableCourseSchedule->group,
+            ];
+        }
+    }
+   
+    return $schedules;
+}
 
 } 

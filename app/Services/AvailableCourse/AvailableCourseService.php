@@ -9,6 +9,7 @@ use App\Models\CourseEligibility;
 use App\Models\Schedule\ScheduleAssignment;
 use App\Models\Schedule\ScheduleSlot;
 use App\Models\Level;
+use App\Models\EnrollmentSchedule;
 use App\Models\Program;
 use App\Models\Term;
 use App\Models\Schedule\Schedule;
@@ -138,15 +139,13 @@ class AvailableCourseService
             throw new BusinessValidationException('Available course not found.');
         }
 
-        // Group schedules by group number and organize by activity type
-        $groupedSchedules = $availableCourse->schedules->groupBy('group')->map(function ($schedules, $groupNumber) use ($availableCourse) {
+        $groupedSchedules = $availableCourse->schedules->groupBy('group')->map(function ($schedules, $groupNumber) use ($availableCourseId) {
             $groupData = [
                 'group' => $groupNumber,
                 'activities' => []
             ];
 
             foreach ($schedules as $schedule) {
-                // Gather all slots for this schedule
                 $slots = $schedule->scheduleAssignments->map(function ($assignment) {
                     return $assignment->scheduleSlot;
                 })->filter();
@@ -158,10 +157,9 @@ class AvailableCourseService
                     $lastSlot = $sortedSlots->last();
 
                     // Calculate enrolled count for this specific schedule
-                    $enrolledCount = \App\Models\Enrollment::join('available_courses', 'enrollments.course_id', '=', 'available_courses.course_id')
-                        ->where('available_courses.id', $availableCourse->id)
-                        ->where('enrollments.term_id', $availableCourse->term_id)
-                        ->count();
+                    $enrolledCount = EnrollmentSchedule::whereHas('availableCourseSchedule', function($query) use ($schedule) {
+                        $query->where('id', $schedule->id);
+                    })->count();
 
                     $groupData['activities'][] = [
                         'id' => $schedule->id,

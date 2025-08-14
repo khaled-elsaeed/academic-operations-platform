@@ -6,6 +6,10 @@
   <link rel="stylesheet" href="{{ asset('css/enrollment.css') }}">
 @endpush
 
+@push('meta')
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+@endpush
+
 @section('page-content')
 <div class="container-xxl flex-grow-1 container-p-y">
   <!-- Page Header -->
@@ -1843,6 +1847,11 @@ const EnrollmentUIModule = {
 // ========================================
 const EnrollmentSubmissionModule = {
   submit() {
+    // Validate basic form data
+    if (!this.validateBasicForm()) {
+      return;
+    }
+    
     const selectedCourses = $('.course-checkbox:checked').length;
     if (selectedCourses === 0) {
       Swal.fire({
@@ -1877,31 +1886,108 @@ const EnrollmentSubmissionModule = {
     this.processEnrollment();
   },
 
+  validateBasicForm() {
+    const studentId = $('#student_id').val();
+    const termId = $('#term_id').val();
+    
+    if (!studentId) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Student Not Selected',
+        text: 'Please search and select a student first.',
+        confirmButtonText: 'OK'
+      });
+      return false;
+    }
+    
+    if (!termId) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Term Not Selected',
+        text: 'Please select an academic term.',
+        confirmButtonText: 'OK'
+      });
+      return false;
+    }
+    
+    if (!window.csrfToken) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Security Token Missing',
+        text: 'Please refresh the page and try again.',
+        confirmButtonText: 'OK'
+      });
+      return false;
+    }
+    
+    return true;
+  },
+
   processEnrollment() {
-    let formData = new FormData();
+    const formData = new FormData();
+    
+    // Add basic required data
     formData.append('student_id', $('#student_id').val());
     formData.append('term_id', $('#term_id').val());
     formData.append('_token', window.csrfToken);
 
-    // Add selected courses and their schedule IDs
+    // Collect selected courses and their schedule data
+    const selectedCourseIds = [];
+    const scheduleIds = [];
+    const courseScheduleMapping = {};
+
     $('.course-checkbox:checked').each(function() {
       const courseId = $(this).val();
       const groupData = EnrollmentState.selectedCourseGroups.get(courseId);
+      
       if (groupData && groupData.group_activities) {
-        formData.append('available_course_ids[]', courseId);
+        selectedCourseIds.push(courseId);
         
-        groupData.group_activities.forEach(function(activity) {
-          formData.append('available_course_schedule_ids[]', activity.id);
-        });
+        // Collect schedule IDs for this course
+        const courseScheduleIds = groupData.group_activities.map(activity => activity.id);
+        scheduleIds.push(...courseScheduleIds);
         
-        const scheduleIds = groupData.group_activities.map(activity => activity.id);
-        formData.append(`course_schedule_mapping[${courseId}]`, JSON.stringify(scheduleIds));
+        // Create mapping as expected by backend
+        courseScheduleMapping[courseId] = JSON.stringify(courseScheduleIds);
       }
+    });
+
+    // Add course data to form
+    selectedCourseIds.forEach(courseId => {
+      formData.append('available_course_ids[]', courseId);
+    });
+
+    // Add schedule IDs
+    scheduleIds.forEach(scheduleId => {
+      formData.append('available_course_schedule_ids[]', scheduleId);
+    });
+
+    // Add course schedule mapping
+    Object.keys(courseScheduleMapping).forEach(courseId => {
+      formData.append(`course_schedule_mapping[${courseId}]`, courseScheduleMapping[courseId]);
     });
 
     const enrollBtn = $('#enrollBtn');
     const originalText = enrollBtn.html();
-    enrollBtn.html('<i class="bx bx-loader-alt bx-spin me-1"></i>Processing...').prop('disabled', true);
+    
+    // Disable form and show loading state
+    enrollBtn.html('<i class="bx bx-loader-alt bx-spin me-1"></i>Processing Enrollment...').prop('disabled', true);
+    $('.course-checkbox').prop('disabled', true);
+    $('#term_id').prop('disabled', true);
+    
+    console.log('Submitting enrollment data:', {
+      studentId: $('#student_id').val(),
+      termId: $('#term_id').val(),
+      selectedCourses: selectedCourseIds.length,
+      totalSchedules: scheduleIds.length
+    });
+
+    // Store request data for potential retry
+    this.lastRequestData = {
+      formData: formData,
+      selectedCourseIds: selectedCourseIds,
+      scheduleIds: scheduleIds
+    };
 
     $.ajax({
       url: window.routes.storeEnrollment,
@@ -1909,20 +1995,27 @@ const EnrollmentSubmissionModule = {
       data: formData,
       processData: false,
       contentType: false,
+      timeout: 30000, // 30 second timeout
       success: (res) => {
-        this.handleSuccess();
+        console.log('Enrollment successful:', res);
+        this.lastRequestData = null; // Clear stored data on success
+        this.handleSuccess(res);
       },
       error: (xhr) => {
+        console.error('Enrollment failed:', xhr);
         this.handleError(xhr);
       },
       complete: () => {
+        // Re-enable form
         enrollBtn.html(originalText).prop('disabled', false);
+        $('.course-checkbox').prop('disabled', false);
+        $('#term_id').prop('disabled', false);
         EnrollmentUIModule.updateEnrollButton();
       }
     });
   },
 
-  handleSuccess() {
+  handleSuccess(response) {
     const enrolledCourses = $('.course-checkbox:checked').length;
     
     Swal.fire({
@@ -2059,25 +2152,57 @@ const EnrollmentSubmissionModule = {
   handleError(xhr) {
     let errorMessage = 'An error occurred during enrollment. Please try again.';
     let errorDetails = '';
+    let showRetryButton = false;
+    
+    console.error('Enrollment submission error:', xhr);
     
     if (xhr.responseJSON) {
       errorMessage = xhr.responseJSON.message || errorMessage;
       
       if (xhr.status === 422) {
+        // Validation errors
         const errors = xhr.responseJSON.errors;
         if (errors) {
-          errorDetails = '<ul class="text-start mt-2">';
+          errorDetails = '<div class="alert alert-danger text-start mt-3"><ul class="mb-0">';
           Object.keys(errors).forEach(field => {
+            const fieldName = this.formatFieldName(field);
             errors[field].forEach(error => {
-              errorDetails += `<li>${error}</li>`;
+              errorDetails += `<li><strong>${fieldName}:</strong> ${error}</li>`;
             });
           });
-          errorDetails += '</ul>';
+          errorDetails += '</ul></div>';
         }
       } else if (xhr.status === 400) {
-        errorDetails = `<div class="text-start mt-2"><small class="text-muted">${errorMessage}</small></div>`;
+        // Business validation errors
+        errorDetails = `<div class="alert alert-warning text-start mt-3"><small>${errorMessage}</small></div>`;
+      } else if (xhr.status === 500) {
+        // Server errors
+        errorMessage = 'Internal server error occurred. Please contact administrator.';
+        errorDetails = '<div class="alert alert-danger text-start mt-3"><small>Please try again later or contact support if the problem persists.</small></div>';
+        showRetryButton = true;
       }
+    } else if (xhr.status === 0 || xhr.statusText === 'timeout') {
+      // Network or timeout errors
+      errorMessage = 'Connection failed or request timed out. Please check your internet connection.';
+      errorDetails = '<div class="alert alert-warning text-start mt-3"><small>This might be a temporary network issue.</small></div>';
+      showRetryButton = true;
+    } else {
+      // Other errors
+      errorMessage = 'An unexpected error occurred. Please try again.';
+      errorDetails = '<div class="alert alert-danger text-start mt-3"><small>Please try again later.</small></div>';
+      showRetryButton = true;
     }
+    
+    const buttonConfig = showRetryButton && this.lastRequestData ? {
+      showDenyButton: true,
+      confirmButtonText: 'Retry',
+      denyButtonText: 'Cancel',
+      confirmButtonColor: '#007bff',
+      denyButtonColor: '#dc3545'
+    } : {
+      confirmButtonText: 'Understand',
+      confirmButtonColor: '#dc3545'
+    };
     
     Swal.fire({
       icon: 'error',
@@ -2091,10 +2216,64 @@ const EnrollmentSubmissionModule = {
           </div>
         </div>
       `,
-      confirmButtonText: 'Understand',
-      confirmButtonColor: '#dc3545',
-      width: '500px'
+      width: '600px',
+      ...buttonConfig
+    }).then((result) => {
+      if (result.isConfirmed && showRetryButton && this.lastRequestData) {
+        // Retry the request
+        console.log('Retrying enrollment submission...');
+        setTimeout(() => {
+          this.retrySubmission();
+        }, 1000);
+      }
     });
+  },
+
+  retrySubmission() {
+    if (!this.lastRequestData) {
+      console.error('No data available for retry');
+      return;
+    }
+
+    const enrollBtn = $('#enrollBtn');
+    const originalText = enrollBtn.html();
+    
+    enrollBtn.html('<i class="bx bx-loader-alt bx-spin me-1"></i>Retrying...').prop('disabled', true);
+
+    $.ajax({
+      url: window.routes.storeEnrollment,
+      method: 'POST',
+      data: this.lastRequestData.formData,
+      processData: false,
+      contentType: false,
+      timeout: 30000,
+      success: (res) => {
+        console.log('Retry successful:', res);
+        this.lastRequestData = null;
+        this.handleSuccess(res);
+      },
+      error: (xhr) => {
+        console.error('Retry failed:', xhr);
+        this.handleError(xhr);
+      },
+      complete: () => {
+        enrollBtn.html(originalText).prop('disabled', false);
+        $('.course-checkbox').prop('disabled', false);
+        $('#term_id').prop('disabled', false);
+        EnrollmentUIModule.updateEnrollButton();
+      }
+    });
+  },
+
+  formatFieldName(field) {
+    const fieldMappings = {
+      'student_id': 'Student',
+      'term_id': 'Academic Term',
+      'available_course_ids': 'Selected Courses',
+      'available_course_schedule_ids': 'Course Schedules',
+      'course_schedule_mapping': 'Schedule Mapping'
+    };
+    return fieldMappings[field] || field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
 };
 
@@ -2136,22 +2315,47 @@ const EnrollmentApp = {
   },
 
   setupGlobalVariables() {
-    // Set up global routes and tokens that should be passed from the backend
-    window.routes = window.routes || {
-      findStudent: $('#findStudentForm').attr('action') || '/enrollments/find-student',
-      studentEnrollments: '/enrollments/student-enrollments',
-      availableCourses: '/available-courses/all',
-      prerequisites: '/courses/prerequisites',
-      courseSchedules: '/available-courses/:id/schedules',
-      remainingCreditHours: '/enrollments/remaining-credit-hours',
-      getSchedules: '/enrollments/get-schedules',
-      storeEnrollment: '/enrollments/store',
-      downloadPdf: '/students/:id/download-pdf',
-      terms: '/terms/all',
-      termsWithInactive: '/terms/all-with-inactive'
-    };
+    // Set up global routes with fallbacks
+    try {
+      window.routes = window.routes || {
+        findStudent: '{{ route("enrollments.findStudent") }}',
+        studentEnrollments: '{{ route("enrollments.studentEnrollments") }}',
+        availableCourses: '{{ route("available-courses.all") }}',
+        prerequisites: '{{ route("courses.prerequisites") }}',
+        courseSchedules: '{{ route("available-courses.schedules", ":id") }}',
+        remainingCreditHours: '{{ route("enrollments.remainingCreditHours") }}',
+        getSchedules: '{{ route("enrollments.getSchedules") }}',
+        storeEnrollment: '{{ route("enrollments.store") }}',
+        downloadPdf: '{{ route("students.download-pdf", ":id") }}',
+        terms: '{{ route("terms.all") }}',
+        termsWithInactive: '{{ route("terms.all-with-inactive") }}'
+      };
+    } catch (e) {
+      console.warn('Some routes may not be available:', e);
+      // Fallback routes
+      window.routes = window.routes || {
+        findStudent: '/enrollments/find-student',
+        studentEnrollments: '/enrollments/student-enrollments',
+        availableCourses: '/available-courses/all',
+        prerequisites: '/courses/prerequisites',
+        courseSchedules: '/available-courses/:id/schedules',
+        remainingCreditHours: '/enrollments/remaining-credit-hours',
+        getSchedules: '/enrollments/get-schedules',
+        storeEnrollment: '/enrollments',
+        downloadPdf: '/students/:id/download-pdf',
+        terms: '/terms/all',
+        termsWithInactive: '/terms/all-with-inactive'
+      };
+    }
     
-    window.csrfToken = $('meta[name="csrf-token"]').attr('content') || $('input[name="_token"]').val();
+    // Get CSRF token from multiple sources
+    window.csrfToken = '{{ csrf_token() }}' || 
+                       $('meta[name="csrf-token"]').attr('content') || 
+                       $('input[name="_token"]').val();
+    
+    if (!window.csrfToken) {
+      console.error('CSRF token not found. Form submission may fail.');
+    }
   },
 
   initializeComponents() {

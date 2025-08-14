@@ -6,10 +6,6 @@
   <link rel="stylesheet" href="{{ asset('css/enrollment.css') }}">
 @endpush
 
-@push('meta')
-  <meta name="csrf-token" content="{{ csrf_token() }}">
-@endpush
-
 @section('page-content')
 <div class="container-xxl flex-grow-1 container-p-y">
   <!-- Page Header -->
@@ -392,7 +388,7 @@ const StudentModule = {
     return $.ajax({
       url: window.routes.findStudent,
       method: 'POST',
-      data: { identifier: identifier, _token: window.csrfToken }
+      data: { identifier: identifier}
     });
   },
 
@@ -468,7 +464,7 @@ const EnrollmentHistoryModule = {
     $.ajax({
       url: window.routes.studentEnrollments,
       method: 'POST',
-      data: { student_id: studentId, _token: window.csrfToken },
+      data: { student_id: studentId },
       success: (res) => {
         const history = res.data || [];
         EnrollmentState.originalHistoryData = history;
@@ -775,7 +771,6 @@ const CourseModule = {
       data: { 
         student_id: EnrollmentState.currentStudentId, 
         course_ids: courseIds,
-        _token: window.csrfToken 
       },
       success: (res) => {
         const prerequisites = res.data || [];
@@ -1212,12 +1207,10 @@ const ActivitySelectionModule = {
       const hasSelection = allActivityTypes[activityType];
       
       if (hasSelection) {
-        $(this).removeClass('bg-light').addClass('bg-success text-white');
         $(this).find('.badge.bg-danger').hide();
         $(this).find('.badge.bg-success').remove();
         $(this).find('h5').append('<span class="badge bg-success ms-2">✓ Selected</span>');
       } else {
-        $(this).removeClass('bg-success text-white').addClass('bg-light');
         $(this).find('.badge.bg-danger').show();
         $(this).find('.badge.bg-success').remove();
       }
@@ -1376,7 +1369,6 @@ const CreditHoursModule = {
       data: { 
         student_id: studentId, 
         term_id: termId, 
-        _token: window.csrfToken 
       },
       success: (res) => {
         if (res.success && res.data) {
@@ -1910,15 +1902,6 @@ const EnrollmentSubmissionModule = {
       return false;
     }
     
-    if (!window.csrfToken) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Security Token Missing',
-        text: 'Please refresh the page and try again.',
-        confirmButtonText: 'OK'
-      });
-      return false;
-    }
     
     return true;
   },
@@ -1929,7 +1912,6 @@ const EnrollmentSubmissionModule = {
     // Add basic required data
     formData.append('student_id', $('#student_id').val());
     formData.append('term_id', $('#term_id').val());
-    formData.append('_token', window.csrfToken);
 
     // Collect selected courses and their schedule data
     const selectedCourseIds = [];
@@ -2315,47 +2297,19 @@ const EnrollmentApp = {
   },
 
   setupGlobalVariables() {
-    // Set up global routes with fallbacks
-    try {
       window.routes = window.routes || {
         findStudent: '{{ route("enrollments.findStudent") }}',
         studentEnrollments: '{{ route("enrollments.studentEnrollments") }}',
-        availableCourses: '{{ route("available-courses.all") }}',
+        availableCourses: '{{ route("available_courses.all") }}',
         prerequisites: '{{ route("courses.prerequisites") }}',
-        courseSchedules: '{{ route("available-courses.schedules", ":id") }}',
+        courseSchedules: '{{ route("available_courses.schedules", ":id") }}',
         remainingCreditHours: '{{ route("enrollments.remainingCreditHours") }}',
         getSchedules: '{{ route("enrollments.getSchedules") }}',
         storeEnrollment: '{{ route("enrollments.store") }}',
-        downloadPdf: '{{ route("students.download-pdf", ":id") }}',
+        downloadPdf: '{{ route("students.download.pdf", ":id") }}',
         terms: '{{ route("terms.all") }}',
-        termsWithInactive: '{{ route("terms.all-with-inactive") }}'
+        termsWithInactive: '{{ route("terms.all.with_inactive") }}'
       };
-    } catch (e) {
-      console.warn('Some routes may not be available:', e);
-      // Fallback routes
-      window.routes = window.routes || {
-        findStudent: '/enrollments/find-student',
-        studentEnrollments: '/enrollments/student-enrollments',
-        availableCourses: '/available-courses/all',
-        prerequisites: '/courses/prerequisites',
-        courseSchedules: '/available-courses/:id/schedules',
-        remainingCreditHours: '/enrollments/remaining-credit-hours',
-        getSchedules: '/enrollments/get-schedules',
-        storeEnrollment: '/enrollments',
-        downloadPdf: '/students/:id/download-pdf',
-        terms: '/terms/all',
-        termsWithInactive: '/terms/all-with-inactive'
-      };
-    }
-    
-    // Get CSRF token from multiple sources
-    window.csrfToken = '{{ csrf_token() }}' || 
-                       $('meta[name="csrf-token"]').attr('content') || 
-                       $('input[name="_token"]').val();
-    
-    if (!window.csrfToken) {
-      console.error('CSRF token not found. Form submission may fail.');
-    }
   },
 
   initializeComponents() {

@@ -43,30 +43,11 @@
                                 <i class="bx bx-calendar me-1"></i> Academic Term <span class="text-danger">*</span>
                             </label>
                             <small class="form-text text-muted mb-2 d-block">Select the academic term for the schedule.</small>
-                            <select class="form-select select2-term" id="term_id" name="term_id" required>
+                            <select class="form-select" id="term_id" name="term_id" required>
                                 <option value="">Select Academic Term</option>
                             </select>
                         </div>
                     </div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="description" class="form-label fw-semibold">
-                        <i class="bx bx-text me-1"></i> Description
-                    </label>
-                    <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter schedule description..."></textarea>
-                </div>
-
-                <div class="mb-0">
-                    <label for="status" class="form-label fw-semibold">
-                        <i class="bx bx-check-circle me-1"></i> Status
-                    </label>
-                    <select class="form-select" id="status" name="status">
-                        <option value="draft">Draft</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="finalized">Finalized</option>
-                    </select>
                 </div>
             </div>
         </div>
@@ -109,6 +90,14 @@
                         </label>
                         <div class="d-flex flex-wrap gap-3">
                             <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="days[]" id="day_saturday" value="saturday">
+                                <label class="form-check-label" for="day_saturday">Saturday</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="days[]" id="day_sunday" value="sunday">
+                                <label class="form-check-label" for="day_sunday">Sunday</label>
+                            </div>
+                            <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="days[]" id="day_monday" value="monday">
                                 <label class="form-check-label" for="day_monday">Monday</label>
                             </div>
@@ -128,15 +117,7 @@
                                 <input class="form-check-input" type="checkbox" name="days[]" id="day_friday" value="friday">
                                 <label class="form-check-label" for="day_friday">Friday</label>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="days[]" id="day_saturday" value="saturday">
-                                <label class="form-check-label" for="day_saturday">Saturday</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="days[]" id="day_sunday" value="sunday">
-                                <label class="form-check-label" for="day_sunday">Sunday</label>
-                            </div>
-                        </div>
+                                                    </div>
                         <small class="text-muted d-block mt-1">Choose at least one day for the repetitive schedule.</small>
                     </div>
                 </div>
@@ -513,7 +494,7 @@ const Select2Manager = {
                 
                 if (response.data?.length > 0) {
                     response.data.forEach(term => {
-                        const termText = `${term.name} (${term.start_date} - ${term.end_date})`;
+                        const termText = `${term.name}`;
                         $select.append(`<option value="${term.id}">${termText}</option>`);
                     });
                 } else {
@@ -553,6 +534,7 @@ const FormManager = {
         $('#day_ends_at').val(CONFIG.defaults.dayEnd);
         $('#slot_duration_minutes').val(CONFIG.defaults.slotDuration);
         $('#repetitive').prop('checked', true);
+        this.handlePatternChange({ target: $('#repetitive')[0] });
     },
 
     /**

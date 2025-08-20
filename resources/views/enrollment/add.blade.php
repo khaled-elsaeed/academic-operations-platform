@@ -538,14 +538,13 @@ const EnrollmentHistoryModule = {
 // ========================================
 const TimeConflictModule = {
   hasConflict(activity1, activity2) {
+    if (!activity1 || !activity2) return false;
     if (!activity1.day_of_week || !activity2.day_of_week) return false;
     if (activity1.day_of_week.toLowerCase() !== activity2.day_of_week.toLowerCase()) return false;
-    
     const start1 = Utils.parseTime(activity1.start_time);
     const end1 = Utils.parseTime(activity1.end_time);
     const start2 = Utils.parseTime(activity2.start_time);
     const end2 = Utils.parseTime(activity2.end_time);
-    
     return (start1 < end2) && (start2 < end1);
   },
 
@@ -1217,33 +1216,7 @@ const ActivitySelectionModule = {
     });
   },
 
-  calculateScheduleSummary(activities) {
-    if (!activities || activities.length === 0) {
-      return { daysText: 'TBA' };
-    }
-    
-    const days = new Set();
-    
-    activities.forEach(activity => {    
-      if (activity.day_of_week) {
-        days.add(activity.day_of_week);
-      }
-    });
-    
-    const daysArray = Array.from(days).sort((a, b) => {
-      const dayOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-      return dayOrder.indexOf(a.toLowerCase()) - dayOrder.indexOf(b.toLowerCase());
-    });
-    
-    let daysText = daysArray.length > 0 ? daysArray.join(', ') : 'TBA';
-    if (daysArray.length > 3) {
-      daysText = `${daysArray.slice(0, 2).join(', ')} + ${daysArray.length - 2} more`;
-    }
-
-    return { daysText };
-  },
-
-  confirmSelection() {
+    confirmSelection() {
     const courseId = $('#activitySelectionModal').data('course-id');
     const selectedActivities = $('.activity-radio:checked');
     
@@ -1301,7 +1274,34 @@ const ActivitySelectionModule = {
       course: EnrollmentState.originalCoursesData.find(c => c.available_course_id == courseId)
     };
     
-    this.finalizeSelection(courseId, courseData);
+    // NEW: Check for conflicts, including with old enrollments
+    const conflicts = TimeConflictModule.checkScheduleConflicts(courseData, courseId);
+    
+    // BONUS: Also check for intra-course conflicts (new activities conflicting among themselves)
+    for (let i = 0; i < selectedActivityData.length; i++) {
+      for (let j = i + 1; j < selectedActivityData.length; j++) {
+        if (TimeConflictModule.hasConflict(selectedActivityData[i], selectedActivityData[j])) {
+          conflicts.push({
+            conflictingCourse: courseData.course.name,
+            conflictingActivity: selectedActivityData[i],
+            newActivity: selectedActivityData[j],
+            conflictType: 'intra_course'
+          });
+        }
+      }
+    }
+
+    if (conflicts.length > 0) {
+      TimeConflictModule.showConflictWarning(conflicts, () => {
+        // Proceed despite conflicts
+        this.finalizeSelection(courseId, courseData);
+      }, () => {
+        // Cancel: Stay in modal, do nothing
+      });
+    } else {
+      // No conflicts: Proceed normally
+      this.finalizeSelection(courseId, courseData);
+    }
   },
 
   finalizeSelection(courseId, courseData) {
@@ -1516,7 +1516,7 @@ const ScheduleModule = {
           EnrollmentState.selectedActivities = res.data.map(item => ({
             course: item.course,
             activity: item.activity,
-            group: item.group_number,
+            group: item.group,
             source: 'old_schedule'
           }));
 

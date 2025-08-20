@@ -22,10 +22,7 @@ class CreateScheduleSlotService
         return DB::transaction(function () use ($data) {
             // Get the schedule
             $schedule = Schedule::with('scheduleType')->findOrFail($data['schedule_id']);
-            
-            // Check if slot time is within schedule time range
-            $this->validateSlotTimeRange($schedule, $data['start_time'], $data['end_time']);
-            
+                        
             // Check for conflicts
             $this->validateSlotConflicts($schedule, $data);
             
@@ -35,30 +32,6 @@ class CreateScheduleSlotService
             // Create the slot
             return ScheduleSlot::create($slotData);
         });
-    }
-
-    /**
-     * Validate that slot time is within schedule time range
-     *
-     * @param Schedule $schedule
-     * @param string $startTime
-     * @param string $endTime
-     * @throws BusinessValidationException
-     */
-    private function validateSlotTimeRange(Schedule $schedule, string $startTime, string $endTime): void
-    {
-        $slotStart = Carbon::parse($startTime);
-        $slotEnd = Carbon::parse($endTime);
-        $scheduleStart = Carbon::parse($schedule->day_starts_at);
-        $scheduleEnd = Carbon::parse($schedule->day_ends_at);
-
-        if ($slotStart->lt($scheduleStart) || $slotEnd->gt($scheduleEnd)) {
-            throw new BusinessValidationException(
-                'Slot time must be within schedule time range (' . 
-                $scheduleStart->format('H:i') . ' - ' . 
-                $scheduleEnd->format('H:i') . ')'
-            );
-        }
     }
 
     /**
@@ -119,8 +92,6 @@ class CreateScheduleSlotService
 
         $nextOrder = $maxOrder + 1;
 
-        // Generate slot identifier
-        $identifier = $this->generateSlotIdentifier($schedule, $data, $nextOrder);
 
         // Convert switch input 'on' to boolean true
         $isActive = isset($data['is_active']) ? 
@@ -129,33 +100,8 @@ class CreateScheduleSlotService
 
         return array_merge($data, [
             'slot_order' => $nextOrder,
-            'slot_identifier' => $identifier,
             'is_active' => $isActive,
             'schedule_id' => $schedule->id
         ]);
-    }
-
-    /**
-     * Generate a unique slot identifier
-     *
-     * @param Schedule $schedule
-     * @param array $data
-     * @param int $order
-     * @return string
-     */
-    private function generateSlotIdentifier(Schedule $schedule, array $data, int $order): string
-    {
-        $prefix = strtoupper(substr($schedule->title, 0, 3));
-        
-        if ($schedule->scheduleType->is_repetitive && $schedule->scheduleType->repetition_pattern === 'weekly') {
-            $dayPrefix = substr(ucfirst($data['day_of_week']), 0, 3);
-        } else {
-            $dayPrefix = Carbon::parse($data['specific_date'])->format('md');
-        }
-        
-        $timePrefix = Carbon::parse($data['start_time'])->format('Hi');
-        $orderPadded = str_pad($order, 2, '0', STR_PAD_LEFT);
-        
-        return "{$prefix}-{$dayPrefix}-{$timePrefix}-{$orderPadded}";
     }
 }

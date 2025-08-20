@@ -131,7 +131,27 @@ class AvailableCourseService
      * @return \Illuminate\Database\Eloquent\Collection
      * @throws BusinessValidationException
      */
-    public function getSchedules(int $availableCourseId)
+    /**
+     * Get all schedules for a given available course grouped by activity type.
+     *
+     * Returns an array like:
+     * [
+     *   [
+     *     'activity_type' => 'lecture',
+     *     'schedules' => [ ... ]
+     *   ],
+     *   [
+     *     'activity_type' => 'lab',
+     *     'schedules' => [ ... ]
+     *   ],
+     *   ...
+     * ]
+     *
+     * @param int $availableCourseId
+     * @return array
+     * @throws BusinessValidationException
+     */
+    public function getSchedules(int $availableCourseId): array
     {
         $availableCourse = AvailableCourse::with('schedules.scheduleAssignments.scheduleSlot')->find($availableCourseId);
 
@@ -139,33 +159,27 @@ class AvailableCourseService
             throw new BusinessValidationException('Available course not found.');
         }
 
-        // Group schedules by activity type instead of group number
-        $groupedSchedules = $availableCourse->schedules->groupBy('activity_type')->map(function ($schedules, $activityType) use ($availableCourseId) {
-            $activityData = [
-                'activity_type' => $activityType,
-                'schedules' => []
-            ];
-
+        // Group schedules by activity_type
+        $grouped = $availableCourse->schedules->groupBy('activity_type')->map(function ($schedules, $activityType) {
+            $activitySchedules = [];
             foreach ($schedules as $schedule) {
                 $slots = $schedule->scheduleAssignments->map(function ($assignment) {
                     return $assignment->scheduleSlot;
                 })->filter();
 
                 if ($slots->isNotEmpty()) {
-                    // Sort slots by start_time
                     $sortedSlots = $slots->sortBy('start_time')->values();
                     $firstSlot = $sortedSlots->first();
                     $lastSlot = $sortedSlots->last();
 
-                    // Calculate enrolled count for this specific schedule
-                    $enrolledCount = EnrollmentSchedule::whereHas('availableCourseSchedule', function($query) use ($schedule) {
+                    $enrolledCount = \App\Models\EnrollmentSchedule::whereHas('availableCourseSchedule', function($query) use ($schedule) {
                         $query->where('id', $schedule->id);
                     })->count();
 
-                    $activityData['schedules'][] = [
+                    $activitySchedules[] = [
                         'id' => $schedule->id,
-                        'group_number' => $schedule->group,
                         'activity_type' => $schedule->activity_type,
+                        'group_number' => $schedule->group,
                         'location' => $schedule->location,
                         'min_capacity' => $schedule->min_capacity,
                         'max_capacity' => $schedule->max_capacity,
@@ -176,11 +190,13 @@ class AvailableCourseService
                     ];
                 }
             }
+            return [
+                'activity_type' => $activityType,
+                'schedules' => $activitySchedules
+            ];
+        })->values()->toArray();
 
-            return $activityData;
-        });
-
-        return $groupedSchedules->values();
+        return $grouped;
     }
 
     /**
@@ -246,11 +262,10 @@ class AvailableCourseService
                     return '<span class="text-muted">No schedules</span>';
                 }
                 $count = $schedules->count();
-                // Always show a button, details will be fetched via AJAX
                 return sprintf(
-                    '<button type="button" class="btn btn-outline-secondary btn-sm show-schedules-modal position-relative group-hover-parent" data-id="%d" title="View Schedules" style="position: relative;">
+                    '<button type="button" class="btn btn-secondary btn-sm show-schedules-modal position-relative group-hover-parent" data-id="%d" title="View Schedules" style="position: relative;">
                         <i class="bx bx-calendar"></i> Schedules 
-                        <span class="badge bg-secondary schedules-badge-hover" style="transition: background-color 0.2s, color 0.2s;">%d</span>
+                        <span class="badge schedules-badge-hover" style="transition: background-color 0.2s, color 0.2s;">%d</span>
                     </button>',
                     $availableCourse->id,
                     $count
@@ -273,9 +288,9 @@ class AvailableCourseService
                     return e($pairs->first());
                 }
                 return sprintf(
-                    '<button type="button" class="btn btn-outline-info btn-sm show-eligibility-modal position-relative group-hover-parent" data-id="%d" title="View Eligibility Requirements" style="position: relative;">
+                    '<button type="button" class="btn btn-info btn-sm show-eligibility-modal position-relative group-hover-parent" data-id="%d" title="View Eligibility Requirements" style="position: relative;">
                         <i class="bx bx-list-ul"></i> Eligibility 
-                        <span class="badge bg-info eligibility-badge-hover" style="transition: background-color 0.2s, color 0.2s;">%d</span>
+                        <span class="badge eligibility-badge-hover" style="transition: background-color 0.2s, color 0.2s;">%d</span>
                     </button>',
                     $availableCourse->id,
                     $count
@@ -400,12 +415,6 @@ class AvailableCourseService
             'schedules.scheduleAssignments.scheduleSlot'
         ])->findOrFail($id);
 
-        Log::info('Retrieved available course', [
-            'course_id' => $availableCourse->id,
-            'term_id' => $availableCourse->term_id,
-            'availability' => $availableCourse,
-        ]);
-
         return [
             'id' => $availableCourse->id,
             'course_id' => $availableCourse->course_id,
@@ -426,10 +435,6 @@ class AvailableCourseService
                     'activity_type' => $schedule->activity_type,
                     'location' => $schedule->location,
                     'slots' => $schedule->scheduleAssignments->map(function ($assignment) {
-                        Log::info('Mapping schedule assignment', [
-                            'assignment_id' => $assignment->id,
-                            'slot_id' => $assignment->scheduleSlot?->id,
-                        ]);
                         return [
                             'schedule_assignment_id' => $assignment->id,
                             'slot_id' => $assignment->scheduleSlot?->id,

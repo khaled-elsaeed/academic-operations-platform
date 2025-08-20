@@ -52,19 +52,52 @@ class ScheduleService
     }
 
     /**
-     * Get schedule with slots for display.
+     * Get schedule with slots for display, with formatted dates.
      *
      * @param int $scheduleId Schedule ID
-     * @return Schedule|null Schedule with slots
+     * @return array|null Schedule details with formatted dates
      */
-    public function getScheduleDetails(int $scheduleId): ?Schedule
+    public function getScheduleDetails(int $scheduleId): ?array
     {
+        // Define the correct day order (Saturday first)
+        $dayOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+
         $schedule = Schedule::with([
-            'slots' => fn($query) => $query->orderBy('day_of_week')->orderBy('slot_order'),
+            'slots' => function($query) use ($dayOrder) {
+            $orderExpr = "FIELD(day_of_week, '" . implode("','", $dayOrder) . "')";
+            $query->orderByRaw($orderExpr)->orderBy('slot_order');
+            },
             'scheduleType',
             'term'
         ])->findOrFail($scheduleId);
-        return $schedule;
+
+        if (!$schedule) {
+            return null;
+        }
+
+        // Format the schedule data and dates
+        return [
+            'id' => $schedule->id,
+            'title' => $schedule->title,
+            'status' => $schedule->status,
+            'schedule_type' => $schedule->scheduleType?->name,
+            'term' => $schedule->term?->name,
+            'type' => $schedule->scheduleType?->name,
+            'day_starts_at' => $schedule->day_starts_at ? formatDate($schedule->day_starts_at) : null,
+            'day_ends_at' => $schedule->day_ends_at ? formatDate($schedule->day_ends_at) : null,
+            'created_at' => $schedule->created_at ? formatDate($schedule->created_at) : null,
+            'updated_at' => $schedule->updated_at ? formatDate($schedule->updated_at) : null,
+            'slots' => $schedule->slots->map(function ($slot) {
+                return [
+                    'id' => $slot->id,
+                    'day_of_week' => ucfirst($slot->day_of_week),
+                    'slot_order' => $slot->slot_order,
+                    'start_time' => $slot->start_time ? formatTime($slot->start_time) : null,
+                    'end_time' => $slot->end_time ? formatTime($slot->end_time) : null,
+                    'label' => $slot->label ?? null,
+                ];
+            })->toArray(),
+        ];
     }
 
     /**
@@ -125,9 +158,8 @@ class ScheduleService
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('type', fn($schedule) => $schedule->scheduleType->name ?? '-')
-            ->addColumn('term', fn($schedule) => $schedule->term->name ?? '-')
-            ->addColumn('start_time', fn($schedule) => $schedule->start_time ? $schedule->start_time->format('H:i') : '-')
-            ->addColumn('end_time', fn($schedule) => $schedule->end_time ? $schedule->end_time->format('H:i') : '-')
+            ->addColumn('day_starts_at', fn($schedule) => formatTime($schedule->day_starts_at))
+            ->addColumn('day_ends_at', fn($schedule) => formatTime($schedule->day_ends_at))
             ->addColumn('status', fn($schedule) => ucfirst($schedule->status))
             ->addColumn('slots_count', fn($schedule) => $schedule->slots()->count())
             ->addColumn('actions', fn($schedule) => $this->renderActionButtons($schedule))
@@ -136,20 +168,9 @@ class ScheduleService
                             ->orderBy('schedule_types.name', $order)
                             ->select('schedules.*');
             })
-            ->orderColumn('term', function ($query, $order) {
-                return $query->join('terms', 'schedules.term_id', '=', 'terms.id')
-                            ->orderBy('terms.code', $order)
-                            ->select('schedules.*');
-            })
             ->orderColumn('slots_count', function ($query, $order) {
                 return $query->withCount('slots')
                             ->orderBy('slots_count', $order);
-            })
-            ->orderColumn('formatted_day_starts_at', function ($query, $order) {
-                return $query->orderBy('day_starts_at', $order);
-            })
-            ->orderColumn('formatted_day_ends_at', function ($query, $order) {
-                return $query->orderBy('day_ends_at', $order);
             })
             ->rawColumns(['actions'])
             ->make(true);

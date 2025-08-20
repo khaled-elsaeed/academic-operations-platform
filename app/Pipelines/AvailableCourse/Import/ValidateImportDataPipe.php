@@ -6,8 +6,11 @@ use App\Models\Course;
 use App\Models\Term;
 use App\Models\Program;
 use App\Models\Level;
+use App\Models\AvailableCourse;
+use App\Models\Schedule\Schedule;
 use App\Exceptions\BusinessValidationException;
 use App\Validators\AvailableCourseImportValidator;
+use App\Exceptions\SkipImportRowException;
 use Closure;
 
 class ValidateImportDataPipe
@@ -24,7 +27,7 @@ class ValidateImportDataPipe
     {
         $rowData = $data['row_data'];
         $rowNumber = $data['row_number'];
-        
+
         \Log::info('Pipeline: Validating import data', [
             'row_number' => $rowNumber,
             'data' => $rowData
@@ -32,22 +35,30 @@ class ValidateImportDataPipe
 
         // Map and validate the row data
         $mappedData = $this->mapRowData($rowData);
-        
+
+        // Skip row if course_code is 'rest' (case-insensitive)
+        if (strtolower(trim($mappedData['course_code'])) === 'rest') {
+            \Log::info("Skipping row {$rowNumber} because course_code is 'rest'.");
+            throw new SkipImportRowException("Row {$rowNumber} skipped: course_code is 'rest'.");
+        }
+
         // Validate the mapped data
         AvailableCourseImportValidator::validateRow($mappedData, $rowNumber);
-        
+
         // Find and validate related entities
         $course = $this->findCourseByCode($mappedData['course_code']);
         $term = $this->findTermByCode($mappedData['term_code']);
         $program = $this->findProgramByCode($mappedData['program_code']);
         $level = $this->findLevelByName($mappedData['level_name']);
-        
+        $schedule = $this->findScheduleByCode($mappedData['schedule_code']);
+
         // Add validated data to pipeline
         $data['mapped_data'] = $mappedData;
         $data['course'] = $course;
         $data['term'] = $term;
         $data['program'] = $program;
         $data['level'] = $level;
+        $data['schedule_id'] = $schedule->id ?? null;
 
         return $next($data);
     }
@@ -151,5 +162,26 @@ class ValidateImportDataPipe
         }
         
         return $level;
+    }
+
+    /**
+     * Find schedule by code.
+     *
+     * @param string|null $code
+     * @return Schedule|null
+     * @throws BusinessValidationException
+     */
+    private function findScheduleByCode(?string $code): ?Schedule
+    {
+        if (empty($code)) {
+            return null;
+        }
+
+        $schedule = Schedule::where('code', $code)->first();
+        if (!$schedule) {
+            throw new BusinessValidationException("Schedule with code '{$code}' not found.");
+        }
+
+        return $schedule;
     }
 }

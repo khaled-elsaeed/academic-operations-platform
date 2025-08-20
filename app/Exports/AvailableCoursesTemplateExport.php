@@ -25,6 +25,7 @@ class AvailableCoursesTemplateExport implements FromArray, WithHeadings
                 'N',            
                 '1',            
                 'AIE',          
+                'SCH-22433'
             ],
         ];
     }
@@ -45,6 +46,7 @@ class AvailableCoursesTemplateExport implements FromArray, WithHeadings
             'External (Y/N)',
             'Level',
             'Program',
+            'Schedule Code'
         ];
     }
 } 

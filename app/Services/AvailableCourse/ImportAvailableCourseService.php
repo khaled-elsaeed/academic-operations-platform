@@ -24,6 +24,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use App\Exceptions\SkipImportRowException;
 use Illuminate\Pipeline\Pipeline;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -69,10 +70,6 @@ class ImportAvailableCourseService
      */
     public function importAvailableCoursesFromRows(Collection $rows): array
     {
-        \Log::info('Starting import of available courses', [
-            'total_rows' => $rows->count()
-        ]);
-
         $results = [
             'created' => [],
             'updated' => [],
@@ -89,7 +86,12 @@ class ImportAvailableCourseService
             foreach ($rows as $index => $row) {
                 try {
                     $result = $this->importSingleAvailableCourse($row->toArray(), $index + 1);
-                    
+
+                    if ($result === null) {
+                        // Defensive: should not happen, but skip if so
+                        continue;
+                    }
+
                     if ($result['operation'] === 'create') {
                         $results['created'][] = $result;
                         $results['summary']['total_created']++;
@@ -97,19 +99,22 @@ class ImportAvailableCourseService
                         $results['updated'][] = $result;
                         $results['summary']['total_updated']++;
                     }
-                    
+
                     $results['summary']['total_processed']++;
-                    
+
+                } catch (SkipImportRowException $e) {
+                    // continue, do not count as error or processed as this is rest schedule
+                    continue;
                 } catch (\Exception $e) {
                     $error = [
                         'row_number' => $index + 1,
                         'data' => $row->toArray(),
                         'error' => $e->getMessage()
                     ];
-                    
+
                     $results['errors'][] = $error;
                     $results['summary']['total_errors']++;
-                    
+
                     \Log::error('Error importing available course row', $error);
                 }
             }
@@ -117,8 +122,6 @@ class ImportAvailableCourseService
             $message = $this->generateSummaryMessage($results['summary']);
             $success = $results['summary']['total_errors'] === 0;
 
-            \Log::info('Import completed', $results['summary']);
-            
             return [
                 'success' => $success,
                 'message' => $message,
@@ -140,10 +143,6 @@ class ImportAvailableCourseService
      */
     public function importSingleAvailableCourse(array $rowData, int $rowNumber): array
     {
-        \Log::info('Processing single available course import', [
-            'row_number' => $rowNumber,
-            'data' => $rowData
-        ]);
 
         $pipelineData = [
             'row_data' => $rowData,
@@ -159,20 +158,7 @@ class ImportAvailableCourseService
                 HandleEligibilityPipe::class,
                 HandleImportSchedulePipe::class,
             ])
-            ->finally(function ($data) {
-                \Log::info('Import pipeline execution completed', [
-                    'row_number' => $data['row_number'],
-                    'operation' => $data['operation'] ?? 'unknown',
-                    'available_course_id' => $data['available_course']->id ?? null,
-                ]);
-            })
             ->then(function ($data) {
-                \Log::info('Available course import processed successfully', [
-                    'row_number' => $data['row_number'],
-                    'operation' => $data['operation'],
-                    'available_course_id' => $data['available_course']->id
-                ]);
-                
                 return [
                     'operation' => $data['operation'],
                     'available_course' => $data['available_course']->fresh(['programs', 'levels', 'schedules.scheduleAssignments']),
@@ -194,11 +180,6 @@ class ImportAvailableCourseService
      */
     public function batchImportAvailableCourses(Collection $rows, int $batchSize = 50): array
     {
-        \Log::info('Starting batch import of available courses', [
-            'total_rows' => $rows->count(),
-            'batch_size' => $batchSize
-        ]);
-
         $results = [
             'created' => [],
             'updated' => [],
@@ -215,10 +196,6 @@ class ImportAvailableCourseService
         $batches = $rows->chunk($batchSize);
 
         foreach ($batches as $batchIndex => $batch) {
-            \Log::info('Processing batch', [
-                'batch_number' => $batchIndex + 1,
-                'batch_size' => $batch->count()
-            ]);
 
             $batchResult = $this->importAvailableCoursesFromRows($batch);
             
@@ -237,8 +214,6 @@ class ImportAvailableCourseService
 
         $message = $this->generateSummaryMessage($results['summary']);
         $success = $results['summary']['total_errors'] === 0;
-
-        \Log::info('Batch import completed', $results['summary']);
         
         return [
             'success' => $success,

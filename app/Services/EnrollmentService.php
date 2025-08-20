@@ -663,14 +663,11 @@ class EnrollmentService
     }
 
 public function getSchedules(int $studentId, int $termId): array
-{
-    \Log::info("Fetching schedules for term & student : {$termId}, {$studentId}");
-    
-    // Get all enrollment schedules with proper eager loading based on actual model relationships
+{    
     $enrollmentSchedules = EnrollmentSchedule::with([
-        'enrollment.course',           // Get the course info through enrollment
-        'availableCourseSchedule.availableCourse', // Get available course info
-        'availableCourseSchedule.scheduleAssignments.scheduleSlot' // Get schedule slots through assignments
+        'enrollment.course',           
+        'availableCourseSchedule.availableCourse', 
+        'availableCourseSchedule.scheduleAssignments.scheduleSlot' 
     ])
     ->whereHas('enrollment', function ($query) use ($studentId, $termId) {
         $query->where('student_id', $studentId)
@@ -688,7 +685,6 @@ public function getSchedules(int $studentId, int $termId): array
         // Get all schedule slots for this available course schedule
         $scheduleSlots = $availableCourseSchedule->scheduleAssignments
             ->pluck('scheduleSlot')
-            ->filter() // Remove null values
             ->sortBy(['day_of_week', 'start_time']);
             
         if ($scheduleSlots->isEmpty()) {

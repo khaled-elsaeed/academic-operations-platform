@@ -37,12 +37,12 @@
 
     {{-- ===== DATA TABLE ===== --}}
     <x-ui.datatable
-        :headers="['Slot ID', 'Day', 'Start Time', 'End Time', 'Duration', 'Order', 'Status', 'Action']"
+        :headers="['Schedule', 'Day', 'Start Time', 'End Time', 'Duration', 'Order', 'Status', 'Action']"
         :columns="[
-            ['data' => 'slot_identifier', 'name' => 'slot_identifier'],
-            ['data' => 'formatted_specific_date', 'name' => 'formatted_specific_date'],
-            ['data' => 'formatted_start_time', 'name' => 'formatted_start_time'],
-            ['data' => 'formatted_end_time', 'name' => 'formatted_end_time'],
+            ['data'=>'schedule', 'name' => 'schedule'],
+            ['data' => 'day_of_week', 'name' => 'day_of_week'],
+            ['data' => 'start_time', 'name' => 'start_time'],
+            ['data' => 'end_time', 'name' => 'end_time'],
             ['data' => 'duration_minutes', 'name' => 'duration_minutes'],
             ['data' => 'slot_order', 'name' => 'slot_order'],
             ['data' => 'status', 'name' => 'status'],
@@ -54,22 +54,22 @@
 
 
     {{-- Modals Section --}}
-    {{-- Add/Edit Slot Modal --}}
-    <x-ui.modal 
-        id="slotModal"
-        title="Add Schedule Slot"
-        size="lg"
-        :scrollable="true"
-        class="slot-modal"
-    >
-        <x-slot name="slot">
-            <form id="slotForm" class="needs-validation" novalidate>
-                <input type="hidden" id="slot_id" name="slot_id">
-                <div class="row g-3">
-                    {{-- Schedule Selection --}}
-                    <div class="col-12">
+  {{-- Add Slot Modal --}}
+  <x-ui.modal 
+    id="slotModal"
+    title="Add Schedule Slot"
+    size="lg"
+    :scrollable="true"
+    class="slot-modal"
+  >
+    <x-slot name="slot">
+      <form id="slotForm" class="needs-validation" novalidate>
+        <input type="hidden" id="slot_id" name="slot_id">
+        <div class="row g-3">
+          {{-- Schedule Selection --}}
+          <div class="col-12">
                         <label for="schedule_id" class="form-label">Schedule <span class="text-danger">*</span></label>
-                        <select class="form-select select2-schedule" id="schedule_id" name="schedule_id" required>
+                        <select class="form-select" id="schedule_id" name="schedule_id" required>
                             <option value="">Select Schedule</option>
                         </select>
                         <div class="invalid-feedback">Please select a schedule.</div>
@@ -88,16 +88,6 @@
                             </div>
                         </div>
 
-                        {{-- Schedule Time Range Info --}}
-                        <div class="alert alert-secondary mb-3">
-                            <div class="d-flex gap-2">
-                                <i class="bx bx-time fs-5"></i>
-                                <div>
-                                    <h6 class="mb-1">Schedule Time Range</h6>
-                                    <p class="mb-0" id="scheduleTimeRangeText"></p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     {{-- Date/Day Selection Card --}}
@@ -143,14 +133,12 @@
                                         <label for="start_time" class="form-label">Start Time <span class="text-danger">*</span></label>
                                         <input type="time" class="form-control" id="start_time" name="start_time" required>
                                         <div class="invalid-feedback">Please select a valid start time.</div>
-                                        <small class="form-text text-muted" id="startTimeHelp"></small>
                                     </div>
 
                                     <div class="col-md-6">
                                         <label for="end_time" class="form-label">End Time <span class="text-danger">*</span></label>
                                         <input type="time" class="form-control" id="end_time" name="end_time" required>
                                         <div class="invalid-feedback">Please select a valid end time.</div>
-                                        <small class="form-text text-muted" id="endTimeHelp"></small>
                                     </div>
 
                                     {{-- Duration (Read-only) --}}
@@ -273,6 +261,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('js/utils.js') }}"></script>
 <script>
 /**
  * Schedule Slot Management System JavaScript
@@ -296,79 +285,6 @@ const ROUTES = {
     all: '{{ route('schedules.all') }}',
     show: '{{ route('schedules.show', ':id') }}'
   }
-};
-
-// ===========================
-// UTILITY FUNCTIONS
-// ===========================
-
-const Utils = {
-  showSuccess(message) {
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: message,
-      showConfirmButton: false,
-      timer: 2500,
-      timerProgressBar: true
-    });
-  },
-
-  showError(message, modal = null) {
-    if (modal) {
-      $(modal).modal('hide');
-      setTimeout(() => {
-        Swal.fire({
-          title: 'Error',
-          html: message,
-          icon: 'error'
-        });
-      }, 500);
-    } else {
-      Swal.fire({
-        title: 'Error',
-        html: message,
-        icon: 'error'
-      });
-    }
-  },
-
-  toggleLoadingState(elementId, isLoading) {
-    const $value = $(`#${elementId}-value`);
-    const $loader = $(`#${elementId}-loader`);
-    const $updated = $(`#${elementId}-last-updated`);
-    const $updatedLoader = $(`#${elementId}-last-updated-loader`);
-
-    if (isLoading) {
-      $value.addClass('d-none');
-      $loader.removeClass('d-none');
-      $updated.addClass('d-none');
-      $updatedLoader.removeClass('d-none');
-    } else {
-      $value.removeClass('d-none');
-      $loader.addClass('d-none');
-      $updated.removeClass('d-none');
-      $updatedLoader.addClass('d-none');
-    }
-  },
-
-  replaceRouteId(route, id) {
-    return route.replace(':id', id);
-  },
-  /**
-     * Hide the page loader overlay.
-     */
-    hidePageLoader() {
-      const loader = document.getElementById('pageLoader');
-      if (loader) {
-        loader.classList.add('fade-out');
-        // Restore scrollbars when loader is hidden
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
-      }
-    }
-
 };
 
 // ===========================
@@ -447,19 +363,38 @@ const ApiService = {
 // ===========================
 
 const StatsManager = {
-  loadSlotStats() {
-    Utils.toggleLoadingState('schedule-slots', true);
+  toggleLoadingState(elementId, isLoading) {
+    const $value = $(`#${elementId}-value`);
+    const $loader = $(`#${elementId}-loader`);
+    const $updated = $(`#${elementId}-last-updated`);
+    const $updatedLoader = $(`#${elementId}-last-updated-loader`);
+
+    if (isLoading) {
+      $value.addClass('d-none');
+      $loader.removeClass('d-none');
+      $updated.addClass('d-none');
+      $updatedLoader.removeClass('d-none');
+    } else {
+      $value.removeClass('d-none');
+      $loader.addClass('d-none');
+      $updated.removeClass('d-none');
+      $updatedLoader.addClass('d-none');
+  }
+},
+
+loadSlotStats() {
+  StatsManager.toggleLoadingState('schedule-slots', true);
     ApiService.fetchSlotStats()
       .done((response) => {
         const data = response.data;
         $('#schedule-slots-value').text(data.total.count ?? '--');
         $('#schedule-slots-last-updated').text(data.total.lastUpdateTime ?? '--');
-        Utils.toggleLoadingState('schedule-slots', false);
+        StatsManager.toggleLoadingState('schedule-slots', false);
       })
       .fail(() => {
         $('#schedule-slots-value').text('N/A');
         $('#schedule-slots-last-updated').text('N/A');
-        Utils.toggleLoadingState('schedule-slots', false);
+        StatsManager.toggleLoadingState('schedule-slots', false);
         Utils.showError('Failed to load slot statistics');
       });
   }
@@ -474,7 +409,7 @@ const SlotManager = {
   selectedSchedule: null,
 
   initializeScheduleSelect() {
-    $('.select2-schedule').select2({
+    $('#schedule_id').select2({
       theme: 'bootstrap-5',
       placeholder: 'Select Schedule',
       allowClear: true,
@@ -537,8 +472,8 @@ const SlotManager = {
           SlotManager.selectedSchedule = schedule;
           SlotManager.updateFormBasedOnSchedule(schedule);
         })
-        .fail(() => {
-          Utils.showError('Failed to fetch schedule details');
+        .fail((xhr) => {
+          Utils.handleAjaxError(xhr,xhr.responseJSON?.message);
         });
     });
   },
@@ -554,11 +489,6 @@ const SlotManager = {
         : 'This is a date range schedule. Please select a specific date.'
     );
 
-    // Use formatted times from the response
-    $('#scheduleTimeRangeText').text(
-      `Schedule runs from ${schedule.formatted_day_starts_at} to ${schedule.formatted_day_ends_at}`
-    );
-
     // Update time input constraints
     $('#start_time').attr({
       'min': schedule.day_starts_at,
@@ -569,9 +499,6 @@ const SlotManager = {
       'max': schedule.day_ends_at
     });
 
-    // Update time help text
-    $('#startTimeHelp').text(`Must be between ${schedule.formatted_day_starts_at} and ${schedule.formatted_day_ends_at}`);
-    $('#endTimeHelp').text(`Must be between ${schedule.formatted_day_starts_at} and ${schedule.formatted_day_ends_at}`);
 
     // Reset fields first
     $('#daySelectionField, #specificDateField').hide();
@@ -651,7 +578,6 @@ const SlotManager = {
     $('.datepicker').datepicker('setStartDate', null);
     $('.datepicker').datepicker('setEndDate', null);
     $('#start_time, #end_time').val('').attr('min', '').attr('max', '');
-    $('#startTimeHelp, #endTimeHelp').text('');
     $('#duration_minutes').val('');
   },
 
@@ -664,25 +590,7 @@ const SlotManager = {
     });
   },
 
-  handleEditSlot() {
-    $(document).on('click', '.editSlotBtn', function() {
-      const slotId = $(this).data('id');
-      SlotManager.currentSlotId = slotId;
-      SlotManager.resetForm();
-      
-      $('#slotModal .modal-title').text('Edit Schedule Slot');
-      
-      ApiService.fetchSlot(slotId)
-        .done((response) => {
-          const slot = response.data;
-          SlotManager.populateForm(slot);
-          $('#slotModal').modal('show');
-        })
-        .fail(() => {
-          Utils.showError('Failed to fetch slot details', '#slotModal');
-        });
-    });
-  },
+
 
   handleViewSlot() {
     $(document).on('click', '.viewSlotBtn', function () {
@@ -695,22 +603,17 @@ const SlotManager = {
           SlotManager.populateViewModal(slot);
           $('#viewSlotModal').modal('show');
         })
-        .fail(() => {
-          Utils.showError('Failed to load slot details', '#viewSlotModal');
+        .fail((xhr) => {
+          Utils.handleAjaxError(xhr,xhr.responseJSON?.message);
         });
     });
   },
-
   handleDeleteSlot() {
     $(document).on('click', '.deleteSlotBtn', function () {
       const slotId = $(this).data('id');
-      Swal.fire({
+      Utils.showConfirmDialog({
         title: 'Are you sure?',
         text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
         confirmButtonText: 'Yes, delete it!'
       }).then((result) => {
         if (result.isConfirmed) {
@@ -720,8 +623,8 @@ const SlotManager = {
               Utils.showSuccess('Slot has been deleted.');
               StatsManager.loadSlotStats();
             })
-            .fail(() => {
-              Utils.showError('Failed to delete slot.');
+            .fail((xhr) => {
+              Utils.handleAjaxError(xhr, xhr.responseJSON?.message);
             });
         }
       });
@@ -737,8 +640,8 @@ const SlotManager = {
           Utils.showSuccess('Slot status has been updated.');
           StatsManager.loadSlotStats();
         })
-        .fail(() => {
-          Utils.showError('Failed to update slot status.');
+        .fail((xhr) => {
+          Utils.handleAjaxError(xhr, xhr.responseJSON?.message);
         });
     });
   },
@@ -746,6 +649,7 @@ const SlotManager = {
   handleFormSubmit() {
     $('#slotForm').on('submit', function(e) {
       e.preventDefault();
+      $('#schedule_id').val($('#schedule_id').select2('val'));
       const formData = $(this).serialize();
       const $submitBtn = $('#slotModal button[type="submit"]');
       const originalText = $submitBtn.text();
@@ -760,8 +664,7 @@ const SlotManager = {
           StatsManager.loadSlotStats();
         })
         .fail((xhr) => {
-          const message = xhr.responseJSON?.message || 'An error occurred. Please check your input.';
-          Utils.showError(message, '#slotModal');
+          Utils.handleAjaxError(xhr, xhr.responseJSON?.message);
         })
         .always(() => {
           $submitBtn.prop('disabled', false).text(originalText);
@@ -776,6 +679,10 @@ const SlotManager = {
 
   populateForm(slot) {
     $('#slot_id').val(slot.id);
+    // Set schedule_id and trigger change for dependent fields
+    if (slot.schedule_id) {
+      $('#schedule_id').val(slot.schedule_id).trigger('change');
+    }
     $('#day_of_week').val(slot.day_of_week);
     $('#specific_date').val(slot.specific_date);
     $('#start_time').val(slot.start_time);
@@ -831,7 +738,7 @@ const SlotManagementApp = {
     SlotManager.initializeTimeHandlers();
     SlotManager.handleScheduleSelection();
     SlotManager.handleAddSlot();
-    SlotManager.handleEditSlot();
+
     SlotManager.handleViewSlot();
     SlotManager.handleDeleteSlot();
     SlotManager.handleToggleStatus();

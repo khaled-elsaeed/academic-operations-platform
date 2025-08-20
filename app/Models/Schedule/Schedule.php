@@ -30,13 +30,6 @@ class Schedule extends Model
         'finalized_at',
     ];
 
-    protected $appends = [
-        'formatted_start_date',
-        'formatted_end_date',
-        'formatted_day_starts_at',
-        'formatted_day_ends_at',
-        'formatted_finalized_at',
-    ];
 
     protected function casts(): array
     {
@@ -66,41 +59,5 @@ class Schedule extends Model
     public function slots(): HasMany
     {
         return $this->hasMany(ScheduleSlot::class);
-    }
-
-    // Formatted Date Attributes using Laravel 12's Attribute class
-    protected function formattedStartDate(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->start_date ? formatDate($this->start_date) : null,
-        );
-    }
-
-    protected function formattedEndDate(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->end_date ? formatDate($this->end_date) : null,
-        );
-    }
-
-    protected function formattedDayStartsAt(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->day_starts_at ? formatTime($this->day_starts_at) : null,
-        );
-    }
-
-    protected function formattedDayEndsAt(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->day_ends_at ? formatTime($this->day_ends_at) : null,
-        );
-    }
-
-    protected function formattedFinalizedAt(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->finalized_at ? formatDateTime($this->finalized_at) : null,
-        );
     }
 }

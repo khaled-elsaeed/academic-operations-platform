@@ -30,7 +30,9 @@ class HandleImportSchedulePipe
             'group' => $mappedData['group']
         ]);
 
-        $this->createOrUpdateCourseSchedule($availableCourse, $mappedData);
+
+    // Pass the whole $data so we can access schedule directly
+    $this->createOrUpdateCourseSchedule($availableCourse, $mappedData, $data);
 
         return $next($data);
     }
@@ -70,13 +72,13 @@ class HandleImportSchedulePipe
             'values' => $scheduleValues
         ]);
 
-        // Create or update the available course schedule
-        $availableCourseSchedule = AvailableCourseSchedule::updateOrCreate($scheduleKeys, $scheduleValues);
+    // Create or update the available course schedule
+    $availableCourseSchedule = AvailableCourseSchedule::updateOrCreate($scheduleKeys, $scheduleValues);
 
-        // Handle schedule slot assignment if provided
-        $this->handleScheduleSlotAssignment($availableCourseSchedule, $availableCourse, $mappedData);
+    // Handle schedule slot assignment if provided, pass $data for schedule
+    $this->handleScheduleSlotAssignment($availableCourseSchedule, $availableCourse, $mappedData, func_num_args() > 2 ? func_get_arg(2) : []);
 
-        return $availableCourseSchedule;
+    return $availableCourseSchedule;
     }
 
     /**
@@ -90,26 +92,28 @@ class HandleImportSchedulePipe
     private function handleScheduleSlotAssignment(
         AvailableCourseSchedule $courseSchedule,
         $availableCourse,
-        array $mappedData
+        array $mappedData,
+        array $data = []
     ): void {
-        $scheduleCode = $mappedData['schedule_code'];
-        $day = $mappedData['day'];
-        $slot = $mappedData['slot'];
+        $scheduleId = $data['schedule_id'] ?? null;
+        $day = $mappedData['day'] ?? null;
+        $slot = $mappedData['slot'] ?? null;
 
         // If we don't have complete schedule information, skip slot assignment
-        if (empty($scheduleCode) || empty($day) || empty($slot)) {
+        if (empty($scheduleId) || empty($day) || empty($slot)) {
             \Log::info('Incomplete schedule slot information, skipping slot assignment', [
-                'schedule_code' => $scheduleCode,
+                'schedule_id' => $scheduleId,
                 'day' => $day,
                 'slot' => $slot
             ]);
             return;
         }
 
-        // Find the schedule and slot
-        $schedule = $this->findScheduleByCode($scheduleCode);
+        $schedule = Schedule::find($scheduleId);
         if (!$schedule) {
-            \Log::warning('Schedule not found for code', ['schedule_code' => $scheduleCode]);
+            \Log::warning('Schedule not found', [
+                'schedule_id' => $scheduleId
+            ]);
             return;
         }
 
@@ -128,14 +132,21 @@ class HandleImportSchedulePipe
     }
 
     /**
-     * Find schedule by code.
+     * Find schedule by id (if provided) or by code.
      *
-     * @param string $code
+     * @param string|null $id
+     * @param string|null $code
      * @return Schedule|null
      */
-    private function findScheduleByCode(string $code): ?Schedule
+    private function findSchedule($id = null, $code = null): ?Schedule
     {
-        return Schedule::where('code', $code)->first();
+        if (!empty($id)) {
+            return Schedule::find($id);
+        }
+        if (!empty($code)) {
+            return Schedule::where('code', $code)->first();
+        }
+        return null;
     }
 
     /**
@@ -205,11 +216,6 @@ class HandleImportSchedulePipe
         array $scheduleSlots
     ): void {
         foreach ($scheduleSlots as $slotData) {
-            $schedule = $this->findScheduleByCode($slotData['schedule_code']);
-            if (!$schedule) {
-                continue;
-            }
-
             $scheduleSlot = $this->findScheduleSlot($schedule, $slotData['day'], $slotData['slot']);
             if (!$scheduleSlot) {
                 continue;

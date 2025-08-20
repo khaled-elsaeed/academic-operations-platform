@@ -122,13 +122,6 @@
                            required>
                 </div>
                 <div class="alert alert-info d-flex align-items-center justify-content-between p-3 mb-3">
-                    <div>
-                        <i class="bx bx-info-circle me-2"></i>
-                        <span class="small">
-                            Use the template for correct available course data formatting.<br>
-                            The file must contain columns: course_code, term_code, program_name, level_name, min_capacity, max_capacity.
-                        </span>
-                    </div>
                     <button type="button" 
                             class="btn btn-sm btn-outline-primary" 
                             id="downloadAvailableCourseTemplateBtn">
@@ -587,105 +580,75 @@ const SchedulesModalManager = {
     const $content = $('#schedulesContent');
     $content.html(`<div class="alert alert-danger">${message}</div>`);
   },
-  renderSchedulesContent(groups) {
+  renderSchedulesContent(activityGroups) {
     const $content = $('#schedulesContent');
     $content.empty();
-    
-    if (Array.isArray(groups) && groups.length > 0) {
-      $content.append('<div class="mb-3"><strong>Course Schedules by Groups:</strong></div>');
-      
-      groups.forEach((group, groupIdx) => {
-        const groupNumber = group.group ?? 'N/A';
-        const activities = group.activities ?? [];
-        
-        // Create group container
-        $content.append(`
-          <div class="card mb-4 shadow-sm group-card">
-            <div class="card-header py-2">
-              <h6 class="mb-0 d-flex align-items-center">
-                <i class="bx bx-group me-2"></i>
-                Group ${groupNumber}
-                <span class="badge bg-light text-dark ms-2">${activities.length} Activities</span>
-              </h6>
-            </div>
-            <div class="card-body p-0" id="group-${groupIdx}-activities">
-            </div>
-          </div>
-        `);
-        
-        const $activitiesContainer = $(`#group-${groupIdx}-activities`);
-        
-        if (activities.length > 0) {
-          activities.forEach((activity, activityIdx) => {
-            const activityType = activity.activity_type ?? 'N/A';
-            const location = activity.location ?? 'TBA';
-            const minCapacity = activity.min_capacity ?? '0';
-            const maxCapacity = activity.max_capacity ?? '0';
-            const enrolledCount = activity.enrolled_count ?? '0';
-            const dayOfWeek = activity.day_of_week ?? 'TBA';
-            const startTime = activity.start_time ?? 'TBA';
-            const endTime = activity.end_time ?? 'TBA';
-            
-            // Calculate enrollment percentage
-            const enrollmentPercentage = maxCapacity > 0 ? Math.round((enrolledCount / maxCapacity) * 100) : 0;
-            const progressBarClass = enrollmentPercentage >= 90 ? 'bg-danger' : (enrollmentPercentage >= 70 ? 'bg-warning' : 'bg-success');
-            
-            $activitiesContainer.append(`
-              <div class="border-bottom ${activityIdx === activities.length - 1 ? 'border-0' : ''} p-3">
-                <div class="row align-items-center">
-                  <div class="col-md-8">
-                    <div class="d-flex align-items-center mb-2">
-                      <span class="badge bg-info me-2">${activityType}</span>
-                      <i class="bx bx-map-pin text-muted me-1"></i>
-                      <small class="text-muted">${location}</small>
-                    </div>
-                    <div class="row text-sm">
-                      <div class="col-sm-6">
-                        <i class="bx bx-calendar text-primary me-1"></i>
-                        <strong>Day:</strong> ${dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1)}
-                      </div>
-                      <div class="col-sm-6">
-                        <i class="bx bx-time text-primary me-1"></i>
-                        <strong>Time:</strong> ${startTime} - ${endTime}
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-md-4">
-                    <div class="text-center">
-                      <div class="small text-muted mb-1">Enrollment</div>
-                      <div class="fw-bold mb-1">${enrolledCount} / ${maxCapacity}</div>
-                      <div class="progress" style="height: 6px;">
-                        <div class="progress-bar ${progressBarClass}" role="progressbar" 
-                             style="width: ${enrollmentPercentage}%" 
-                             aria-valuenow="${enrollmentPercentage}" 
-                             aria-valuemin="0" 
-                             aria-valuemax="100">
-                        </div>
-                      </div>
-                      <small class="text-muted">${enrollmentPercentage}% Full</small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            `);
-          });
-        } else {
-          $activitiesContainer.append(`
-            <div class="p-3 text-center text-muted">
-              <i class="bx bx-info-circle me-1"></i>
-              No activities scheduled for this group
-            </div>
-          `);
-        }
-      });
-    } else {
+    if (!Array.isArray(activityGroups) || activityGroups.length === 0) {
       $content.append(`
         <div class="alert alert-warning d-flex align-items-center">
           <i class="bx bx-info-circle me-2 fs-5"></i>
           No schedules found for this course.
         </div>
       `);
+      return;
     }
+
+    // Build nav-pills tabs
+    let navTabs = '<ul class="nav nav-pills flex-wrap mb-3" role="tablist">';
+    let tabContent = '<div class="tab-content pt-0">';
+    activityGroups.forEach((group, idx) => {
+      const activityType = group.activity_type ?? 'N/A';
+      const schedules = group.schedules ?? [];
+      const tabId = `activity-type-tab-${idx}`;
+      navTabs += `
+        <li class="nav-item" role="presentation">
+          <button type="button" class="nav-link${idx === 0 ? ' active' : ''}" role="tab" data-bs-toggle="tab" data-bs-target="#${tabId}" aria-controls="${tabId}" aria-selected="${idx === 0 ? 'true' : 'false'}">${activityType.charAt(0).toUpperCase() + activityType.slice(1)}</button>
+        </li>
+      `;
+      // Table for schedules
+      let tableHtml = '';
+      if (schedules.length > 0) {
+        tableHtml += `<div class="table-responsive text-start text-nowrap"><table class="table table-borderless mb-0"><thead><tr><th>No</th><th>Group</th><th>Location</th><th>Day</th><th>Time</th><th>Capacity</th><th>Enrollment</th><th class="w-50">% Full</th></tr></thead><tbody>`;
+        schedules.forEach((schedule, sidx) => {
+          const groupNumber = schedule.group_number ?? 'N/A';
+          const location = schedule.location ?? 'TBA';
+          const dayOfWeek = schedule.day_of_week ?? 'TBA';
+          const startTime = schedule.start_time ?? 'TBA';
+          const endTime = schedule.end_time ?? 'TBA';
+          const minCapacity = schedule.min_capacity ?? '0';
+          const maxCapacity = schedule.max_capacity ?? '0';
+          const enrolledCount = schedule.enrolled_count ?? '0';
+          const enrollmentPercentage = maxCapacity > 0 ? Math.round((enrolledCount / maxCapacity) * 100) : 0;
+          let progressBarClass = 'bg-success';
+          if (enrollmentPercentage >= 90) progressBarClass = 'bg-danger';
+          else if (enrollmentPercentage >= 70) progressBarClass = 'bg-warning';
+          tableHtml += `<tr>
+            <td>${sidx + 1}</td>
+            <td>Group ${groupNumber}</td>
+            <td>${location}</td>
+            <td>${dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1)}</td>
+            <td>${startTime} - ${endTime}</td>
+            <td>${minCapacity} - ${maxCapacity}</td>
+            <td>${enrolledCount} / ${maxCapacity}</td>
+            <td>
+              <div class="d-flex justify-content-between align-items-center gap-4">
+                <div class="progress w-100" style="height:10px;">
+                  <div class="progress-bar ${progressBarClass}" role="progressbar" style="width: ${enrollmentPercentage}%" aria-valuenow="${enrollmentPercentage}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <small class="fw-medium">${enrollmentPercentage}%</small>
+              </div>
+            </td>
+          </tr>`;
+        });
+        tableHtml += '</tbody></table></div>';
+      } else {
+        tableHtml = `<div class="p-3 text-center text-muted"><i class="bx bx-info-circle me-1"></i>No schedules for this activity type</div>`;
+      }
+      tabContent += `<div class="tab-pane fade${idx === 0 ? ' active show' : ''}" id="${tabId}" role="tabpanel">${tableHtml}</div>`;
+    });
+    navTabs += '</ul>';
+    tabContent += '</div>';
+    $content.append(`<div class="col-xxl-12"><div class="card text-center h-100"><div class="card-header nav-align-top">${navTabs}</div>${tabContent}</div></div>`);
   }
 };
 // ===========================

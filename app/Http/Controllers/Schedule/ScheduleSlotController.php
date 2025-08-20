@@ -59,6 +59,8 @@ class ScheduleSlotController extends \App\Http\Controllers\Controller
         try {
             $this->scheduleSlotService->deleteSlot($id);
             return successResponse('Schedule slot deleted successfully.');
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
         } catch (Exception $e) {
             logError('ScheduleSlotController@destroy', $e, ['slot_id' => $id]);
             return errorResponse('Failed to delete schedule slot.', [], 500);

@@ -83,6 +83,9 @@ class ScheduleSlotService
     {
         DB::transaction(function () use ($id) {
             $slot = ScheduleSlot::findOrFail($id);
+            if ($slot->assignments()->count() > 0) {
+            throw new BusinessValidationException('Cannot delete slot with assignments.');
+            }
             $slot->delete();
         });
     }
@@ -94,23 +97,22 @@ class ScheduleSlotService
      */
     public function getDatatable(): JsonResponse
     {
-        $query = ScheduleSlot::with(['schedule']);
+        $query = ScheduleSlot::with(['schedule'])
+            ->orderByRaw("FIELD(day_of_week, 'saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday')")
+            ->orderBy('schedule_id')
+            ->orderBy('slot_order');
 
         return DataTables::of($query)
             ->addIndexColumn()
-            ->addcolumn('status', fn($slot) => $slot->is_active ? 'Active' : 'Inactive')
+            ->addColumn('schedule', fn($slot) => $slot->schedule->title ?? 'N/A')
+            ->editColumn('day_of_week', fn($slot) => ucfirst($slot->day_of_week))
+            ->editColumn('start_time', fn($slot) => formatTime($slot->start_time))
+            ->editColumn('end_time', fn($slot) => formatTime($slot->end_time))
+            ->editColumn('specific_date', fn($slot) => formatDate($slot->specific_date))
+            ->addColumn('status', fn($slot) => $slot->is_active ? 'Active' : 'Inactive')
             ->addColumn('actions', fn($slot) => $this->renderActionButtons($slot))
-            ->ordercolumn('stats', function ($query, $order) {
+            ->orderColumn('status', function ($query, $order) {
                 return $query->orderBy('is_active', $order);
-            })
-            ->orderColumn('formatted_specific_date', function ($query, $order) {
-                return $query->orderBy('specific_date', $order);
-            })
-            ->orderColumn('formatted_start_time', function ($query, $order) {
-                return $query->orderBy('start_time', $order);
-            })
-            ->orderColumn('formatted_ends_time', function ($query, $order) {
-                return $query->orderBy('end_time', $order);
             })
             ->rawColumns(['actions'])
             ->make(true);
@@ -135,16 +137,6 @@ class ScheduleSlotService
             <li>
                 <a class="dropdown-item viewSlotBtn" href="javascript:void(0);" data-id="%d">
                     <i class="bx bx-show me-1"></i> View
-                </a>
-            </li>',
-            $slot->id
-        );
-
-        // Edit option
-        $buttons .= sprintf('
-            <li>
-                <a class="dropdown-item editSlotBtn" href="javascript:void(0);" data-id="%d">
-                    <i class="bx bx-edit-alt me-1"></i> Edit
                 </a>
             </li>',
             $slot->id

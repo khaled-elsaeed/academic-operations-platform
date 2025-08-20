@@ -11,7 +11,6 @@ return new class extends Migration
         Schema::create('schedule_slots', function (Blueprint $table) {
             $table->id();
             $table->foreignId('schedule_id')->constrained()->cascadeOnDelete();
-            $table->string('slot_identifier');
             $table->time('start_time');
             $table->time('end_time');
             $table->integer('duration_minutes');

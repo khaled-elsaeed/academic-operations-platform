@@ -191,7 +191,6 @@ class CreateScheduleService
             foreach ($slotsPerDay as $index => $slot) {
                 $slots[] = [
                     'schedule_id' => $schedule->id,
-                    'slot_identifier' => "SLOT-{$schedule->id}-{$day}-{$index}",
                     'start_time' => $slot['start_time'],
                     'end_time' => $slot['end_time'],
                     'duration_minutes' => $slot['duration_minutes'],
@@ -284,7 +283,6 @@ class CreateScheduleService
 
                 $slots[] = [
                     'schedule_id' => $schedule->id,
-                    'slot_identifier' => "SLOT-{$schedule->id}-{$date->format('Y-m-d')}-{$index}",
                     'start_time' => $time->format('H:i:s'),
                     'end_time' => $endTime->format('H:i:s'),
                     'duration_minutes' => $slotDurationMinutes,

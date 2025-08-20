@@ -40,7 +40,6 @@
             'Code',
             'Start Date',
             'End Date',
-            'Term',
             'Slots',
             'Status',
             'Action'
@@ -49,9 +48,8 @@
             ['data' => 'title', 'name' => 'title'],
             ['data' => 'type', 'name' => 'type'],
             ['data' => 'code', 'name' => 'code'],
-            ['data' => 'formatted_day_starts_at', 'name' => 'formatted_day_starts_at'],
-            ['data' => 'formatted_day_ends_at', 'name' => 'formatted_day_ends_at'],
-            ['data' => 'term', 'name' => 'term'],
+            ['data' => 'day_starts_at', 'name' => 'day_starts_at'],
+            ['data' => 'day_ends_at', 'name' => 'day_ends_at'],
             ['data' => 'slots_count', 'name' => 'slots_count'],
             ['data' => 'status', 'name' => 'status'],
             ['data' => 'actions', 'name' => 'actions', 'orderable' => false, 'searchable' => false]
@@ -108,7 +106,6 @@
                                     <th>End Time</th>
                                     <th>Duration</th>
                                     <th>Order</th>
-                                    <th>Active</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -305,22 +302,20 @@ const ScheduleManager = {
   },
 
   populateScheduleModal(schedule) {
-    $('#viewScheduleTitle').text(schedule.title || 'N/A');
+    $('#viewScheduleTitle').text(schedule.title || 'Not Set');
 
-    let scheduleType = 'N/A';
-    scheduleType = schedule.schedule_type.name;
-    $('#viewScheduleType').text(scheduleType);
+    $('#viewScheduleType').text(schedule.type ? schedule.type : 'Not Set');
 
-    $('#viewScheduleStatus').text(schedule.status ? schedule.status : 'N/A');
+    $('#viewScheduleStatus').text(schedule.status ? schedule.status : 'Not Set');
 
-    let termName = 'N/A';
+    let termName = 'Not Set';
     if (schedule.term && schedule.term.name) {
       termName = schedule.term.name;
     }
     $('#viewScheduleTerm').text(termName);
 
-    $('#viewScheduleStart').text(schedule.formatted_start_date ? schedule.formatted_start_date : '--');
-    $('#viewScheduleEnd').text(schedule.formatted_end_date ? schedule.formatted_end_date : '--');
+    $('#viewScheduleStart').text(schedule.start_date ? schedule.start_date : 'Not Set');
+    $('#viewScheduleEnd').text(schedule.end_date ? schedule.end_date : 'Not Set');
     $('#viewScheduleDescription').text(schedule.description || '');
     ScheduleManager.populateSlotsTable(schedule);
   },
@@ -338,13 +333,12 @@ const ScheduleManager = {
 
     let slotIndex = 1;
     slots.forEach(function(slot) {
-      let dayDisplay = slot.day_of_week ? slot.day_of_week : '-';
-      const startTime = slot.formatted_start_time ? slot.formatted_start_time : '--';
-      const endTime = slot.formatted_end_time ? slot.formatted_end_time : '--';
-      const duration = slot.duration_minutes ? `${slot.duration_minutes} min` : '--';
-      const slotOrder = slot.slot_order || '';
-      let specificDate = slot.formatted_specific_date ? `<br><small class="text-muted">${slot.formatted_specific_date}</small>` : '';
-      let isActive = slot.is_active ? 'Yes' : 'No';
+      let dayDisplay = slot.day_of_week ? slot.day_of_week : 'Not Set';
+      const startTime = slot.start_time ? slot.start_time : 'Not Set';
+      const endTime = slot.end_time ? slot.end_time : 'Not Set';
+      const duration = slot.duration_minutes ? `${slot.duration_minutes} min` : 'Not Set';
+      const slotOrder = slot.slot_order || 'Not Set';
+      let specificDate = slot.specific_date ? `<br><small class="text-muted">${slot.specific_date}</small>` : '';
 
       $tbody.append(
         `<tr>
@@ -354,7 +348,6 @@ const ScheduleManager = {
           <td>${endTime}</td>
           <td>${duration}</td>
           <td>${slotOrder}</td>
-          <td>${isActive}${specificDate}</td>
         </tr>`
       );
     });

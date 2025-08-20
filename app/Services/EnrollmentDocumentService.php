@@ -16,7 +16,7 @@ class EnrollmentDocumentService
      * Constants
      */
     private const MAX_COURSES_WORD = 16;
-    private const MAX_COURSES_PDF = 4;
+    private const MAX_COURSES_PDF = 10;
     private const MEMORY_LIMIT = '512M';
     private const EXECUTION_TIME = 300;
     private const TEMPLATE_FILENAME = 'enrollment_template.docx';

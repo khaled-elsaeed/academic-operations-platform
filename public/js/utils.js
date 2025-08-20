@@ -376,14 +376,6 @@ const Utils = {
     `);
   },
 
-  parseTime(timeStr) {
-    if (!timeStr) return 0;
-    const timeParts = timeStr.split(':');
-    if (timeParts.length < 2) return 0;
-    const hours = parseInt(timeParts[0]) || 0;
-    const minutes = parseInt(timeParts[1]) || 0;
-    return hours * 60 + minutes;
-  },
 
   formatTime(timeStr) {
     if (!timeStr) return 'TBA';
@@ -397,9 +389,55 @@ const Utils = {
     return cleanTime;
   },
 
+  parseTime(timeString) {
+    if (!timeString || typeof timeString !== 'string') {
+      console.log('Invalid time string:', timeString);
+      return null;
+    }
+    
+    // Handle different time formats
+    const cleanTime = timeString.trim().toLowerCase();
+    
+    // Remove common suffixes like "am" or "pm" but keep the time part
+    let time = cleanTime.replace(/\s*(am|pm)\s*/g, '');
+    
+    // Handle formats like "8:00", "08:00", "8.00", etc.
+    const timeMatch = time.match(/(\d{1,2})[:.،]?(\d{0,2})/);
+    
+    if (!timeMatch) {
+      console.log('Could not parse time:', timeString);
+      return null;
+    }
+    
+    let hours = parseInt(timeMatch[1]);
+    let minutes = parseInt(timeMatch[2]) || 0;
+    
+    // Handle 12-hour format
+    if (cleanTime.includes('pm') && hours < 12) {
+      hours += 12;
+    } else if (cleanTime.includes('am') && hours === 12) {
+      hours = 0;
+    }
+    
+    // Validate hours and minutes
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      console.log('Invalid time values:', hours, minutes, 'from', timeString);
+      return null;
+    }
+    
+    const result = hours * 60 + minutes; // Convert to minutes for easy comparison
+    return result;
+  },
+
   formatTimeRange(startTime, endTime) {
-    if (!startTime || !endTime) return 'TBA';
-    return `${this.formatTime(startTime)} - ${this.formatTime(endTime)}`;
+    if (!startTime || !endTime) return 'Time TBA';
+    
+    // Simple formatting - if times are already formatted, return as is
+    if (typeof startTime === 'string' && typeof endTime === 'string') {
+      return `${startTime} - ${endTime}`;
+    }
+    
+    return `${startTime} - ${endTime}`;
   },
 
 };

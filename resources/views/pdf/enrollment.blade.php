@@ -118,6 +118,11 @@
             header: page-header;
             footer: page-footer;
         }
+
+        /* ===== PAGE BREAK STYLES ===== */
+        .page-break {
+            page-break-before: always;
+        }
     </style>
 </head>
 <body>
@@ -164,7 +169,8 @@
                 </tr>
             </table>
         </htmlpageheader>
-        <!-- ===== MAIN CONTENT ===== -->
+        
+        <!-- ===== FIRST PAGE CONTENT ===== -->
         <div style="padding: 80px 15px 20px 15px; margin-top: 80px;">
             <!-- ===== EGYPT FLAG SECTION ===== -->
             <div style="text-align: center; margin-bottom: 20px;">
@@ -193,7 +199,6 @@
                 <tr>
                     <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">اسم البرنامج:</td>
                     <td style="padding: 6px; border: 1px solid #ddd; font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 13px;">{{ $program_name ?? '________' }}</td>
-
                 </tr>
             </table>
             <!-- ===== NOTICE SECTION ===== -->
@@ -202,7 +207,7 @@
                     نحيطكم علماً بأن المقررات المسجلة في فصل {{ $semester ?? 'الصيف' }} من العام الأكاديمي الحالي {{ $academic_year ?? '2024/2025' }} الخاصة بك هي على النحو التالي:
                 </p>
             </div>
-            <!-- ===== COURSES TABLE SECTION ===== -->
+            <!-- ===== COURSES TABLE SECTION (LAST THING ON PAGE 1) ===== -->
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px;">
                 <thead>
                     <tr style="background-color: #f5f5f5; border: 1px solid #000;">
@@ -213,7 +218,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @php $maxRows = 4; @endphp
+                    @php $maxRows = 10; @endphp
                     @for ($i = 1; $i <= $maxRows; $i++)
                         <tr>
                             <td style="padding: 6px; border: 1px solid #000; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">{{ $i }}</td>
@@ -238,76 +243,87 @@
                     </tr>
                 </tbody>
             </table>
-            <!-- ===== NOTES SECTION ===== -->
-            <div style="margin: 20px 0 20px 0;">
-                <strong>ملاحظات:</strong>
-                <ul style="font-size: 14px; margin-top: 8px; margin-bottom: 0; padding-right: 20px;">
-                    <li>يتعهد الطالب بتسجيل المقررات علي نظام معلومات الطالب <span style="font-family: 'DejaVu Sans', Arial, sans-serif;">SIS</span> مطابق تماما للتسجيل الورقي الذي قام بالتوقيع عليه.</li>
-                    <li>في حالة رغبة الطالب في اجراء أي تعديل في تسجيل المقررات خلال فترة التسجيل الممكنة أن يتم ذلك بموافقة وتوقيع المرشد الأكاديمي أولاً.</li>
-                    <li>أيضا إتاحة المقرر في الفصل {{ $semester ?? 'الصيف' }} يعتمد علي اكتمال الحد الأدنى لفتح المقرر طبقا للأعداد المقررة بلائحة الجامعة.</li>
-                    <li>لن يُعتمد تسجيل أي طالب لم يقم بسداد رسوم الفصل الدراسي على النظام <span style="font-family: 'DejaVu Sans', Arial, sans-serif;">SIS</span> فقط، وسيتم إلغاء تسجيله نهائيًا.</li>
-                </ul>
-            </div>
-            <!-- ===== SIGNATURES SECTION ON NEW PAGE ===== -->
-            <div style="margin-top: 60px;">
-                <table class="text-right sm-padding small strong">
-                    <thead>
-                        <tr>
-                            <th width="2%"></th>
-                            <th width="48%"></th>
-                            <th width="2%"></th>
-                            <th width="48%"></th>
-                            <th width="2%"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td width=""></td>
-                            <td class="text-left border-bottom">
-                                توقيع الطالب : ...................................................
-                            </td>
-                            <td width=""></td>
-                            <td class="text-left border-bottom">
-                                توقيع فريق الارشاد : ...................................................
-                            </td>
-                            <td width=""></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div style="margin-top: 20px;margin-bottom:16px">
-                <table class="text-right sm-padding small strong">
-                    <thead>
-                        <tr>
-                            <th width="2%"></th>
-                            <th width="48%"></th>
-                            <th width="2%"></th>
-                            <th width="48%"></th>
-                            <th width="2%"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td width=""></td>
-                            <td class="text-left border-bottom">
-                                رقم تليفون الطالب : ...................................................
-                            </td>
-                            <td width=""></td>
-                            <td class="text-left border-bottom">
-                                توقيع المرشد الأكاديمي : ...................................................
-                            </td>
-                            <td width=""></td>
-                        </tr>
-                    </tbody>
-                </table>
+        </div>
+
+        <!-- ===== PAGE BREAK - START SECOND PAGE ===== -->
+        <div class="page-break">
+            <!-- ===== SECOND PAGE CONTENT ===== -->
+            <div style="padding: 80px 15px 20px 15px; margin-top: 80px;">
+                <!-- ===== NOTES SECTION ===== -->
+                <div style="margin: 20px 0 20px 0;">
+                    <strong>ملاحظات:</strong>
+                    <ul style="font-size: 14px; margin-top: 8px; margin-bottom: 0; padding-right: 20px;">
+                        <li>يتعهد الطالب بتسجيل المقررات علي نظام معلومات الطالب <span style="font-family: 'DejaVu Sans', Arial, sans-serif;">SIS</span> مطابق تماما للتسجيل الورقي الذي قام بالتوقيع عليه.</li>
+                        <li>في حالة رغبة الطالب في اجراء أي تعديل في تسجيل المقررات خلال فترة التسجيل الممكنة أن يتم ذلك بموافقة وتوقيع المرشد الأكاديمي أولاً.</li>
+                        <li>أيضا إتاحة المقرر في الفصل {{ $semester ?? 'الصيف' }} يعتمد علي اكتمال الحد الأدنى لفتح المقرر طبقا للأعداد المقررة بلائحة الجامعة.</li>
+                        <li>لن يُعتمد تسجيل أي طالب لم يقم بسداد رسوم الفصل الدراسي على النظام <span style="font-family: 'DejaVu Sans', Arial, sans-serif;">SIS</span> فقط، وسيتم إلغاء تسجيله نهائيًا.</li>
+                    </ul>
+                </div>
+                
+                <!-- ===== SIGNATURES SECTION ===== -->
+                <div style="margin-top: 60px;">
+                    <table class="text-right sm-padding small strong">
+                        <thead>
+                            <tr>
+                                <th width="2%"></th>
+                                <th width="48%"></th>
+                                <th width="2%"></th>
+                                <th width="48%"></th>
+                                <th width="2%"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td width=""></td>
+                                <td class="text-left border-bottom">
+                                    توقيع الطالب : ...................................................
+                                </td>
+                                <td width=""></td>
+                                <td class="text-left border-bottom">
+                                    توقيع فريق الارشاد : ...................................................
+                                </td>
+                                <td width=""></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="margin-top: 20px;margin-bottom:16px">
+                    <table class="text-right sm-padding small strong">
+                        <thead>
+                            <tr>
+                                <th width="2%"></th>
+                                <th width="48%"></th>
+                                <th width="2%"></th>
+                                <th width="48%"></th>
+                                <th width="2%"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td width=""></td>
+                                <td class="text-left border-bottom">
+                                    رقم تليفون الطالب : ...................................................
+                                </td>
+                                <td width=""></td>
+                                <td class="text-left border-bottom">
+                                    توقيع المرشد الأكاديمي : ...................................................
+                                </td>
+                                <td width=""></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- ===== ADDITIONAL INFORMATION SECTION ===== -->
+                <div style="text-align: center; margin-top: 20px;">
+                    <span style="font-size: 18px; color: #333; font-family: 'KFGQPC', Arial, sans-serif; font-weight: bold;">
+                        مع تمنياتنا بالتوفيق والنجاح
+                    </span>
+                </div>
             </div>
         </div>
-        <!-- ===== ADDITIONAL INFORMATION SECTION ===== -->
-        <div style="text-align: center; margin-top: 20px;">
-            <span style="font-size: 18px; color: #333; font-family: 'KFGQPC', Arial, sans-serif; font-weight: bold;">
-                مع تمنياتنا بالتوفيق والنجاح
-            </span>
-        </div>
+
         <!-- ===== PAGE FOOTER ===== -->
         <htmlpagefooter name="page-footer">
             <div style="width: 100%; text-align: right; font-size: 12px; color: #888; font-family: 'DejaVu Sans', Arial, sans-serif;">

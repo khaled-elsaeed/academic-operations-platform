@@ -34,7 +34,6 @@ class StoreScheduleRequest extends FormRequest
             'end_date' => 'nullable|required_if:pattern,range|date|after_or_equal:start_date',
             'days' => 'required_if:pattern,repetitive|array|min:1',
             'days.*' => 'required_if:pattern,repetitive|in:sunday,monday,tuesday,wednesday,thursday,friday,saturday',
-            'status' => 'required|string',
         ];
     }
 }

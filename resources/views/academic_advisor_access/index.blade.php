@@ -26,7 +26,7 @@
         description="Manage advisor access permissions to students based on level and program."
         icon="bx bx-user-check"
     >
-        <button class="btn btn-primary mx-2" onclick="openAddAccessModal()">
+        <button class="btn btn-primary mx-2" id="addAccessRuleBtn">
             <i class="bx bx-plus me-1"></i> Add Access Rule
         </button>
     </x-ui.page-header>
@@ -71,13 +71,14 @@
             ['data' => 'advisor', 'name' => 'advisor'],
             ['data' => 'level', 'name' => 'level'],
             ['data' => 'program', 'name' => 'program'],
-            ['data' => 'is_active', 'name' => 'is_active'],
+            ['data' => 'status', 'name' => 'status'],
             ['data' => 'created_at', 'name' => 'created_at'],
             ['data' => 'actions', 'name' => 'actions', 'orderable' => false, 'searchable' => false],
         ]"
         :ajax-url="route('academic_advisor_access.datatable')"
         table-id="academic-advisor-access-table"
         :filter-fields="['search_advisor','search_level','search_program','search_status']"
+    />
     />
 
     {{-- ===== MODALS SECTION ===== --}}
@@ -424,6 +425,20 @@ const Select2Manager = {
 // ===========================
 let currentAccessId = null;
 const AdvisorAccessManager = {
+
+  init() {
+    this.bindEvents();
+    this.saveAccess();
+  },
+
+  bindEvents() {
+    console.log('Binding events for AdvisorAccessManager');
+    $(document).on('click', '#addAccessRuleBtn', this.openAddAccessModal.bind(this));
+    $(document).on('click', '.edit-access', this.editAccess.bind(this));
+    $(document).on('click', '.delete-access', this.deleteAccess.bind(this));
+    $(document).on('click', '.view-access', this.viewAccess.bind(this));
+  },
+
   openAddAccessModal() {
     currentAccessId = null;
     $(SELECTORS.accessForm)[0].reset();
@@ -437,10 +452,15 @@ const AdvisorAccessManager = {
     $(SELECTORS.programSelect).prop('disabled', false);
     $(SELECTORS.accessModal).modal('show');
   },
-  editAccess(accessId) {
+  editAccess(event) {
+    const accessId = $(event.currentTarget).data('id');
+    console.log('Editing access for ID:', accessId);
+    console.log('Event target:', event.currentTarget);
+
     currentAccessId = accessId;
     ApiService.fetchAccess(accessId)
       .done((response) => {
+        console.log('Edit response:', response);
         if (response.success) {
           const access = response.data;
           DropdownManager.loadAdvisors(access.advisor_id);
@@ -478,7 +498,9 @@ const AdvisorAccessManager = {
         });
     });
   },
-  deleteAccess(accessId) {
+  deleteAccess(event) {
+    const accessId = $(event.currentTarget).data('id');
+    console.log('Deleting access for ID:', accessId);
     Swal.fire({
       title: 'Are you sure?',
       text: "You won't be able to revert this!",
@@ -502,14 +524,17 @@ const AdvisorAccessManager = {
       }
     });
   },
-  viewAccess(accessId) {
+  viewAccess(event) {
+    const accessId = $(event.currentTarget).data('id');
+    console.log('Viewing access for ID:', accessId);
     ApiService.fetchAccess(accessId)
       .done((response) => {
+        console.log('View response:', response);
         if (response.success) {
           const access = response.data;
-          $(SELECTORS.viewAccessAdvisor).text(access.advisor_name);
-          $(SELECTORS.viewAccessLevel).text(access.level_name || (access.all_levels ? 'All Levels' : ''));
-          $(SELECTORS.viewAccessProgram).text(access.program_name || (access.all_programs ? 'All Programs' : ''));
+          $(SELECTORS.viewAccessAdvisor).text(access.advisor ? access.advisor.name : 'N/A');
+          $(SELECTORS.viewAccessLevel).text(access.level ? access.level.name : 'N/A');
+          $(SELECTORS.viewAccessProgram).text(access.program ? access.program.name : 'N/A');
           $(SELECTORS.viewAccessStatus).text(access.is_active ? 'Active' : 'Inactive');
           $(SELECTORS.viewAccessCreated).text(new Date(access.created_at).toLocaleString());
           $(SELECTORS.viewAccessModal).modal('show');
@@ -542,7 +567,7 @@ const SearchManager = {
 const AdvisorAccessApp = {
   init() {
     StatsManager.loadStats();
-    AdvisorAccessManager.saveAccess();
+    AdvisorAccessManager.init();
     Select2Manager.initAccessModalSelect2();
     // Checkbox logic for all_levels and all_programs
     $(SELECTORS.allLevelsCheckbox).on('change', function() {

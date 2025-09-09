@@ -63,13 +63,8 @@ class AvailableCourseService
      */
     public function updateAvailableCourse($availableCourseOrId, array $data)
     {
-        
-        // if ($availableCourseOrId instanceof AvailableCourse) {
-        //     return $this->updateService->updateAvailableCourseSingle($availableCourseOrId, $data);
-        // }
-        
         $availableCourse = AvailableCourse::findOrFail($availableCourseOrId);
-        return $this->updateService->updateAvailableCourse($availableCourse, $data);
+        return $this->updateService->updateAvailableCourseSingle($availableCourse, $data);
     }
 
     /**
@@ -125,33 +120,13 @@ class AvailableCourseService
     }
 
     /**
-     * Get all schedules for a given available course grouped by group number.
-     *
-     * @param int $availableCourseId
-     * @return \Illuminate\Database\Eloquent\Collection
-     * @throws BusinessValidationException
-     */
-    /**
      * Get all schedules for a given available course grouped by activity type.
-     *
-     * Returns an array like:
-     * [
-     *   [
-     *     'activity_type' => 'lecture',
-     *     'schedules' => [ ... ]
-     *   ],
-     *   [
-     *     'activity_type' => 'lab',
-     *     'schedules' => [ ... ]
-     *   ],
-     *   ...
-     * ]
      *
      * @param int $availableCourseId
      * @return array
      * @throws BusinessValidationException
      */
-    public function getSchedules(int $availableCourseId): array
+    public function getSchedules(int $availableCourseId, string $group): array
     {
         $availableCourse = AvailableCourse::with('schedules.scheduleAssignments.scheduleSlot')->find($availableCourseId);
 
@@ -159,8 +134,11 @@ class AvailableCourseService
             throw new BusinessValidationException('Available course not found.');
         }
 
-        // Group schedules by activity_type
-        $grouped = $availableCourse->schedules->groupBy('activity_type')->map(function ($schedules, $activityType) {
+        // Filter schedules by group number
+        $filteredSchedules = $availableCourse->schedules->where('group', $group);
+
+        // Group filtered schedules by activity_type
+        $grouped = $filteredSchedules->groupBy('activity_type')->map(function ($schedules, $activityType) {
             $activitySchedules = [];
             foreach ($schedules as $schedule) {
                 $slots = $schedule->scheduleAssignments->map(function ($assignment) {
@@ -426,6 +404,7 @@ class AvailableCourseService
                     'level_id' => $eligibility->level_id,
                     'program_name' => $eligibility->program?->name,
                     'level_name' => $eligibility->level?->name,
+                    'group' => $eligibility->group,
                 ];
             })->toArray(),
             'schedules' => $availableCourse->schedules->map(function ($schedule) {
@@ -478,7 +457,6 @@ class AvailableCourseService
                     'schedules' => $availableCourse->schedules->map(function($detail) {
                         return [
                             'id' => $detail->id,
-                            'group' => $detail->group,
                             'activity_type' => $detail->activity_type,
                             'day' => $detail->day ?? null,
                             'slot' => $detail->slot ?? null,

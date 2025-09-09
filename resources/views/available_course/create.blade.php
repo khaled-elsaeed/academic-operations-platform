@@ -92,6 +92,7 @@
                           <th style="width:40px;">#</th>
                           <th>Program</th>
                           <th>Level</th>
+                          <th style="width:80px;">Group</th>
                           <th style="width:40px;"></th>
                         </tr>
                       </thead>
@@ -520,7 +521,7 @@ const DropdownManager = {
 // ELIGIBILITY TABLE MANAGER
 // ===========================
 const EligibilityTableManager = {
-  renderRow(index, selectedProgram = '', selectedLevel = '') {
+  renderRow(index, selectedProgram = '', selectedLevel = '', selectedGroup = '') {
     const programOptions = DropdownManager.programOptions;
     const levelOptions = DropdownManager.levelOptions;
 
@@ -540,11 +541,14 @@ const EligibilityTableManager = {
     });
     levelSelect += `</select>`;
 
+    let groupInput = `<input type='number' min='1' class='form-control group-input' name='eligibility[${index}][group]' value='${selectedGroup || 1}' style='width:70px;'>`;
+
     return `
       <tr>
         <td class='align-middle text-center row-number'></td>
         <td>${programSelect}</td>
         <td>${levelSelect}</td>
+        <td>${groupInput}</td>
         <td class='align-middle text-center'>
           <button type='button' class='btn btn-sm btn-danger remove-eligibility-row'>
             <i class='bx bx-trash'></i>
@@ -567,13 +571,11 @@ const EligibilityTableManager = {
     });
   },
 
-  addRow(selectedProgram = '', selectedLevel = '') {
+  addRow(selectedProgram = '', selectedLevel = '', selectedGroup = '') {
     const currentRows = $('#eligibilityTable tbody tr').length;
-    const newRow = this.renderRow(currentRows, selectedProgram, selectedLevel);
-    
+    const newRow = this.renderRow(currentRows, selectedProgram, selectedLevel, selectedGroup);
     $('#eligibilityTable tbody').append(newRow);
     this.updateRowNumbers();
-    
     // Initialize Select2 for the new row
     const $newRow = $('#eligibilityTable tbody tr:last');
     DropdownManager.initEligibilitySelect2($newRow);
@@ -1007,8 +1009,9 @@ const FormManager = {
       $('#eligibilityTable tbody tr').each(function() {
         const program_id = $(this).find('.program-select').val();
         const level_id = $(this).find('.level-select').val();
+        const group = $(this).find('.group-input').val(); 
         if (program_id && level_id) {
-          data.eligibility.push({ program_id, level_id });
+          data.eligibility.push({ program_id, level_id, group });
         }
       });
     }

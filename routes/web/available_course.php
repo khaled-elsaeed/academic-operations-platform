@@ -13,10 +13,10 @@ Route::middleware(['auth'])
     ->controller(AvailableCourseController::class)
     ->group(function () {
         // ===== Specific Routes First =====
-        Route::get('datatable', 'datatable')->name('datatable')->middleware('can:course.view');
-        Route::get('stats', 'stats')->name('stats')->middleware('can:course.view');
-        Route::get('template', 'template')->name('template')->middleware('can:course.view');
-        Route::get('create', 'create')->name('create')->middleware('can:course.create');
+        Route::get('datatable', 'datatable')->name('datatable')->middleware('can:available_course.view');
+        Route::get('stats', 'stats')->name('stats')->middleware('can:available_course.view');
+        Route::get('template', 'template')->name('template')->middleware('can:available_course.view');
+        Route::get('create', 'create')->name('create')->middleware('can:available_course.create');
         Route::get('all', 'all')->name('all');
         
         // ===== Import/Export Operations =====
@@ -24,25 +24,25 @@ Route::middleware(['auth'])
 
         // ===== CRUD Operations =====
         // List & View
-        Route::get('/', 'index')->name('index')->middleware('can:course.view');
-        Route::get('{availableCourse}', 'show')->name('show')->middleware('can:course.view');
-        Route::get('{availableCourse}/edit', 'edit')->name('edit')->middleware('can:course.edit');
-        
+        Route::get('/', 'index')->name('index')->middleware('can:available_course.view');
+        Route::get('{availableCourse}', 'show')->name('show')->middleware('can:available_course.view');
+        Route::get('{availableCourse}/edit', 'edit')->name('edit')->middleware('can:available_course.edit');
+
         // Create
-        Route::post('/', 'store')->name('store')->middleware('can:course.create');
-        
+        Route::post('/', 'store')->name('store')->middleware('can:available_course.create');
+
         // Update
-        Route::put('{id}', 'update')->name('update')->middleware('can:course.edit');
-        Route::patch('{id}', 'update')->middleware('can:course.edit');
-        
+        Route::put('{id}', 'update')->name('update')->middleware('can:available_course.edit');
+        Route::patch('{id}', 'update')->middleware('can:available_course.edit');
+
         // Delete
-        Route::delete('{id}', 'destroy')->name('destroy')->middleware('can:course.delete');
+        Route::delete('{id}', 'destroy')->name('destroy')->middleware('can:available_course.delete');
 
         // ===== Related Data Routes =====
-        Route::get('{availableCourse}/programs', 'programs')->name('programs')->middleware('can:course.view');
-        Route::get('{availableCourse}/levels', 'levels')->name('levels')->middleware('can:course.view');
+        Route::get('{availableCourse}/programs', 'programs')->name('programs')->middleware('can:available_course.view');
+        Route::get('{availableCourse}/levels', 'levels')->name('levels')->middleware('can:available_course.view');
 
         // ===== Schedules & Eligibilities AJAX Routes =====
-        Route::get('{availableCourse}/schedules', 'schedules')->name('schedules')->middleware('can:course.view');
-        Route::get('{availableCourse}/eligibilities', 'eligibilities')->name('eligibilities')->middleware('can:course.view');
+        Route::get('{availableCourse}/schedules', 'schedules')->name('schedules')->middleware('can:available_course.view');
+        Route::get('{availableCourse}/eligibilities', 'eligibilities')->name('eligibilities')->middleware('can:available_course.view');
     });

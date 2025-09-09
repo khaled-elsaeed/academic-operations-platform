@@ -37,6 +37,7 @@ class UpdateAvailableCourseRequest extends FormRequest
                 $rules['eligibility'] = 'required|array|min:1';
                 $rules['eligibility.*.program_id'] = 'required|exists:programs,id';
                 $rules['eligibility.*.level_id'] = 'required|exists:levels,id';
+                $rules['eligibility.*.group'] = 'required|string|max:255';
                 $rules['level_id'] = 'prohibited';
                 $rules['program_id'] = 'prohibited';
                 break;
@@ -117,6 +118,7 @@ class UpdateAvailableCourseRequest extends FormRequest
             'eligibility.*.program_id.exists' => 'The selected program does not exist.',
             'eligibility.*.level_id.required' => 'Please select a level for each eligibility row.',
             'eligibility.*.level_id.exists' => 'The selected level does not exist.',
+            'eligibility.*.group.required' => 'Please enter a group number for each eligibility row.',
 
             // Eligibility (other modes)
             'level_id.required' => 'Please select a level for "All Programs" mode.',

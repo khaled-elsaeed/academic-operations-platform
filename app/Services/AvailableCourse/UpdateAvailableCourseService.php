@@ -3,12 +3,11 @@
 namespace App\Services\AvailableCourse;
 
 use App\Models\AvailableCourse;
-use App\Pipelines\AvailableCourse\Update\FindAvailableCoursePipe;
-use App\Pipelines\AvailableCourse\Update\ValidateUpdateDataPipe;
-use App\Pipelines\AvailableCourse\Shared\CheckDuplicatesPipe;
-use App\Pipelines\AvailableCourse\Update\UpdateAvailableCoursePipe;
-use App\Pipelines\AvailableCourse\Shared\HandleEligibilityPipe;
-use App\Pipelines\AvailableCourse\Shared\HandleSchedulePipe;
+use App\Models\AvailableCourseSchedule;
+use App\Models\Schedule\ScheduleSlot;
+use App\Models\Schedule\ScheduleAssignment;
+use App\Models\Program;
+use App\Models\Level;
 use App\Exceptions\BusinessValidationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Pipeline\Pipeline;
@@ -16,53 +15,256 @@ use Illuminate\Pipeline\Pipeline;
 class UpdateAvailableCourseService
 {
     /**
-     * Update an existing available course using Pipeline pattern.
+     * Update a single available course with eligibility mode support using Pipeline pattern.
      *
-     * @param AvailableCourse|int $availableCourse
+     * @param AvailableCourse $availableCourse
      * @param array $data
      * @return AvailableCourse
      * @throws BusinessValidationException
      */
-    public function updateAvailableCourse($availableCourse, array $data): AvailableCourse
+    public function updateAvailableCourseSingle(AvailableCourse $availableCourse, array $data): AvailableCourse
     {
-        $availableCourseId = $availableCourse instanceof AvailableCourse ? $availableCourse->id : $availableCourse;
-        
-        \Log::info('Starting update of available course using Pipeline', [
-            'available_course_id' => $availableCourseId,
-            'data' => $data
-        ]);
+        return DB::transaction(function () use ($availableCourse, $data) {
+            // Validate required data
+            $this->validateRequiredData($data);
 
-        return DB::transaction(function () use ($availableCourseId, $data) {
-            $pipelineData = [
-                'available_course_id' => $availableCourseId,
-                'update_data' => $data,
-            ];
+            // Update the AvailableCourse
+            $this->updateAvailableCourseRecord($availableCourse, $data);
 
-            $result = app(Pipeline::class)
-                ->send($pipelineData)
-                ->through([
-                    FindAvailableCoursePipe::class,
-                    ValidateUpdateDataPipe::class,
-                    CheckDuplicatesPipe::class,
-                    UpdateAvailableCoursePipe::class,
-                    HandleEligibilityPipe::class,
-                    HandleSchedulePipe::class,
-                ])
-                ->finally(function ($data) {
-                    \Log::info('Update pipeline execution completed', [
-                        'available_course_id' => $data['available_course']->id ?? null,
-                        'updated_fields' => array_keys($data['update_data'])
-                    ]);
-                })
-                ->then(function ($data) {
-                    \Log::info('Available course updated successfully via Pipeline', [
-                        'available_course_id' => $data['available_course']->id
-                    ]);
-                    
-                    return $data['available_course']->fresh(['programs', 'levels', 'schedules.scheduleAssignments']);
-                });
+            // Update schedules and assignments (if present)
+            $this->handleScheduleDetails($availableCourse, $data);
 
-            return $result;
+            // Update eligibility
+            $this->handleEligibility($availableCourse, $data);
+
+            return $availableCourse->fresh(['programs', 'levels', 'schedules']);
         });
+    }
+
+    /**
+     * Validate required data for creating an available course.
+     *
+     * @param array $data
+     * @throws BusinessValidationException
+     * @return void
+     */
+    public function validateRequiredData(array $data): void
+    {
+        // 1. Validate required fields
+        if (empty($data['course_id'])) {
+            throw new BusinessValidationException('Course ID is required.');
+        }
+        if (empty($data['term_id'])) {
+            throw new BusinessValidationException('Term ID is required.');
+        }
+
+        // 2. Validate eligibility mode
+        $eligibilityMode = $data['mode'] ?? 'individual';
+        $validModes = ['universal', 'all_programs', 'all_levels', 'individual'];
+        if (!in_array($eligibilityMode, $validModes)) {
+                throw new BusinessValidationException('Invalid eligibility mode. Must be one of: ' . implode(', ', $validModes));
+            }
+
+
+        // 3. Validate eligibility mode requirements
+        switch ($eligibilityMode) {
+            case 'all_programs':
+                if (empty($data['level_id'])) {
+                    throw new BusinessValidationException('Level ID is required for all_programs eligibility mode.');
+                }
+                break;
+            case 'all_levels':
+                if (empty($data['program_id'])) {
+                    throw new BusinessValidationException('Program ID is required for all_levels eligibility mode.');
+                }
+                break;
+            case 'individual':
+                if (empty($data['eligibility']) || !is_array($data['eligibility'])) {
+                    throw new BusinessValidationException('Eligibility array is required for individual eligibility mode.');
+                }
+                foreach ($data['eligibility'] as $pair) {
+                    if (empty($pair['program_id']) || empty($pair['level_id']) || !isset($pair['group'])) {
+                        throw new BusinessValidationException('Each eligibility pair must have program_id, level_id');
+                    }
+                }
+                break;
+            case 'universal':
+                break;
+        }
+
+
+        // 4. Validate schedule details
+        if (isset($data['schedule_details']) && is_array($data['schedule_details'])) {
+            foreach ($data['schedule_details'] as $index => $detail) {
+                if (empty($detail['schedule_slot_id']) && (empty($detail['schedule_slot_ids']) || !is_array($detail['schedule_slot_ids']))) {
+                    throw new BusinessValidationException("Schedule slot ID(s) are required for schedule detail at index {$index}.");
+                }
+                if (empty($detail['group_number'])) {
+                    throw new BusinessValidationException("Group number is required for schedule detail at index {$index}.");
+                }
+                if (empty($detail['activity_type'])) {
+                    throw new BusinessValidationException("Activity type is required for schedule detail at index {$index}.");
+                }
+                $slotIds = [];
+                if (!empty($detail['schedule_slot_ids']) && is_array($detail['schedule_slot_ids'])) {
+                    $slotIds = $detail['schedule_slot_ids'];
+                } elseif (!empty($detail['schedule_slot_id'])) {
+                    $slotIds = [$detail['schedule_slot_id']];
+                }
+                foreach ($slotIds as $slotId) {
+                    if (!ScheduleSlot::where('id', $slotId)->exists()) {
+                        throw new BusinessValidationException("Schedule slot with ID {$slotId} does not exist in schedule detail at index {$index}.");
+                    }
+                }
+                // Validate capacity
+                if (isset($detail['min_capacity']) || isset($detail['max_capacity'])) {
+                    $minCapacity = $detail['min_capacity'] ?? 1;
+                    $maxCapacity = $detail['max_capacity'] ?? 30;
+                    if ($minCapacity > $maxCapacity) {
+                        throw new BusinessValidationException("Minimum capacity cannot be greater than maximum capacity in schedule detail at index {$index}.");
+                    }
+                    if ($minCapacity < 0 || $maxCapacity < 0) {
+                        throw new BusinessValidationException("Capacity values cannot be negative in schedule detail at index {$index}.");
+                    }
+                }
+            }
+        }
+    }
+
+
+    /**
+     * Update the AvailableCourse record.
+     *
+     * @param AvailableCourse $availableCourse
+     * @param array $data
+     * @return void
+     */
+    public function updateAvailableCourseRecord(AvailableCourse $availableCourse, array $data): void
+    {
+        $courseId = $data['course_id'];
+        $termId = $data['term_id'];
+        $eligibilityMode = $data['mode'] ?? 'individual';
+
+        $availableCourse->update([
+            'course_id' => $courseId,
+            'term_id' => $termId,
+            'mode' => $eligibilityMode,
+        ]);
+    }
+
+
+    /**
+     * Handle schedule details and update assignments for the available course.
+     *
+     * @param AvailableCourse $availableCourse
+     * @param array $data
+     * @return void
+     */
+    public function handleScheduleDetails(AvailableCourse $availableCourse, array $data): void
+    {
+        // Clear existing schedules and assignments
+        $availableCourse->schedules()->delete();
+
+        if (isset($data['schedule_details']) && is_array($data['schedule_details'])) {
+            foreach ($data['schedule_details'] as $detail) {
+                $courseDetail = AvailableCourseSchedule::create(
+                    [
+                        'available_course_id' => $availableCourse->id,
+                        'activity_type' => $detail['activity_type'],
+                        'location' => $detail['location'] ?? null,
+                        'group' => $detail['group_number'],
+                        'min_capacity' => $detail['min_capacity'] ?? 1,
+                        'max_capacity' => $detail['max_capacity'] ?? 30,
+                ]);
+                $slotIds = $detail['schedule_slot_ids'] ?? [];
+                foreach ($slotIds as $index => $slotId) {
+                    $slot = ScheduleSlot::find($slotId);
+                    $slotOrder = $slot ? $slot->slot_order : ($index + 1);
+                    $slotInfo = count($slotIds) > 1 ? "Slots {$slotOrder}" : "Slot {$slotOrder}";
+                    if (count($slotIds) > 1 && $index === 0) {
+                        $firstSlot = ScheduleSlot::find($slotIds[0]);
+                        $lastSlot = ScheduleSlot::find(end($slotIds));
+                        if ($firstSlot && $lastSlot) {
+                            $slotInfo = "Slots {$firstSlot->slot_order}-{$lastSlot->slot_order}";
+                        }
+                    }
+                    $generatedTitle = $detail['title'] ?? "{$detail['activity_type']} - Group {$detail['group_number']} - {$slotInfo}";
+                    $generatedDescription = $detail['description'] ?? "Scheduled {$detail['activity_type']} for Group {$detail['group_number']} during {$slotInfo} at {$detail['location']}.";
+                    ScheduleAssignment::updateOrCreate([
+                        'schedule_slot_id' => $slotId,
+                        'type' => 'available_course',
+                        'available_course_schedule_id' => $courseDetail->id,
+                    ], [
+                        'title' => $generatedTitle,
+                        'description' => $generatedDescription,
+                        'enrolled' => $detail['enrolled'] ?? 0,
+                        'resources' => $detail['resources'] ?? null,
+                        'status' => 'scheduled',
+                        'notes' => $detail['notes'] ?? null,
+                    ]);
+                }
+            }
+        }
+    }
+
+
+    /**
+     * Handle eligibility assignment for the available course.
+     *
+     * @param AvailableCourse $availableCourse
+     * @param array $data
+     * @return void
+     */
+    public function handleEligibility(AvailableCourse $availableCourse, array $data): void
+    {   
+        // Clear existing eligibilities
+        $availableCourse->eligibilities()->delete();
+
+        $eligibilityMode = $data['mode'] ?? 'individual';
+        switch ($eligibilityMode) {
+            case 'universal':
+                break;
+            case 'all_programs':
+                $allPrograms = Program::pluck('id')->toArray();
+                $bulkEligibility = [];
+                foreach ($allPrograms as $programId) {
+                    $bulkEligibility[] = [
+                        'program_id' => $programId,
+                        'level_id' => $data['level_id']
+                    ];
+                }
+                $availableCourse->setProgramLevelPairs($bulkEligibility);
+                break;
+            case 'all_levels':
+                $allLevels = Level::pluck('id')->toArray();
+                $bulkEligibility = [];
+                foreach ($allLevels as $levelId) {
+                    $bulkEligibility[] = [
+                        'program_id' => $data['program_id'],
+                        'level_id' => $levelId
+                    ];
+                }
+                $availableCourse->setProgramLevelPairs($bulkEligibility);
+                break;
+            case 'individual':
+            default:
+                $pairs = collect($data['eligibility'])
+                    ->filter(function ($pair) {
+                        return isset($pair['program_id']) && isset($pair['level_id']) && isset($pair['group']);
+                    })
+                    ->map(function ($pair) {
+                        return [
+                            'program_id' => $pair['program_id'],
+                            'level_id' => $pair['level_id'],
+                            'group' => (int) $pair['group'],
+                        ];
+                    })
+                    ->values()
+                    ->toArray();
+                if (!empty($pairs)) {
+                    $availableCourse->setProgramLevelPairs($pairs);
+                }
+                break;
+        }
     }
 }

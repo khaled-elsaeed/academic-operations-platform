@@ -18,7 +18,7 @@ class StoreAvailableCourseRequest extends FormRequest
         $rules = [
             'course_id'                              => 'required|exists:courses,id',
             'term_id'                                => 'required|exists:terms,id',
-            'mode'                       => 'required|string|in:individual,all_programs,all_levels,universal',
+            'mode'                                   => 'required|string|in:individual,all_programs,all_levels,universal',
             'schedule_details'                       => 'required_if:mode,individual|array|min:1',
             'schedule_details.*.schedule_id'         => 'required|exists:schedules,id',
             'schedule_details.*.activity_type'       => 'required|string|in:lecture,tutorial,lab',
@@ -36,6 +36,7 @@ class StoreAvailableCourseRequest extends FormRequest
                 $rules['eligibility'] = 'required|array|min:1';
                 $rules['eligibility.*.program_id'] = 'required|exists:programs,id';
                 $rules['eligibility.*.level_id'] = 'required|exists:levels,id';
+                $rules['eligibility.*.group'] = 'required|string|max:255';
                 $rules['level_id'] = 'prohibited';
                 $rules['program_id'] = 'prohibited';
                 break;
@@ -118,6 +119,9 @@ class StoreAvailableCourseRequest extends FormRequest
             'eligibility.min' => 'Please add at least one eligibility pair (program and level).',
             'eligibility.*.program_id.required' => 'Please select a program for each eligibility row.',
             'eligibility.*.program_id.exists' => 'The selected program does not exist.',
+            'eligibility.*.group.required' => 'Please select a group for each eligibility row.',
+            'eligibility.*.group.string' => 'The group must be a string.',
+            'eligibility.*.group.max' => 'The group may not be greater than 255 characters.',
             'eligibility.*.level_id.required' => 'Please select a level for each eligibility row.',
             'eligibility.*.level_id.exists' => 'The selected level does not exist.',
             

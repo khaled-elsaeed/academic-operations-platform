@@ -27,6 +27,8 @@ class HomeController extends Controller
             return $this->adminHome();
         } elseif (auth()->user()->hasRole('advisor')) {
             return $this->advisorHome();
+        } elseif (auth()->user()->hasRole('schedules_committee')) {
+            return $this->schedulesCommitteeHome();
         }
         
         // Default fallback
@@ -47,6 +49,14 @@ class HomeController extends Controller
     public function advisorHome(): View
     {
         return view('home.advisor');
+    }
+
+    /**
+     * Display the schedules committee home page.
+     */
+    public function schedulesCommitteeHome(): View
+    {
+        return view('home.schedules_committee');
     }
 
     /**

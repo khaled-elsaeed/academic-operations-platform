@@ -247,6 +247,7 @@ class AvailableCourse extends Model
             $this->eligibilities()->firstOrCreate([
                 'program_id' => $pair['program_id'],
                 'level_id' => $pair['level_id'],
+                'group' => $pair['group'] ?? 1,
             ]);
         }
     }

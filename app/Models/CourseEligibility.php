@@ -13,6 +13,7 @@ class CourseEligibility extends Model
         'available_course_id',
         'program_id',
         'level_id',
+        'group',
     ];
 
     public function availableCourse(): BelongsTo

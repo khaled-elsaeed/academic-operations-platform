@@ -52,14 +52,18 @@ class CreateSchedulePipe
      */
     private function createAvailableCourseSchedule($availableCourse, array $detail): AvailableCourseSchedule
     {
-        return AvailableCourseSchedule::create([
-            'available_course_id' => $availableCourse->id,
-            'group' => $detail['group_number'],
-            'activity_type' => $detail['activity_type'],
-            'location' => $detail['location'] ?? null,
-            'min_capacity' => $detail['min_capacity'] ?? 1,
-            'max_capacity' => $detail['max_capacity'] ?? 30,
-        ]);
+        return AvailableCourseSchedule::updateOrCreate(
+            [
+                'available_course_id' => $availableCourse->id,
+                'group' => $detail['group_number'],
+                'activity_type' => $detail['activity_type'],
+            ],
+            [
+                'location' => $detail['location'] ?? null,
+                'min_capacity' => $detail['min_capacity'] ?? 1,
+                'max_capacity' => $detail['max_capacity'] ?? 30,
+            ]
+        );
     }
 
     /**

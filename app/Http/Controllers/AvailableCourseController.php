@@ -230,13 +230,18 @@ class AvailableCourseController extends Controller
         $studentId = $validated['student_id'];
         $availableCourses = AvailableCourse::available($programId, $levelId, $termId)
             ->notEnrolled($studentId, $termId)
-            ->with('course')
+            ->with(['course', 'eligibilities'])
             ->get();
-        $courses = $availableCourses->map(function ($availableCourse) {
+        $courses = $availableCourses->map(function ($availableCourse) use ($programId, $levelId) {
+            // Find the eligibility group for this student's program and level
+            $eligibility = $availableCourse->eligibilities->first(function ($elig) use ($programId, $levelId) {
+                return $elig->program_id == $programId && $elig->level_id == $levelId;
+            });
             return [
                 'id'                 => $availableCourse->course->id,
                 'name'               => $availableCourse->course->name,
                 'code'               => $availableCourse->course->code,
+                'group'              => $eligibility ? $eligibility->group : null,
                 'credit_hours'       => $availableCourse->course->credit_hours,
                 'available_course_id'=> $availableCourse->id,
                 'remaining_capacity' => $availableCourse->remaining_capacity,
@@ -257,7 +262,8 @@ class AvailableCourseController extends Controller
     public function schedules($id): JsonResponse
     {
         try {
-            $schedules = $this->availableCourseService->getSchedules($id);
+            $group = request()->input('group');
+            $schedules = $this->availableCourseService->getSchedules($id, $group);
             return successResponse('Schedules fetched successfully.', $schedules);
         } catch (BusinessValidationException $e) {
             return errorResponse($e->getMessage(), [], $e->getCode());

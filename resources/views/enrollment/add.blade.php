@@ -893,7 +893,6 @@ const CourseModule = {
   },
 
   checkCourseConflicts(courseId) {
-    // For now, return false since we'll do detailed conflict checking when selecting activities
     // This could be enhanced to do a preliminary check if needed
     return false;
   },
@@ -1036,14 +1035,14 @@ const PrerequisiteModule = {
 // ========================================
 const ActivitySelectionModule = {
   show(courseId) {
-    const course = EnrollmentState.originalCoursesData.find(c => c.available_course_id == courseId);
+    const course = EnrollmentState.originalCoursesData.find(c => c.available_course_id == courseId || c.id == courseId);
     if (!course) return;
-    
+
     $('#activitySelectionModalLabel').html(`
       <i class="bx bx-chalkboard me-2"></i>
       Select Activity Schedule for ${course.name}
     `);
-    
+
     $('#courseActivityInfo').html(`
       <div class="alert alert-info">
         <h6 class="mb-1 text-dark">${course.name}</h6>
@@ -1053,19 +1052,21 @@ const ActivitySelectionModule = {
         </p>
       </div>
     `);
-    
-    this.loadActivities(courseId);
+
+    // Always send group to loadActivities
+    this.loadActivities(courseId, course.group);
     $('#activitySelectionModal').data('course-id', courseId);
     $('#activitySelectionModal').modal('show');
   },
 
-  loadActivities(courseId) {
+  loadActivities(courseId, group) {
     Utils.showLoading('#activitiesList', 'Loading course schedules...');
     
     const url = window.routes.courseSchedules.replace(':id', courseId);
     $.ajax({
       url: url,
       method: 'GET',
+      data: { group: group },
       success: (res) => {
         const activityTypes = res.data || [];
         $('#activitySelectionModal').data('activityTypes', activityTypes);

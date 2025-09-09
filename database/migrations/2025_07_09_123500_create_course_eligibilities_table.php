@@ -12,9 +12,10 @@ return new class extends Migration {
             $table->foreignId('available_course_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
             $table->foreignId('program_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
             $table->foreignId('level_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
+            $table->integer('group')->default(1);
             $table->timestamps();
 
-            $table->unique(['available_course_id', 'program_id', 'level_id'], 'course_eligibility_unique');
+            $table->unique(['available_course_id', 'program_id', 'level_id', 'group'], 'course_eligibility_unique');
         });
     }
 

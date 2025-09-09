@@ -67,6 +67,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'home.view',
             'home.admin',
             'home.advisor',
+            'home.schedules_committee',
             // Account Settings Permissions
             'account_settings.view',
             'account_settings.edit',
@@ -76,6 +77,16 @@ class RolesAndPermissionsSeeder extends Seeder
             'academic_advisor_access.create',
             'academic_advisor_access.edit',
             'academic_advisor_access.delete',
+            // Available courses Permissions
+            'available_course.view',
+            'available_course.create',
+            'available_course.edit',
+            'available_course.delete',
+            // Schedule
+            'schedule.view',
+            'schedule.create',
+            'schedule.edit',
+            'schedule.delete',
         ];
 
         foreach ($permissions as $permission) {
@@ -83,8 +94,9 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         // Create roles
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $adminRole = Role::firstOrCreate(  ['name' => 'admin']);
         $advisorRole = Role::firstOrCreate(['name' => 'advisor']);
+        $schedulesCommitteeRole = Role::firstOrCreate(['name' => 'schedules_committee']);
 
         // Admin gets all permissions, but only assign those not already assigned
         $allPermissions = Permission::all();
@@ -108,11 +120,37 @@ class RolesAndPermissionsSeeder extends Seeder
             'account_settings.view',
             'account_settings.edit',
             'account_settings.password',
+            // Academic Advisor Access Permissions
+            'available_course.view',
+            'available_course.create',
+            'available_course.edit',
+            'available_course.delete',
+
         ];
         $advisorCurrentPermissions = $advisorRole->permissions->pluck('name')->toArray();
         $advisorNewPermissions = array_diff($advisorPermissions, $advisorCurrentPermissions);
         if (!empty($advisorNewPermissions)) {
             $advisorRole->givePermissionTo($advisorNewPermissions);
+        }
+
+        // Schedules Committee gets limited permissions, but only assign those not already assigned
+        $schedulesCommitteePermissions = [
+            'home.view',
+            'home.schedules_committee',
+            // Account Settings Permissions for schedules committee
+            'account_settings.view',
+            'account_settings.edit',
+            'account_settings.password',
+            // Schedule related permissions (when they're added later)
+            'schedule.view',
+            'schedule.create',
+            'schedule.edit',
+            'schedule.delete',
+        ];
+        $schedulesCommitteeCurrentPermissions = $schedulesCommitteeRole->permissions->pluck('name')->toArray();
+        $schedulesCommitteeNewPermissions = array_diff($schedulesCommitteePermissions, $schedulesCommitteeCurrentPermissions);
+        if (!empty($schedulesCommitteeNewPermissions)) {
+            $schedulesCommitteeRole->givePermissionTo($schedulesCommitteeNewPermissions);
         }
     }
 } 

@@ -93,6 +93,7 @@
                           <th style="width:40px;">#</th>
                           <th>Program</th>
                           <th>Level</th>
+                          <th>Group</th>
                           <th style="width:40px;"></th>
                         </tr>
                       </thead>
@@ -401,7 +402,7 @@ const DropdownManager = {
         // Load individual eligibility pairs
         if (availableCourse.eligibilities && availableCourse.eligibilities.length > 0) {
           availableCourse.eligibilities.forEach(eligibility => {
-            EligibilityTableManager.addRow(eligibility.program_id, eligibility.level_id);
+            EligibilityTableManager.addRow(eligibility.program_id, eligibility.level_id, eligibility.group);
           });
         } else {
           EligibilityTableManager.addRow(); // Add empty row
@@ -460,15 +461,18 @@ const DropdownManager = {
 // ELIGIBILITY TABLE MANAGER
 // ===========================
 const EligibilityTableManager = {
-  renderRow(index, selectedProgram = '', selectedLevel = '') {
+  renderRow(index, selectedProgram = '', selectedLevel = '', selectedGroup = '') {
     // Create empty selects to be populated later
     let programSelect = `<select class='form-select program-select' name='eligibility[${index}][program_id]'></select>`;
     let levelSelect = `<select class='form-select level-select' name='eligibility[${index}][level_id]'></select>`;
+    let groupInput = `<input type='number' min='1' class='form-control group-input' name='eligibility[${index}][group]' value='${selectedGroup}' style='width:70px;'>`;
+
     return `
       <tr>
         <td class='align-middle text-center row-number'></td>
         <td>${programSelect}</td>
         <td>${levelSelect}</td>
+        <td>${groupInput}</td>
         <td class='align-middle text-center'>
           <button type='button' class='btn btn-sm btn-danger remove-eligibility-row'>
             <i class='bx bx-trash'></i>
@@ -491,9 +495,9 @@ const EligibilityTableManager = {
     });
   },
 
-  addRow(selectedProgram = '', selectedLevel = '') {
+  addRow(selectedProgram = '', selectedLevel = '', selectedGroup = '') {
     const currentRows = $('#eligibilityTable tbody tr').length;
-    const newRow = this.renderRow(currentRows, selectedProgram, selectedLevel);
+    const newRow = this.renderRow(currentRows, selectedProgram, selectedLevel, selectedGroup);
 
     $('#eligibilityTable tbody').append(newRow);
     this.updateRowNumbers();
@@ -1163,8 +1167,10 @@ const FormManager = {
       $('#eligibilityTable tbody tr').each(function() {
         const program_id = $(this).find('.program-select').val();
         const level_id = $(this).find('.level-select').val();
+        const group = $(this).find('.group-input').val();
+
         if (program_id && level_id) {
-          data.eligibility.push({ program_id, level_id });
+          data.eligibility.push({ program_id, level_id, group });
         }
       });
     }
@@ -1312,7 +1318,7 @@ const FormManager = {
       const response = await ApiService.updateAvailableCourse(data);
       
       // Show success message and redirect
-      Utils.showSuccess(response.message || 'Available course updated successfully.');
+      Utils.showSuccess(response.message);
       
       setTimeout(() => {
         window.location.href = ROUTES.availableCourses.index;

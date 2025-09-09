@@ -57,7 +57,7 @@ class HandleImportSchedulePipe
             'available_course_id' => $availableCourse->id,
             'group' => $group,
             'activity_type' => $activityType,
-            'location' => $location,
+            'location' => $location ?? null,
         ];
 
         // Define the values to update/create

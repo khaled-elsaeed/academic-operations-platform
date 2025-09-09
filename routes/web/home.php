@@ -42,4 +42,15 @@ Route::middleware(['auth'])
         Route::get('home', [HomeController::class, 'advisorHome'])
             ->name('home')
             ->middleware('can:home.advisor');
+    });
+
+// ===== Schedules Committee Home Routes =====
+Route::middleware(['auth'])
+    ->prefix('schedules-committee')
+    ->name('schedules_committee.')
+    ->group(function () {
+        // Main Routes
+        Route::get('home', [HomeController::class, 'schedulesCommitteeHome'])
+            ->name('home')
+            ->middleware('can:home.schedules_committee');
     }); 

@@ -30,6 +30,8 @@ class AuthController extends Controller
                 return redirect()->intended(route('admin.home'));
             } elseif ($user->hasRole('advisor')) {
                 return redirect()->intended(route('advisor.home'));
+            } elseif ($user->hasRole('schedules_committee')) {
+                return redirect()->intended(route('schedules_committee.home'));
             }
         }
         return back()->withErrors(['email' => 'Invalid credentials.']);

@@ -222,13 +222,15 @@ class AvailableCourseController extends Controller
         $validated = $request->validate([
             'student_id' => ['required', 'exists:students,id'],
             'term_id'    => ['required', 'exists:terms,id'],
+            'exceptionForDifferentLevels'  => ['nullable', 'boolean'],
         ]);
         $student = Student::findOrFail($validated['student_id']);
         $programId = $student->program_id;
         $levelId   = $student->level_id;
         $termId    = $validated['term_id'];
         $studentId = $validated['student_id'];
-        $availableCourses = AvailableCourse::available($programId, $levelId, $termId)
+        $exceptionForDifferentLevels = $validated['exceptionForDifferentLevels'];
+        $availableCourses = AvailableCourse::available($programId, $levelId, $termId, $exceptionForDifferentLevels)
             ->notEnrolled($studentId, $termId)
             ->with(['course', 'eligibilities'])
             ->get();

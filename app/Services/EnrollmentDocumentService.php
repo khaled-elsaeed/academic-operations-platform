@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Student;
+use App\Models\Term;
 use Exception;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Mpdf\Mpdf;
@@ -12,9 +12,10 @@ use PhpOffice\PhpWord\TemplateProcessor;
 
 class EnrollmentDocumentService
 {
-    /**
-     * Constants
-     */
+    // ============================================================================
+    // CONSTANTS
+    // ============================================================================
+
     private const MAX_COURSES_WORD = 16;
     private const MAX_COURSES_PDF = 10;
     private const MEMORY_LIMIT = '512M';
@@ -22,13 +23,13 @@ class EnrollmentDocumentService
     private const TEMPLATE_FILENAME = 'enrollment_template.docx';
     private const PDF_STORAGE_PATH = 'documents/enrollments/pdf/';
     private const WORD_STORAGE_PATH = 'documents/enrollments/word/';
-    private const DEFAULT_ACADEMIC_YEAR = '2024-2025';
-    private const DEFAULT_SEMESTER = 'الصيف';
+    private const DEFAULT_ACADEMIC_YEAR = '';
+    private const DEFAULT_SEMESTER = '';
     private const DEFAULT_LEVEL = 'الأول';
     private const VALID_LEVELS = ['1', '2', '3', '4', '5'];
     private const LEVEL_MAPPING = [
         '1' => 'الأول',
-        '2' => 'الثاني', 
+        '2' => 'الثاني',
         '3' => 'الثالث',
         '4' => 'الرابع',
         '5' => 'الخامس',
@@ -43,15 +44,17 @@ class EnrollmentDocumentService
     ];
     private const COURSE_TITLE_LIMIT = 40;
 
-    /**
-     * File paths
-     */
+    // ============================================================================
+    // FILE PATHS
+    // ============================================================================
+
     private string $templatePath;
     private string $outputPath;
 
-    /**
-     * Constructor
-     */
+    // ============================================================================
+    // CONSTRUCTOR
+    // ============================================================================
+
     public function __construct()
     {
         $this->templatePath = storage_path('app/private/');
@@ -63,114 +66,68 @@ class EnrollmentDocumentService
     // PUBLIC METHODS
     // ============================================================================
 
-    /**
-     * Generate PDF enrollment document
-     *
-     * @param Student $student
-     * @param int|null $termId
-     * @return array
-     * @throws Exception
-     */
     public function generatePdf(Student $student, ?int $termId = null): array
     {
-        try {
-            $this->setResourceLimits();
-            
-            $studentWithEnrollments = $this->loadStudentWithEnrollments($student->id);
-            $enrollments = $this->filterEnrollmentsByTerm($studentWithEnrollments->enrollments, $termId);
-            
-            $this->validateEnrollments($enrollments, $student->id, $termId);
-            
-            $pdfData = $this->prepareDataForPdf($studentWithEnrollments, $enrollments);
+        $this->setResourceLimits();
 
-            $pdfData['enrollment_date'] = \Carbon\Carbon::now('Africa/Cairo')->translatedFormat('l d/m/Y h:i A');
-            
-            $html = view('pdf.enrollment', $pdfData)->render();
-            
-            $filename = $this->generateFilename($student, 'pdf');
-            $pdfContent = $this->generatePdfContent($html, $filename);
-            
-            $url = $this->saveToPublicStorage($pdfContent, self::PDF_STORAGE_PATH . $filename);
-            
-            return ['url' => $url, 'filename' => $filename];
-            
-        } catch (Exception $e) {
-            $this->logError('generatePdf', $student->id, $termId, $e);
-            throw $e;
-        }
+        $studentWithEnrollments = $this->loadStudentWithEnrollments($student->id);
+        $enrollments = $this->filterEnrollmentsByTerm($studentWithEnrollments->enrollments, $termId);
+        $this->validateEnrollments($enrollments, $student->id, $termId);
+
+        $pdfData = $this->prepareDataForPdf($studentWithEnrollments, $enrollments);
+
+        // Term info
+        $term = $termId ? Term::find($termId) : null;
+        $pdfData['semester'] = $term ? $this->mapSeason($term->season) : self::DEFAULT_SEMESTER;
+        $pdfData['academic_year'] = $term ? $term->year : self::DEFAULT_ACADEMIC_YEAR;
+
+        $pdfData['enrollment_date'] = \Carbon\Carbon::now('Africa/Cairo')->translatedFormat('l d/m/Y h:i A');
+        $pdfData['cgpa'] = $student->cgpa ?? 0.0;
+
+        $html = view('pdf.enrollment', $pdfData)->render();
+        $filename = $this->generateFilename($student, 'pdf');
+        $pdfContent = $this->generatePdfContent($html, $filename);
+        $url = $this->saveToPublicStorage($pdfContent, self::PDF_STORAGE_PATH . $filename);
+
+        return ['url' => $url, 'filename' => $filename];
     }
 
-    /**
-     * Generate Word enrollment document
-     *
-     * @param Student $student
-     * @param int|null $termId
-     * @return array
-     * @throws Exception
-     */
     public function generateWord(Student $student, ?int $termId = null): array
     {
-        try {
-            $studentWithEnrollments = $this->loadStudentWithEnrollments($student->id);
-            $enrollments = $this->filterEnrollmentsByTerm($studentWithEnrollments->enrollments, $termId);
-            
-            $this->validateEnrollments($enrollments, $student->id, $termId);
-            
-            $studentData = $this->prepareStudentData($studentWithEnrollments);
-            $enrollmentsArray = $this->prepareEnrollmentsForWord($enrollments);
-            
-            $filename = $this->generateFilename($student, 'docx');
-            $filePath = $this->generateWordDocument($studentData, $enrollmentsArray, $filename);
-            
-            $url = $this->saveFileToPublicStorage($filePath, self::WORD_STORAGE_PATH . $filename);
-            
-            return ['url' => $url, 'filename' => $filename];
-            
-        } catch (Exception $e) {
-            $this->logError('generateWord', $student->id, $termId, $e);
-            throw $e;
-        }
+        $studentWithEnrollments = $this->loadStudentWithEnrollments($student->id);
+        $enrollments = $this->filterEnrollmentsByTerm($studentWithEnrollments->enrollments, $termId);
+        $this->validateEnrollments($enrollments, $student->id, $termId);
+
+        $studentData = $this->prepareStudentData($studentWithEnrollments);
+
+        // Term info
+        $term = $termId ? Term::find($termId) : null;
+        $studentData['semester'] = $term ? $this->mapSeason($term->season) : self::DEFAULT_SEMESTER;
+        $studentData['academic_year'] = $term ? $term->year : self::DEFAULT_ACADEMIC_YEAR;
+
+        $enrollmentsArray = $this->prepareEnrollmentsForWord($enrollments);
+        $filename = $this->generateFilename($student, 'docx');
+        $filePath = $this->generateWordDocument($studentData, $enrollmentsArray, $filename);
+        $url = $this->saveFileToPublicStorage($filePath, self::WORD_STORAGE_PATH . $filename);
+
+        return ['url' => $url, 'filename' => $filename];
     }
 
-    /**
-     * Check if student has enrollments
-     *
-     * @param Student $student
-     * @param int|null $termId
-     * @return bool
-     */
     public function hasEnrollments(Student $student, ?int $termId = null): bool
     {
         $query = $student->enrollments();
-        
-        if ($termId) {
-            $query->where('term_id', $termId);
-        }
-        
+        if ($termId) $query->where('term_id', $termId);
         return $query->exists();
     }
 
-    /**
-     * Get enrollment statistics for a student
-     *
-     * @param Student $student
-     * @param int|null $termId
-     * @return array
-     */
     public function getEnrollmentStats(Student $student, ?int $termId = null): array
     {
         $query = $student->enrollments();
-        
-        if ($termId) {
-            $query->where('term_id', $termId);
-        }
-        
+        if ($termId) $query->where('term_id', $termId);
+
         $enrollments = $query->with('course')->get();
-        
-        $totalHours = $enrollments->sum(function($enrollment) {
-            return (int)($enrollment->course->credit_hours ?? 0);
-        });
-        
+        $totalHours = $enrollments->sum(fn($enrollment) => (int)($enrollment->course->credit_hours ?? 0));
+
         return [
             'total_courses' => $enrollments->count(),
             'total_hours' => $totalHours,
@@ -178,12 +135,6 @@ class EnrollmentDocumentService
         ];
     }
 
-    /**
-     * Get available download formats for a student
-     *
-     * @param Student $student
-     * @return array
-     */
     public function getDownloadOptions(Student $student): array
     {
         return [
@@ -193,146 +144,77 @@ class EnrollmentDocumentService
     }
 
     // ============================================================================
-    // PRIVATE METHODS - Data Loading & Validation
+    // PRIVATE METHODS
     // ============================================================================
 
-    /**
-     * Load student with enrollments
-     *
-     * @param int $studentId
-     * @return Student
-     */
     private function loadStudentWithEnrollments(int $studentId): Student
     {
         return Student::with(['enrollments.course', 'program', 'level'])->findOrFail($studentId);
     }
 
-    /**
-     * Filter enrollments by term
-     *
-     * @param \Illuminate\Database\Eloquent\Collection $enrollments
-     * @param int|null $termId
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
     private function filterEnrollmentsByTerm($enrollments, ?int $termId)
     {
         return $termId ? $enrollments->where('term_id', $termId) : $enrollments;
     }
 
-    /**
-     * Validate enrollments exist
-     *
-     * @param \Illuminate\Database\Eloquent\Collection $enrollments
-     * @param int $studentId
-     * @param int|null $termId
-     * @throws Exception
-     */
     private function validateEnrollments($enrollments, int $studentId, ?int $termId): void
     {
         if ($enrollments->isEmpty()) {
-            $message = $termId 
-                ? "No enrollments found for this student in the selected term"
-                : "No enrollments found for this student";
-            
-            Log::warning('No enrollments found', [
-                'student_id' => $studentId,
-                'term_id' => $termId
-            ]);
-            
-            throw new Exception($message);
+            throw new Exception($termId 
+                ? "No enrollments found for this student in the selected term" 
+                : "No enrollments found for this student");
         }
     }
 
-    // ============================================================================
-    // PRIVATE METHODS - Data Preparation
-    // ============================================================================
-
-    /**
-     * Prepare student data for documents
-     *
-     * @param Student $student
-     * @return array
-     */
     private function prepareStudentData(Student $student): array
     {
         $levelName = $student->level->name ?? null;
-        $mappedLevel = $this->mapLevel($levelName);
-
-        $data = [
+        return [
             'academic_number' => $student->academic_id,
             'student_name' => $student->name_ar ?? $student->name_en,
-            'national_id' => $student->national_id,
+            'national_id' => $student->national_id ?? '',
             'program_name' => $student->program->name ?? '',
             'student_phone' => $student->phone ?? '',
-            'level' => $mappedLevel,
+            'level' => $this->mapLevel($levelName),
             'academic_year' => self::DEFAULT_ACADEMIC_YEAR,
             'semester' => self::DEFAULT_SEMESTER
         ];
-
-        Log::info('Prepared student data for document', [
-            'student_id' => $student->id,
-            'academic_number' => $data['academic_number'],
-            'student_name' => $data['student_name'],
-            'level' => $data['level'],
-            'program_name' => $data['program_name'],
-            'academic_year' => $data['academic_year'],
-            'semester' => $data['semester'],
-        ]);
-
-        return $data;
     }
 
-    /**
-     * Map level to the required format 
-     *
-     * @param string|null $levelName
-     * @return string
-     */
     private function mapLevel(?string $levelName): string
     {
         if (!$levelName || !in_array($levelName, self::VALID_LEVELS)) {
             return self::LEVEL_MAPPING[self::DEFAULT_LEVEL];
         }
-
         return self::LEVEL_MAPPING[$levelName] ?? self::LEVEL_MAPPING[self::DEFAULT_LEVEL];
     }
 
-    /**
-     * Prepare enrollment data for Word document
-     *
-     * @param \Illuminate\Database\Eloquent\Collection $enrollments
-     * @return array
-     */
-    private function prepareEnrollmentsForWord($enrollments): array
+    private function mapSeason(?string $season): string
     {
-        return $enrollments->map(function($enrollment) {
-            return [
-                'course_code' => $enrollment->course->code ?? '',
-                'course_name' => $enrollment->course->title ?? '',
-                'course_hours' => $enrollment->course->credit_hours ?? ''
-            ];
-        })->toArray();
+        $seasonMapping = [
+            'fall' => 'الخريف',
+            'spring' => 'الربيع',
+            'summer' => 'الصيف'
+        ];
+        return $seasonMapping[$season] ?? self::DEFAULT_SEMESTER;
     }
 
-    /**
-     * Prepare data for PDF document
-     *
-     * @param Student $student
-     * @param \Illuminate\Database\Eloquent\Collection $enrollments
-     * @return array
-     */
+    private function prepareEnrollmentsForWord($enrollments): array
+    {
+        return $enrollments->map(fn($enrollment) => [
+            'course_code' => $enrollment->course->code ?? '',
+            'course_name' => $enrollment->course->title ?? '',
+            'course_hours' => $enrollment->course->credit_hours ?? ''
+        ])->toArray();
+    }
+
     private function prepareDataForPdf(Student $student, $enrollments): array
     {
-        $enrollments = $enrollments->values(); // Reset keys to be sequential
+        $enrollments = $enrollments->values();
         $studentData = $this->prepareStudentData($student);
         $enrollmentData = [];
         $totalHours = 0;
-        
-        Log::info('Preparing enrollment data for PDF', [
-            'student_id' => $student->id,
-            'enrollments_count' => $enrollments->count(),
-        ]);
-        
+
         for ($i = 1; $i <= self::MAX_COURSES_PDF; $i++) {
             if (isset($enrollments[$i - 1])) {
                 $enrollment = $enrollments[$i - 1];
@@ -340,28 +222,16 @@ class EnrollmentDocumentService
                 $enrollmentData["course_title_{$i}"] = Str::limit($enrollment->course->title ?? '', self::COURSE_TITLE_LIMIT, '...');
                 $enrollmentData["course_hours_{$i}"] = $enrollment->course->credit_hours ?? '';
                 $totalHours += (int)($enrollment->course->credit_hours ?? 0);
-                
-                Log::info("Enrollment row {$i} populated", [
-                    'course_code' => $enrollmentData["course_code_{$i}"],
-                    'course_title' => $enrollmentData["course_title_{$i}"],
-                    'course_hours' => $enrollmentData["course_hours_{$i}"],
-                ]);
             } else {
                 $enrollmentData["course_code_{$i}"] = '';
                 $enrollmentData["course_title_{$i}"] = '';
                 $enrollmentData["course_hours_{$i}"] = '';
-                Log::info("Enrollment row {$i} left blank");
             }
         }
-        
+
         $enrollmentData['total_hours'] = $totalHours;
-        
         return array_merge($studentData, $enrollmentData);
     }
-
-    // ============================================================================
-    // PRIVATE METHODS - Document Generation
-    // ============================================================================
 
     /**
      * Generate PDF content

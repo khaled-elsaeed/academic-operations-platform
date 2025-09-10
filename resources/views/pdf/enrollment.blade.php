@@ -179,7 +179,7 @@
             <!-- ===== DOCUMENT TITLE ===== -->
             <div style="text-align: center; margin-bottom: 30px;">
                 <h2 style="font-family: 'KFGQPC', Arial, sans-serif; font-size: 18px; font-weight: bold; color: #333; margin: 0;">
-                    نموذج ارشاد الطلاب لفصل {{ $semester ?? 'الصيف' }} {{ $academic_year ?? '2024/2025' }} المستوى {{ $level ?? 'الأول' }}
+                    نموذج ارشاد الطلاب لفصل {{ $semester }} {{ $academic_year }} المستوى {{ $level }}
                 </h2>
             </div>
             <!-- ===== STUDENT INFORMATION SECTION ===== -->
@@ -200,11 +200,15 @@
                     <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">اسم البرنامج:</td>
                     <td style="padding: 6px; border: 1px solid #ddd; font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 13px;">{{ $program_name ?? '________' }}</td>
                 </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">المعدل التراكمي:</td>
+                    <td style="padding: 6px; border: 1px solid #ddd; font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 13px;">{{ $cgpa ?? '________' }}</td>
+                </tr>
             </table>
             <!-- ===== NOTICE SECTION ===== -->
             <div style="margin-bottom: 30px; text-align: justify; line-height: 1.6;">
                 <p style="margin: 0; font-size: 14px;">
-                    نحيطكم علماً بأن المقررات المسجلة في فصل {{ $semester ?? 'الصيف' }} من العام الأكاديمي الحالي {{ $academic_year ?? '2024/2025' }} الخاصة بك هي على النحو التالي:
+                    نحيطكم علماً بأن المقررات المسجلة في فصل {{ $semester }} من العام الأكاديمي الحالي {{ $academic_year }} الخاصة بك هي على النحو التالي:
                 </p>
             </div>
             <!-- ===== COURSES TABLE SECTION (LAST THING ON PAGE 1) ===== -->
@@ -255,7 +259,7 @@
                     <ul style="font-size: 14px; margin-top: 8px; margin-bottom: 0; padding-right: 20px;">
                         <li>يتعهد الطالب بتسجيل المقررات علي نظام معلومات الطالب <span style="font-family: 'DejaVu Sans', Arial, sans-serif;">SIS</span> مطابق تماما للتسجيل الورقي الذي قام بالتوقيع عليه.</li>
                         <li>في حالة رغبة الطالب في اجراء أي تعديل في تسجيل المقررات خلال فترة التسجيل الممكنة أن يتم ذلك بموافقة وتوقيع المرشد الأكاديمي أولاً.</li>
-                        <li>أيضا إتاحة المقرر في الفصل {{ $semester ?? 'الصيف' }} يعتمد علي اكتمال الحد الأدنى لفتح المقرر طبقا للأعداد المقررة بلائحة الجامعة.</li>
+                        <li>أيضا إتاحة المقرر في الفصل {{ $semester }} يعتمد علي اكتمال الحد الأدنى لفتح المقرر طبقا للأعداد المقررة بلائحة الجامعة.</li>
                         <li>لن يُعتمد تسجيل أي طالب لم يقم بسداد رسوم الفصل الدراسي على النظام <span style="font-family: 'DejaVu Sans', Arial, sans-serif;">SIS</span> فقط، وسيتم إلغاء تسجيله نهائيًا.</li>
                     </ul>
                 </div>

@@ -196,6 +196,10 @@
               </span>
               <input type="text" class="form-control border-primary" id="coursesSearch" placeholder="Search course names or codes...">
             </div>
+            <div class="form-check form-switch mt-2">
+              <input class="form-check-input" type="checkbox" id="exceptionForDifferentLevels">
+              <label class="form-check-label" for="exceptionForDifferentLevels">Allow courses from other levels</label>
+            </div>
           </div>
           <div class="card-body">
             <form id="enrollForm">
@@ -230,6 +234,12 @@
               <div class="d-flex align-items-center mb-2 mb-sm-0">
                 <i class="bx bx-calendar-week me-2 text-primary"></i>
                 <h5 class="mb-0 text-dark">Weekly Schedule Preview</h5>
+              </div>
+              <div class="mt-2 mt-sm-0">
+                <button type="button" class="btn btn-sm btn-outline-primary" id="downloadTimetableBtn" style="display:none;">
+                  <i class="bx bx-download me-1"></i>
+                  Download Timetable
+                </button>
               </div>
             </div>
           </div>
@@ -579,13 +589,12 @@ const TimeConflictModule = {
   checkScheduleConflicts(newCourseData, currentCourseId) {
     const conflicts = [];
     
-    console.log('Checking conflicts for course:', currentCourseId);
-    console.log('New activities:', newCourseData.selected_activities);
+    
     
     // Check conflicts with other selected courses
     EnrollmentState.selectedCourseGroups.forEach((groupData, courseId) => {
       if (courseId != currentCourseId && groupData.group_activities) {
-        console.log('Checking against selected course:', groupData.course.name);
+        
         groupData.group_activities.forEach(currentActivity => {
           newCourseData.selected_activities.forEach(newActivity => {
             if (this.hasConflict(currentActivity, newActivity)) {
@@ -606,7 +615,7 @@ const TimeConflictModule = {
       activity => activity.source === 'old_schedule'
     );
 
-    console.log('Existing enrolled activities:', existingEnrolledActivities);
+    
 
     existingEnrolledActivities.forEach(enrolledItem => {
       newCourseData.selected_activities.forEach(newActivity => {
@@ -622,7 +631,7 @@ const TimeConflictModule = {
       });
     });
     
-    console.log('Total conflicts found:', conflicts.length);
+    
     return conflicts;
   },
 
@@ -630,119 +639,50 @@ const TimeConflictModule = {
     let conflictDetailsHtml = '';
     
     conflicts.forEach((conflict, index) => {
-      // Different styling based on conflict type
       const isEnrolledConflict = conflict.conflictType === 'enrolled_course';
       const isIntraCourseConflict = conflict.conflictType === 'intra_course';
-      const cardHeaderClass = isEnrolledConflict ? 'bg-warning text-dark' : 
-                            isIntraCourseConflict ? 'bg-info text-dark' : 'bg-danger text-white';
-      const badgeClass = isEnrolledConflict ? 'bg-warning text-dark' : 
-                       isIntraCourseConflict ? 'bg-info text-white' : 'bg-danger text-white';
-      
       const conflictTypeLabel = isEnrolledConflict ? 'Already Enrolled' :
-                              isIntraCourseConflict ? 'Within Same Course' : 'Selected Course';
-      
+                                isIntraCourseConflict ? 'Within Same Course' : 'Selected Course';
       conflictDetailsHtml += `
-        <div class="alert mb-3">
+        <div class="alert mb-2 ${isEnrolledConflict ? 'alert-warning' : 'alert-danger'}">
           <div class="d-flex align-items-start">
-            <div class="conflict-indicator me-3">
-              <i class="bx bx-error-circle"></i>
-            </div>
-            <div class="flex-grow-1">
-              <h6 class="mb-2 text-dark">
-                <i class="bx bx-book me-1"></i>
-                Conflict #${index + 1}: ${conflict.conflictingCourse} 
-                <span class="badge ${badgeClass} ms-2">${conflictTypeLabel}</span>
-              </h6>
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="card border-danger">
-                    <div class="card-header ${cardHeaderClass}">
-                      <small>
-                        <i class="bx bx-clock me-1"></i>
-                        ${conflictTypeLabel}
-                      </small>
-                    </div>
-                    <div class="card-body">
-                      <strong class="text-dark">${conflict.conflictingCourse}</strong><br>
-                      ${isEnrolledConflict && conflict.enrolledGroup ? `<small class="text-muted">Group ${conflict.enrolledGroup}</small><br>` : ''}
-                      <div class="schedule-time-display mt-2">
-                        <i class="bx bx-time me-1"></i>
-                        <span class="schedule-time-range">${conflict.conflictingActivity.start_time} - ${conflict.conflictingActivity.end_time}</span><br>
-                        <i class="bx bx-calendar me-1"></i>
-                        ${conflict.conflictingActivity.day_of_week}<br>
-                        <i class="bx bx-chalkboard me-1"></i>
-                        ${conflict.conflictingActivity.activity_type.charAt(0).toUpperCase() + conflict.conflictingActivity.activity_type.slice(1)}
-                        ${conflict.conflictingActivity.location ? '<br><i class="bx bx-map me-1"></i>' + conflict.conflictingActivity.location : ''}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="card border-warning">
-                    <div class="card-header bg-warning text-dark">
-                      <small><i class="bx bx-plus me-1"></i>New Selection</small>
-                    </div>
-                    <div class="card-body">
-                      <strong class="text-dark">New Course Selection</strong><br>
-                      <div class="schedule-time-display mt-2">
-                        <i class="bx bx-time me-1"></i>
-                        <span class="schedule-time-range">${conflict.newActivity.start_time} - ${conflict.newActivity.end_time}</span><br>
-                        <i class="bx bx-calendar me-1"></i>
-                        ${conflict.newActivity.day_of_week}<br>
-                        <i class="bx bx-chalkboard me-1"></i>
-                        ${conflict.newActivity.activity_type.charAt(0).toUpperCase() + conflict.newActivity.activity_type.slice(1)}
-                        ${conflict.newActivity.location ? '<br><i class="bx bx-map me-1"></i>' + conflict.newActivity.location : ''}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <i class="bx bx-error-circle me-2"></i>
+            <div>
+              <div class="fw-semibold text-dark mb-1">Conflict #${index + 1}: ${conflict.conflictingCourse} <span class="badge ${isEnrolledConflict ? 'bg-warning text-dark' : 'bg-danger'} ms-1">${conflictTypeLabel}</span></div>
+              <div class="small text-dark">
+                <div><strong>Existing:</strong> ${conflict.conflictingActivity.day_of_week} ${conflict.conflictingActivity.start_time} - ${conflict.conflictingActivity.end_time} (${conflict.conflictingActivity.activity_type})${isEnrolledConflict && conflict.enrolledGroup ? `, Group ${conflict.enrolledGroup}` : ''}</div>
+                <div><strong>New:</strong> ${conflict.newActivity.day_of_week} ${conflict.newActivity.start_time} - ${conflict.newActivity.end_time} (${conflict.newActivity.activity_type})</div>
               </div>
             </div>
           </div>
         </div>
       `;
     });
-
-    // Add warning message for enrolled course conflicts
+    
     const enrolledConflicts = conflicts.filter(c => c.conflictType === 'enrolled_course');
-    if (enrolledConflicts.length > 0) {
-      conflictDetailsHtml = `
-        <div class="alert alert-danger mb-3">
-          <div class="d-flex align-items-center">
-            <i class="bx bx-error-circle me-2"></i>
-            <strong class="text-dark">Warning: Conflicts with Already Enrolled Courses!</strong>
-          </div>
-          <p class="mb-0 text-dark small mt-1">
-            You have ${enrolledConflicts.length} conflict(s) with courses you're already enrolled in. 
-            Proceeding may cause schedule conflicts in your timetable.
-          </p>
-        </div>
-      ` + conflictDetailsHtml;
-    }
+    const headerHtml = enrolledConflicts.length > 0 ? `
+      <div class="alert alert-danger mb-2">
+        <i class="bx bx-error-circle me-2"></i>
+        <strong class="text-dark">Warning:</strong> ${enrolledConflicts.length} conflict(s) with already enrolled courses.
+      </div>
+    ` : '';
     
-    $('#conflictDetailsList').html(conflictDetailsHtml);
-    
-    // Set up modal event handlers
-    $('#proceedWithConflictBtn').off('click').on('click', function() {
-      $('#scheduleConflictModal').modal('hide');
-      onConfirm();
-    });
-    
-    $('#scheduleConflictModal').off('hidden.bs.modal').on('hidden.bs.modal', function() {
-      if (!$(this).data('proceeded')) {
+    Swal.fire({
+      title: 'Schedule Conflicts Detected',
+      html: headerHtml + conflictDetailsHtml,
+      icon: 'warning',
+      width: '800px',
+      showCancelButton: true,
+      confirmButtonText: 'Proceed Anyway',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        onConfirm();
+      } else {
         onCancel();
       }
     });
-    
-    $('#proceedWithConflictBtn').on('click', function() {
-      $('#scheduleConflictModal').data('proceeded', true);
-    });
-    
-    $('#scheduleConflictModal').on('show.bs.modal', function() {
-      $(this).data('proceeded', false);
-    });
-    
-    $('#scheduleConflictModal').modal('show');
   }
 };
 // ========================================
@@ -764,7 +704,7 @@ const CourseModule = {
     $.ajax({
       url: window.routes.availableCourses,
       method: 'GET',
-      data: { student_id: studentId, term_id: termId },
+      data: { student_id: studentId, term_id: termId, exceptionForDifferentLevels: $('#exceptionForDifferentLevels').is(':checked') ? 1 : 0 },
       success: (res) => {
         const courses = res.courses || [];
         EnrollmentState.originalCoursesData = courses;
@@ -1207,7 +1147,7 @@ const ActivitySelectionModule = {
 
     for (let enrolledItem of existingEnrolledActivities) {
       if (TimeConflictModule.hasConflict(enrolledItem.activity, activity)) {
-        console.log('Conflict detected with enrolled course:', enrolledItem.course.name);
+        
         return true;
       }
     }
@@ -1219,7 +1159,7 @@ const ActivitySelectionModule = {
       if (courseId != currentCourseId && groupData.group_activities) {
         for (let selectedActivity of groupData.group_activities) {
           if (TimeConflictModule.hasConflict(selectedActivity, activity)) {
-            console.log('Conflict detected with selected course:', groupData.course.name);
+            
             return true;
           }
         }
@@ -1242,7 +1182,7 @@ const ActivitySelectionModule = {
 
     for (let selectedActivity of selectedActivitiesInModal) {
       if (TimeConflictModule.hasConflict(selectedActivity, activity)) {
-        console.log('Intra-course conflict detected');
+        
         return true;
       }
     }
@@ -1409,12 +1349,9 @@ const ActivitySelectionModule = {
 
     if (conflicts.length > 0) {
       console.log('Conflicts detected:', conflicts);
-      TimeConflictModule.showConflictWarning(conflicts, () => {
-        // Proceed despite conflicts
-        this.finalizeSelection(courseId, courseData);
-      }, () => {
-        // Cancel: Stay in modal, do nothing
-      });
+      // Block proceeding when conflicts exist
+      TimeConflictModule.showConflictWarning(conflicts, () => {}, () => {});
+      return;
     } else {
       // No conflicts: Proceed normally
       this.finalizeSelection(courseId, courseData);
@@ -1460,12 +1397,12 @@ const ActivitySelectionModule = {
     EnrollmentUIModule.updateEnrollButton();
     CreditHoursModule.updateSummary();
     
-    // FIXED: Important - Update the schedule immediately after selection
+    // Update the preview schedule using selection (still shows Selected)
     setTimeout(() => {
       ScheduleModule.update();
     }, 100);
     
-    console.log('Course selected successfully:', courseData.course.name);
+    
   },
 
   organizeActivitiesByType(activities) {
@@ -1633,17 +1570,17 @@ const ScheduleModule = {
       return;
     }
 
-    console.log('Initializing schedule for student:', studentId, 'term:', termId);
+    
 
     $.ajax({
       url: window.routes.getSchedules,
       method: 'GET',
       data: { student_id: studentId, term_id: termId },
       success: (res) => {
-        console.log('Old schedule loaded:', res);
+        
         if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-          // FIXED: Clear old activities before adding new ones
-          EnrollmentState.selectedActivities = EnrollmentState.selectedActivities.filter(activity => activity.source !== 'old_schedule');
+          // FIXED: Clear all previous activities (selection and old) before adding fresh enrolled schedule
+          EnrollmentState.selectedActivities = [];
           
           // Add enrolled activities
           res.data.forEach(item => {
@@ -1660,23 +1597,23 @@ const ScheduleModule = {
           this.highlightConflicts(EnrollmentState.selectedActivities);
         } else {
           // FIXED: Clear activities when no old schedule
-          EnrollmentState.selectedActivities = EnrollmentState.selectedActivities.filter(activity => activity.source !== 'old_schedule');
+          EnrollmentState.selectedActivities = [];
           $('#weeklyScheduleCard').hide();
           $('#scheduleConflictAlert').hide();
         }
       },
       error: (xhr) => {
         // FIXED: Clear activities on error
-        EnrollmentState.selectedActivities = EnrollmentState.selectedActivities.filter(activity => activity.source !== 'old_schedule');
+        EnrollmentState.selectedActivities = [];
         $('#weeklyScheduleCard').hide();
         $('#scheduleConflictAlert').hide();
-        console.error('Failed to load old schedule:', xhr);
+        
       }
     });
   },
 
   update() {
-    console.log('Updating schedule...');
+    
     
     // FIXED: Remove only selection activities, keep old_schedule activities
     EnrollmentState.selectedActivities = EnrollmentState.selectedActivities.filter(activity => activity.source !== 'selection');
@@ -1686,7 +1623,7 @@ const ScheduleModule = {
       const courseId = $(this).val();
       const groupData = EnrollmentState.selectedCourseGroups.get(courseId);
       if (groupData && groupData.group_activities) {
-        console.log('Adding activities for course:', groupData.course.name);
+        
         groupData.group_activities.forEach(activity => {
           EnrollmentState.selectedActivities.push({
             course: groupData.course,
@@ -1698,19 +1635,17 @@ const ScheduleModule = {
       }
     });
     
-    console.log('Total activities in schedule:', EnrollmentState.selectedActivities.length);
-    console.log('Activities breakdown:', {
-      old_schedule: EnrollmentState.selectedActivities.filter(a => a.source === 'old_schedule').length,
-      selection: EnrollmentState.selectedActivities.filter(a => a.source === 'selection').length
-    });
+    
     
     if (EnrollmentState.selectedActivities.length === 0) {
       $('#weeklyScheduleCard').hide();
       $('#scheduleConflictAlert').hide();
+      $('#downloadTimetableBtn').hide();
       return;
     }
     
     $('#weeklyScheduleCard').show();
+    $('#downloadTimetableBtn').show();
     this.generateGrid(EnrollmentState.selectedActivities);
     this.highlightConflicts(EnrollmentState.selectedActivities);
   },
@@ -2001,6 +1936,23 @@ const EnrollmentUIModule = {
     EnrollmentHistoryModule.load(EnrollmentState.currentStudentId);
     CourseModule.load(EnrollmentState.currentStudentId, EnrollmentState.currentTermId);
   }
+  ,
+  refreshAfterEnrollment() {
+    // Clear only selection state and reload authoritative data from backend
+    EnrollmentState.selectedCourseGroups.clear();
+    $('.course-item').removeClass('selected');
+    $('.selected-group-info').hide();
+    $('.course-checkbox').prop('checked', false);
+    // Reload history, courses, and schedule fresh
+    if (EnrollmentState.currentStudentId && EnrollmentState.currentTermId) {
+      EnrollmentHistoryModule.load(EnrollmentState.currentStudentId);
+      CourseModule.load(EnrollmentState.currentStudentId, EnrollmentState.currentTermId);
+      ScheduleModule.initialize(EnrollmentState.currentStudentId, EnrollmentState.currentTermId);
+      $('#weeklyScheduleCard').show();
+      $('#downloadTimetableBtn').show();
+    }
+    this.updateEnrollButton();
+  }
 };
 
 // ========================================
@@ -2044,6 +1996,18 @@ const EnrollmentSubmissionModule = {
       return;
     }
     
+    // Final hard check: block submission if any conflicts exist
+    const conflicts = ScheduleModule.getCurrentConflicts();
+    if (conflicts.length > 0) {
+      TimeConflictModule.showConflictWarning(conflicts.map(c => ({
+        conflictingCourse: c.activity1.course.name,
+        conflictingActivity: c.activity1.activity,
+        newActivity: c.activity2.activity,
+        conflictType: c.activity1.source === 'old_schedule' ? 'enrolled_course' : 'selected_course'
+      })), () => {}, () => {});
+      return;
+    }
+
     this.processEnrollment();
   },
 
@@ -2148,16 +2112,18 @@ const EnrollmentSubmissionModule = {
       contentType: false,
       timeout: 30000, // 30 second timeout
       success: (res) => {
-        console.log('Enrollment successful:', res);
-        this.lastRequestData = null; // Clear stored data on success
+        
+        this.lastRequestData = null; 
+        if (EnrollmentState.currentStudentId && EnrollmentState.currentTermId) {
+          ScheduleModule.initialize(EnrollmentState.currentStudentId, EnrollmentState.currentTermId);
+        }
         this.handleSuccess(res);
       },
       error: (xhr) => {
-        console.error('Enrollment failed:', xhr);
+        
         this.handleError(xhr);
       },
       complete: () => {
-        // Re-enable form
         enrollBtn.html(originalText).prop('disabled', false);
         $('.course-checkbox').prop('disabled', false);
         $('#term_id').prop('disabled', false);
@@ -2190,6 +2156,10 @@ const EnrollmentSubmissionModule = {
       showConfirmButton: false,
       allowOutsideClick: false,
       didOpen: () => {
+        // Immediately refresh schedule behind the dialog
+        if (EnrollmentState.currentStudentId && EnrollmentState.currentTermId) {
+          ScheduleModule.initialize(EnrollmentState.currentStudentId, EnrollmentState.currentTermId);
+        }
         this.setupPdfDownload();
         this.setupContinueButton();
       }
@@ -2221,7 +2191,7 @@ const EnrollmentSubmissionModule = {
               showConfirmButton: false
             }).then(() => {
               Swal.close();
-              EnrollmentUIModule.resetForm();
+              EnrollmentUIModule.refreshAfterEnrollment();
             });
           } else {
             pdfBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Downloading...';
@@ -2296,7 +2266,7 @@ const EnrollmentSubmissionModule = {
   setupContinueButton() {
     document.getElementById('continueBtn').addEventListener('click', function() {
       Swal.close();
-      EnrollmentUIModule.resetForm();
+      EnrollmentUIModule.refreshAfterEnrollment();
     });
   },
 
@@ -2522,6 +2492,13 @@ const EnrollmentApp = {
       const searchTerm = $(e.target).val().toLowerCase();
       CourseModule.filter(searchTerm);
     });
+
+    // Toggle: exception for different levels
+    $(document).on('change', '#exceptionForDifferentLevels', () => {
+      if (EnrollmentState.currentStudentId && EnrollmentState.currentTermId) {
+        CourseModule.load(EnrollmentState.currentStudentId, EnrollmentState.currentTermId);
+      }
+    });
   },
 
   loadInitialData() {
@@ -2619,6 +2596,40 @@ function showMissingPrerequisites(missingPrereqs) {
 // ========================================
 $(document).ready(function() {
   EnrollmentApp.init();
+  // Lazy-load html2canvas on demand when user clicks download
+  $(document).on('click', '#downloadTimetableBtn', async function() {
+    const btn = $(this);
+    btn.prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i>Preparing...');
+    const ensureHtml2Canvas = () => new Promise((resolve, reject) => {
+      if (window.html2canvas) return resolve();
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load html2canvas'));
+      document.head.appendChild(script);
+    });
+
+    try {
+      await ensureHtml2Canvas();
+      const scheduleEl = document.getElementById('weeklySchedule');
+      if (!scheduleEl) throw new Error('Schedule not found');
+      const canvas = await window.html2canvas(scheduleEl, { backgroundColor: '#ffffff', scale: 2 });
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      const studentId = EnrollmentState.currentStudentId || 'student';
+      const termId = EnrollmentState.currentTermId || 'term';
+      link.href = dataUrl;
+      link.download = `timetable_${studentId}_${termId}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      btn.prop('disabled', false).html('<i class="bx bx-download me-1"></i>Download Timetable');
+    } catch (e) {
+      console.error(e);
+      Swal.fire('Error', 'Failed to export timetable image.', 'error');
+      btn.prop('disabled', false).html('<i class="bx bx-download me-1"></i>Download Timetable');
+    }
+  });
 });
 </script>
 @endpush

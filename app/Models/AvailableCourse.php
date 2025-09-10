@@ -150,13 +150,31 @@ class AvailableCourse extends Model
      * @return \Illuminate\Database\Eloquent\Builder
      */
     #[Scope]
-    protected function available(Builder $query, ?int $programId = null, ?int $levelId = null, ?int $termId = null): Builder
+    /**
+     * Scope a query to filter available courses by program, level, and term.
+     * If $exceptionForDifferentLevels is true, show all available courses for the student's program, for all levels (ignore $levelId).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  int|null  $programId
+     * @param  int|null  $levelId
+     * @param  int|null  $termId
+     * @param  bool|null $exceptionForDifferentLevels
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function available(
+        Builder $query,
+        ?int $programId = null,
+        ?int $levelId = null,
+        ?int $termId = null,
+        ?bool $exceptionForDifferentLevels = false
+    ): Builder
     {
-        return $query->when($termId, function ($q) use ($termId) {
+        $query = $query->when($termId, function ($q) use ($termId) {
             return $q->where('term_id', $termId);
-        })
-        ->when($programId, function ($q) use ($programId) {
-            return $q->where(function ($subQuery) use ($programId) {
+        });
+
+        if ($programId) {
+            $query = $query->where(function ($subQuery) use ($programId) {
                 $subQuery
                     ->where('mode', self::MODE_UNIVERSAL)
                     ->orWhere(function ($q2) use ($programId) {
@@ -166,9 +184,11 @@ class AvailableCourse extends Model
                         $pairQuery->where('program_id', $programId);
                     });
             });
-        })
-        ->when($levelId, function ($q) use ($levelId) {
-            return $q->where(function ($subQuery) use ($levelId) {
+        }
+
+        // If exceptionForDifferentLevels is true, do NOT filter by level at all (show all levels for the program)
+        if (!$exceptionForDifferentLevels && $levelId) {
+            $query = $query->where(function ($subQuery) use ($levelId) {
                 $subQuery
                     ->where('mode', self::MODE_UNIVERSAL)
                     ->orWhere(function ($q2) use ($levelId) {
@@ -178,7 +198,9 @@ class AvailableCourse extends Model
                         $pairQuery->where('level_id', $levelId);
                     });
             });
-        });
+        }
+
+        return $query;
     }
 
     /**

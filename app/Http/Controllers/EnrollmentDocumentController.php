@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Services\EnrollmentTemplateService;
 use App\Models\Student;
 use App\Models\Enrollment;
+use App\Models\Term;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class EnrollmentDocumentController extends Controller
 {
-    private $enrollmentTemplateService;
+    private EnrollmentTemplateService $enrollmentTemplateService;
 
     public function __construct(EnrollmentTemplateService $enrollmentTemplateService)
     {
@@ -16,72 +19,76 @@ class EnrollmentDocumentController extends Controller
     }
 
     /**
-     * Generate and download enrollment document
+     * Generate and download enrollment document for a student
+     *
+     * @param int $studentId
+     * @return \Illuminate\Http\Response
      */
     public function downloadEnrollmentDocument($studentId)
     {
         try {
             $termId = request()->query('term_id');
-            // Get student with enrollments
-            $student = Student::with(['enrollments.course', 'program', 'level'])->findOrFail($studentId);
-            
-            // Prepare student data
-            $levelName = $student->level->name ?? null;
-            $validLevels = ['1', '2', '3', '4', '5', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس'];
-            $studentData = [
-                'academic_number' => $student->academic_id, // fixed field
-                'student_name' => $student->name_ar ?? $student->name_en, // prefer Arabic name
-                'national_id' => $student->national_id,
-                'program_name' => $student->program->name ?? '',
-                'student_phone' => $student->phone ?? '',
-                'level' => (in_array($levelName, $validLevels) ? $levelName : 'الأول'),
-                'academic_year' => '2024-2025',
-                'semester' => 'الصيف'
+
+            if (!$termId) {
+                return response()->json([
+                    'message' => 'يرجى تحديد الفصل الدراسي.'
+                ], 400);
+            }
+
+            // Get student with relationships
+            $student = Student::with(['enrollments.course', 'program', 'level'])
+                ->findOrFail($studentId);
+
+            $term = Term::findOrFail($termId);
+
+            $validLevels = ['1', '2', '3', '4', '5'];
+            $termSeason = [
+                'fall' => 'الخريف',
+                'spring' => 'الربيع',
+                'summer' => 'الصيف'
             ];
 
-            // Prepare enrollment data
-            $enrollments = $student->enrollments;
+            $levelName = $student->level->name ?? null;
 
-            $enrollments = $enrollments->map(function($enrollment) {
+            $studentData = [
+                'academic_number' => $student->academic_id,
+                'student_name' => $student->name_ar ?? $student->name_en,
+                'national_id' => $student->national_id ?? '',
+                'program_name' => $student->program->name ?? '',
+                'student_phone' => $student->phone ?? '',
+                'level' => in_array($levelName, $validLevels) ? $levelName : 'الأول',
+                'academic_year' => $term->year,
+                'semester' => $termSeason[$term->season] ?? '',
+                'cgpa' => $student->cgpa ?? 0.0,
+            ];
+
+            // Map enrollments
+            $enrollments = $student->enrollments->map(function ($enrollment) {
                 return [
-                    'course_code' => $enrollment->course->code,
-                    'course_name' => $enrollment->course->title,
-                    'course_hours' => $enrollment->course->credit_hours
+                    'course_code' => $enrollment->course->code ?? '',
+                    'course_name' => $enrollment->course->title ?? '',
+                    'course_hours' => $enrollment->course->credit_hours ?? 0,
                 ];
             })->toArray();
 
+            // Generate and stream document
             return $this->enrollmentTemplateService->streamEnrollmentDocument(
                 $studentData,
                 $enrollments,
                 "enrollment_{$student->academic_id}.docx"
             );
+
         } catch (\Exception $e) {
-            \Log::error('Error in EnrollmentDocumentController@downloadEnrollmentDocument', [
+            Log::error('Error generating enrollment document', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'studentId' => $studentId,
-                'termId' => request()->query('term_id')
+                'student_id' => $studentId,
+                'term_id' => request()->query('term_id')
             ]);
+
             return response()->json([
                 'message' => 'حدث خطأ أثناء توليد مستند القيد. برجاء المحاولة لاحقاً.'
             ], 500);
         }
-    }
-
-
-    /**
-     * Convert level number to Arabic
-     */
-    private function getLevelInArabic($level): string
-    {
-        $levels = [
-            1 => 'الأول',
-            2 => 'الثاني', 
-            3 => 'الثالث',
-            4 => 'الرابع',
-            5 => 'الخامس'
-        ];
-
-        return $levels[$level] ?? 'الأول';
     }
 }

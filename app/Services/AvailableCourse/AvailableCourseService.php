@@ -126,7 +126,7 @@ class AvailableCourseService
      * @return array
      * @throws BusinessValidationException
      */
-    public function getSchedules(int $availableCourseId, string $group): array
+    public function getSchedules(int $availableCourseId, ?string $group = null): array
     {
         $availableCourse = AvailableCourse::with('schedules.scheduleAssignments.scheduleSlot')->find($availableCourseId);
 
@@ -134,8 +134,10 @@ class AvailableCourseService
             throw new BusinessValidationException('Available course not found.');
         }
 
-        // Filter schedules by group number
-        $filteredSchedules = $availableCourse->schedules->where('group', $group);
+        // Filter schedules by group number if provided; otherwise include all groups
+        $filteredSchedules = ($group !== null && $group !== '')
+            ? $availableCourse->schedules->where('group', $group)
+            : $availableCourse->schedules;
 
         // Group filtered schedules by activity_type
         $grouped = $filteredSchedules->groupBy('activity_type')->map(function ($schedules, $activityType) {
@@ -275,7 +277,6 @@ class AvailableCourseService
                 );
             })
             ->addColumn('capacity', function ($availableCourse) {
-                // Show capacity as a summary of all schedules' capacities
                 $schedules = $availableCourse->schedules;
                 if ($schedules->isEmpty()) {
                     return '-';
@@ -290,10 +291,13 @@ class AvailableCourseService
                     ? $ranges->first()
                     : $ranges->implode(', ');
             })
+            ->addColumn('enrollments', function ($availableCourse) {
+                return $availableCourse->enrollments->count();
+            })
             ->addColumn('action', function ($availableCourse) {
                 return $this->renderActionButtons($availableCourse);
             })
-            ->rawColumns(['eligibility', 'schedules', 'action'])
+            ->rawColumns(['eligibility', 'schedules', 'enrollments', 'action'])
             ->orderColumn('course', function ($query, $order) {
                 $query->join('courses', 'available_courses.course_id', '=', 'courses.id')
                     ->orderBy('courses.title', $order)
@@ -539,6 +543,11 @@ class AvailableCourseService
     public function deleteCourseDetail(int $detailId): void
     {
         $detail = AvailableCourseSchedule::findOrFail($detailId);
+        
+        if($detail->enrollments->count() > 0){
+            throw new BusinessValidationException('Cannot delete course detail with enrollments.');
+        }
+
         $detail->delete();
     }
 

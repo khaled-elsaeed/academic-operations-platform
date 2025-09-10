@@ -67,12 +67,13 @@
 
     {{-- ===== DATA TABLE ===== --}}
     <x-ui.datatable
-      :headers="['Course', 'Term', 'Eligibilities', 'Schedules', 'Action']"
+      :headers="['Course', 'Term', 'Eligibilities', 'Schedules','Enrollments', 'Action']"
       :columns="[
           ['data' => 'course', 'name' => 'course'],
           ['data' => 'term', 'name' => 'term'],
           ['data' => 'eligibility', 'name' => 'eligibility'],
           ['data' => 'schedules', 'name' => 'schedules'],
+          ['data' => 'enrollments', 'name' => 'enrollments'],
           ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
       ]"
       :ajax-url="route('available_courses.datatable')"

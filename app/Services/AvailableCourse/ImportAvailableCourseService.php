@@ -14,18 +14,12 @@ use App\Models\Schedule\ScheduleAssignment;
 use App\Exceptions\BusinessValidationException;
 use App\Imports\AvailableCoursesImport;
 use App\Validators\AvailableCourseImportValidator;
-use App\Pipelines\AvailableCourse\Import\ValidateImportDataPipe;
-use App\Pipelines\AvailableCourse\Import\DetermineOperationPipe;
-use App\Pipelines\AvailableCourse\Import\ProcessAvailableCoursePipe;
-use App\Pipelines\AvailableCourse\Shared\HandleEligibilityPipe;
-use App\Pipelines\AvailableCourse\Import\HandleImportSchedulePipe;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use App\Exceptions\SkipImportRowException;
-use Illuminate\Pipeline\Pipeline;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ImportAvailableCourseService
@@ -134,7 +128,7 @@ class ImportAvailableCourseService
     }
 
     /**
-     * Import a single available course using Pipeline pattern.
+     * Import a single available course without using pipelines (inline logic).
      *
      * @param array $rowData
      * @param int $rowNumber
@@ -143,32 +137,67 @@ class ImportAvailableCourseService
      */
     public function importSingleAvailableCourse(array $rowData, int $rowNumber): array
     {
+        // Map and validate row
+        $mappedData = $this->mapRowData($rowData);
 
-        $pipelineData = [
-            'row_data' => $rowData,
+        // Skip if course_code is 'rest'
+        if (strtolower(trim($mappedData['course_code'])) === 'rest') {
+            throw new SkipImportRowException("Row {$rowNumber} skipped: course_code is 'rest'.");
+        }
+
+        AvailableCourseImportValidator::validateRow($mappedData, $rowNumber);
+
+        // Resolve related entities
+        $course = $this->findCourseByCode($mappedData['course_code']);
+        $term = $this->findTermByCode($mappedData['term_code']);
+        $program = $this->findProgramByCode($mappedData['program_code']);
+        $level = $this->findLevelByName($mappedData['level_name']);
+        $schedule = $this->findScheduleByCode($mappedData['schedule_code']);
+
+        // Determine mode and existence
+        if (is_null($program) && is_null($level)) {
+            $mode = 'universal';
+            $existingCourse = $this->findUniversalAvailableCourse($course, $term);
+        } else {
+            $mode = 'individual';
+            $existingCourse = $this->findIndividualAvailableCourse($course, $term, $program, $level);
+        }
+
+        $operation = $existingCourse ? 'update' : 'create';
+
+        // Create or update
+        if ($operation === 'create') {
+            $availableCourse = AvailableCourse::create([
+                'course_id' => $course->id,
+                'term_id' => $term->id,
+                'mode' => $mode,
+            ]);
+
+            // If individual and both program & level are present, attach eligibility
+            if ($mode === 'individual' && $program && $level) {
+                $this->ensureEligibilityExists($availableCourse, $program, $level);
+            }
+        } else {
+            $availableCourse = $existingCourse;
+            if ($mode === 'individual' && $program && $level) {
+                $this->ensureEligibilityExists($availableCourse, $program, $level);
+            }
+            $availableCourse->refresh();
+        }
+
+        // Handle schedule for this row
+        $scheduleId = $schedule->id ?? null;
+        $this->createOrUpdateCourseSchedule($availableCourse, $mappedData, [
+            'schedule_id' => $scheduleId,
+        ]);
+
+        return [
+            'operation' => $operation,
+            'available_course' => $availableCourse->fresh(['programs', 'levels', 'schedules.scheduleAssignments']),
             'row_number' => $rowNumber,
+            'course_code' => $course->code ?? null,
+            'term_name' => $term->name ?? null,
         ];
-
-        $result = app(Pipeline::class)
-            ->send($pipelineData)
-            ->through([
-                ValidateImportDataPipe::class,
-                DetermineOperationPipe::class,
-                ProcessAvailableCoursePipe::class,
-                HandleEligibilityPipe::class,
-                HandleImportSchedulePipe::class,
-            ])
-            ->then(function ($data) {
-                return [
-                    'operation' => $data['operation'],
-                    'available_course' => $data['available_course']->fresh(['programs', 'levels', 'schedules.scheduleAssignments']),
-                    'row_number' => $data['row_number'],
-                    'course_code' => $data['course']->code ?? null,
-                    'term_name' => $data['term']->name ?? null
-                ];
-            });
-
-        return $result;
     }
 
     /**
@@ -243,5 +272,221 @@ class ImportAvailableCourseService
         } else {
             return "Import completed with {$totalProcessed} successful ({$created} created, {$updated} updated) and {$errors} failed rows.";
         }
+    }
+
+    /**
+     * Helpers inlined from pipeline steps
+     */
+
+    private function mapRowData(array $row): array
+    {
+        return [
+            'course_code' => $row['course_code'] ?? '',
+            'course_name' => $row['course_name'] ?? '',
+            'term_code' => $row['term'] ?? '',
+            'activity_type' => strtolower($row['activity_type'] ?? 'lecture'),
+            'group' => (int)($row['grouping'] ?? 1),
+            'day' => $row['day'] ?? null,
+            'slot' => $row['slot'] ?? null,
+            'time' => $row['time'] ?? null,
+            'instructor' => $row['instructor'] ?? null,
+            'location' => $row['location'] ?? null,
+            'external' => $row['external'] ?? null,
+            'level_name' => $row['level'] ?? null,
+            'program_code' => $row['program'] ?? null,
+            'min_capacity' => (int)($row['min_capacity'] ?? 1),
+            'max_capacity' => (int)($row['max_capacity'] ?? 30),
+            'schedule_code' => $row['schedule_code'] ?? null,
+        ];
+    }
+
+    private function findCourseByCode(string $code): Course
+    {
+        $course = Course::where('code', $code)->first();
+        if (!$course) {
+            throw new BusinessValidationException("Course with code '{$code}' not found.");
+        }
+        return $course;
+    }
+
+    private function findTermByCode(string $code): Term
+    {
+        $term = Term::where('code', $code)->first();
+        if (!$term) {
+            throw new BusinessValidationException("Term with code '{$code}' not found.");
+        }
+        return $term;
+    }
+
+    private function findProgramByCode(?string $code): ?Program
+    {
+        if (empty($code)) {
+            return null;
+        }
+        $program = Program::where('code', $code)->first();
+        if (!$program) {
+            throw new BusinessValidationException("Program with code '{$code}' not found.");
+        }
+        return $program;
+    }
+
+    private function findLevelByName(?string $name): ?Level
+    {
+        if (empty($name)) {
+            return null;
+        }
+        $level = Level::where('name', $name)->first();
+        if (!$level) {
+            throw new BusinessValidationException("Level with name '{$name}' not found.");
+        }
+        return $level;
+    }
+
+    private function findScheduleByCode(?string $code): ?Schedule
+    {
+        if (empty($code)) {
+            return null;
+        }
+        $schedule = Schedule::where('code', $code)->first();
+        if (!$schedule) {
+            throw new BusinessValidationException("Schedule with code '{$code}' not found.");
+        }
+        return $schedule;
+    }
+
+    private function findUniversalAvailableCourse($course, $term): ?AvailableCourse
+    {
+        return AvailableCourse::where('course_id', $course->id)
+            ->where('term_id', $term->id)
+            ->where('mode', 'universal')
+            ->first();
+    }
+
+    private function findIndividualAvailableCourse($course, $term, $program, $level): ?AvailableCourse
+    {
+        if (!$program || !$level) {
+            return AvailableCourse::where('course_id', $course->id)
+                ->where('term_id', $term->id)
+                ->where('mode', 'individual')
+                ->first();
+        }
+
+        $withPair = AvailableCourse::where('course_id', $course->id)
+            ->where('term_id', $term->id)
+            ->where('mode', 'individual')
+            ->whereHas('eligibilities', function ($q) use ($program, $level) {
+                $q->where('program_id', $program->id)
+                  ->where('level_id', $level->id);
+            })
+            ->first();
+
+        if ($withPair) {
+            return $withPair;
+        }
+
+        return AvailableCourse::where('course_id', $course->id)
+            ->where('term_id', $term->id)
+            ->where('mode', 'individual')
+            ->first();
+    }
+
+    private function ensureEligibilityExists(AvailableCourse $availableCourse, $program, $level): void
+    {
+        $exists = $availableCourse->eligibilities()
+            ->where('program_id', $program->id)
+            ->where('level_id', $level->id)
+            ->exists();
+
+        if (!$exists) {
+            $availableCourse->eligibilities()->create([
+                'program_id' => $program->id,
+                'level_id' => $level->id,
+            ]);
+        }
+    }
+
+    private function createOrUpdateCourseSchedule($availableCourse, array $mappedData, array $data = []): AvailableCourseSchedule
+    {
+        $activityType = $mappedData['activity_type'];
+        $group = $mappedData['group'];
+        $location = $mappedData['location'];
+        $minCapacity = $mappedData['min_capacity'];
+        $maxCapacity = $mappedData['max_capacity'];
+
+        $scheduleKeys = [
+            'available_course_id' => $availableCourse->id,
+            'group' => $group,
+            'activity_type' => $activityType,
+            'location' => $location ?? null,
+        ];
+
+        $scheduleValues = [
+            'min_capacity' => $minCapacity,
+            'max_capacity' => $maxCapacity,
+        ];
+
+        $availableCourseSchedule = AvailableCourseSchedule::updateOrCreate($scheduleKeys, $scheduleValues);
+
+        $this->handleScheduleSlotAssignment($availableCourseSchedule, $availableCourse, $mappedData, $data);
+
+        return $availableCourseSchedule;
+    }
+
+    private function handleScheduleSlotAssignment(
+        AvailableCourseSchedule $courseSchedule,
+        $availableCourse,
+        array $mappedData,
+        array $data = []
+    ): void {
+        $scheduleId = $data['schedule_id'] ?? null;
+        $day = $mappedData['day'] ?? null;
+        $slot = $mappedData['slot'] ?? null;
+
+        if (empty($scheduleId) || empty($day) || empty($slot)) {
+            return;
+        }
+
+        $schedule = Schedule::find($scheduleId);
+        if (!$schedule) {
+            return;
+        }
+
+        $scheduleSlot = $this->findScheduleSlot($schedule, $day, $slot);
+        if (!$scheduleSlot) {
+            return;
+        }
+
+        $this->createOrUpdateScheduleAssignment($courseSchedule, $availableCourse, $scheduleSlot);
+    }
+
+    private function findScheduleSlot(Schedule $schedule, string $day, $slot): ?ScheduleSlot
+    {
+        return ScheduleSlot::where('schedule_id', $schedule->id)
+            ->where('day_of_week', $day)
+            ->where('slot_order', $slot)
+            ->first();
+    }
+
+    private function createOrUpdateScheduleAssignment(
+        AvailableCourseSchedule $courseSchedule,
+        $availableCourse,
+        ScheduleSlot $scheduleSlot
+    ): ScheduleAssignment {
+        $assignmentKeys = [
+            'schedule_slot_id' => $scheduleSlot->id,
+            'available_course_schedule_id' => $courseSchedule->id,
+        ];
+
+        $assignmentValues = [
+            'type' => 'available_course',
+            'title' => $availableCourse->course->name ?? 'Course Activity',
+            'description' => $availableCourse->course->description ?? null,
+            'enrolled' => 0,
+            'resources' => null,
+            'status' => 'scheduled',
+            'notes' => null,
+        ];
+
+        return ScheduleAssignment::updateOrCreate($assignmentKeys, $assignmentValues);
     }
 }

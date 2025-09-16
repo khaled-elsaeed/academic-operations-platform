@@ -541,7 +541,14 @@ const EligibilityTableManager = {
     });
     levelSelect += `</select>`;
 
-    let groupInput = `<input type='number' min='1' class='form-control group-input' name='eligibility[${index}][group]' value='${selectedGroup || 1}' style='width:70px;'>`;
+    // Group is now a multi-select so multiple group numbers can be assigned
+    let groupInput = `<select multiple class='form-select group-select' name='eligibility[${index}][group_ids][]' style='width:120px;'>`;
+    const maxGroups = 8;
+    for (let g = 1; g <= maxGroups; g++) {
+      const selected = (Array.isArray(selectedGroup) && selectedGroup.includes(String(g))) || String(selectedGroup) === String(g) ? 'selected' : '';
+      groupInput += `<option value='${g}' ${selected}>Group ${g}</option>`;
+    }
+    groupInput += `</select>`;
 
     return `
       <tr>
@@ -576,9 +583,13 @@ const EligibilityTableManager = {
     const newRow = this.renderRow(currentRows, selectedProgram, selectedLevel, selectedGroup);
     $('#eligibilityTable tbody').append(newRow);
     this.updateRowNumbers();
-    // Initialize Select2 for the new row
+    // Initialize Select2 for the new row (including group multi-select)
     const $newRow = $('#eligibilityTable tbody tr:last');
     DropdownManager.initEligibilitySelect2($newRow);
+    // init group select as multi-select
+    $newRow.find('.group-select').each(function() {
+      Utils.initSelect2($(this), { placeholder: 'Select Group', closeOnSelect: false });
+    });
   },
 
   removeRow($button) {
@@ -624,7 +635,7 @@ const ScheduleDetailsCardManager = {
     $card.find('.activity-type-select').attr('name', `schedule_details[${index}][activity_type]`).attr('data-index', index);
     $card.find('.schedule-day-select').attr('name', `schedule_details[${index}][schedule_day_id]`).attr('data-index', index);
     $card.find('.schedule-slot-select').attr('name', `schedule_details[${index}][schedule_slot_ids][]`).attr('data-index', index);
-    $card.find('.group-select').attr('name', `schedule_details[${index}][group_number]`).attr('data-index', index);
+  $card.find('.group-select').attr('name', `schedule_details[${index}][group_number]`).attr('data-index', index);
     $card.find('.location-input').attr('name', `schedule_details[${index}][location]`).attr('data-index', index);
     $card.find('.min-capacity-input').attr('name', `schedule_details[${index}][min_capacity]`).attr('data-index', index);
     $card.find('.max-capacity-input').attr('name', `schedule_details[${index}][max_capacity]`).attr('data-index', index);
@@ -900,9 +911,15 @@ const EligibilityModeManager = {
           Utils.showError('Please add at least one eligibility pair.');
           isValid = false;
         } else {
-          data.eligibility = data.eligibility.map(item => ({
-            ...item,
-          }));
+            // Ensure each eligibility row has at least one group selected
+            for (let i = 0; i < data.eligibility.length; i++) {
+              const item = data.eligibility[i];
+              if (!item.group_ids || !Array.isArray(item.group_ids) || item.group_ids.length === 0) {
+                Utils.showError('Please select at least one group for each eligibility row.');
+                return false;
+              }
+            }
+            data.eligibility = data.eligibility.map(item => ({ ...item }));
           data.mode = 'individual';
         }
         break;
@@ -1009,9 +1026,10 @@ const FormManager = {
       $('#eligibilityTable tbody tr').each(function() {
         const program_id = $(this).find('.program-select').val();
         const level_id = $(this).find('.level-select').val();
-        const group = $(this).find('.group-input').val(); 
+        // group-select is now a multi-select returning an array of group ids
+        const group_ids = $(this).find('.group-select').val() || [];
         if (program_id && level_id) {
-          data.eligibility.push({ program_id, level_id, group });
+          data.eligibility.push({ program_id, level_id, group_ids });
         }
       });
     }

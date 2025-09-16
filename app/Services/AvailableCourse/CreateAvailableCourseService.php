@@ -85,8 +85,11 @@ class CreateAvailableCourseService
                     throw new BusinessValidationException('Eligibility array is required for individual eligibility mode.');
                 }
                 foreach ($data['eligibility'] as $pair) {
-                    if (empty($pair['program_id']) || empty($pair['level_id']) || !isset($pair['group'])) {
-                        throw new BusinessValidationException('Each eligibility pair must have program_id, level_id, and a numeric group.');
+                    if (empty($pair['program_id']) || empty($pair['level_id']) || !isset($pair['group_ids'])) {
+                        throw new BusinessValidationException('Each eligibility pair must have program_id, level_id, and at least one group.');
+                    }
+                    if (!is_array($pair['group_ids']) || count($pair['group_ids']) === 0) {
+                        throw new BusinessValidationException('Each eligibility pair must include at least one group id.');
                     }
                 }
                 break;
@@ -177,14 +180,17 @@ class CreateAvailableCourseService
                 case 'individual':
                 default:
                     foreach ($data['eligibility'] as $pair) {
-                        $conflict = AvailableCourse::where('course_id', $courseId)
-                            ->where('term_id', $termId)
-                            ->whereHas('eligibilities', function ($q) use ($pair) {
-                                $q->where('program_id', $pair['program_id'])
-                                  ->where('level_id', $pair['level_id'])
-                                  ->where('group', $pair['group']);
-                            })->exists();
-                        if ($conflict) break;
+                        $groupIds = is_array($pair['group_ids']) ? $pair['group_ids'] : (isset($pair['group']) ? [$pair['group']] : []);
+                        foreach ($groupIds as $g) {
+                            $conflict = AvailableCourse::where('course_id', $courseId)
+                                ->where('term_id', $termId)
+                                ->whereHas('eligibilities', function ($q) use ($pair, $g) {
+                                    $q->where('program_id', $pair['program_id'])
+                                      ->where('level_id', $pair['level_id'])
+                                      ->where('group', (int) $g);
+                                })->exists();
+                            if ($conflict) break 2;
+                        }
                     }
                     break;
             }
@@ -300,21 +306,24 @@ class CreateAvailableCourseService
                 break;
             case 'individual':
             default:
-                $pairs = collect($data['eligibility'])
-                    ->filter(function ($pair) {
-                        return isset($pair['program_id']) && isset($pair['level_id']) && isset($pair['group']);
-                    })
-                    ->map(function ($pair) {
-                        return [
-                            'program_id' => $pair['program_id'],
-                            'level_id' => $pair['level_id'],
-                            'group' => (int) $pair['group'],
-                        ];
-                    })
-                    ->values()
-                    ->toArray();
-                if (!empty($pairs)) {
-                    $availableCourse->setProgramLevelPairs($pairs);
+                // Expand group_ids into individual pairs
+                $expanded = [];
+                foreach ($data['eligibility'] as $pair) {
+                    $programId = $pair['program_id'] ?? null;
+                    $levelId = $pair['level_id'] ?? null;
+                    $groupIds = is_array($pair['group_ids']) ? $pair['group_ids'] : (isset($pair['group']) ? [$pair['group']] : []);
+                    foreach ($groupIds as $g) {
+                        if ($programId && $levelId && $g) {
+                            $expanded[] = [
+                                'program_id' => $programId,
+                                'level_id' => $levelId,
+                                'group' => (int) $g,
+                            ];
+                        }
+                    }
+                }
+                if (!empty($expanded)) {
+                    $availableCourse->setProgramLevelPairs($expanded);
                 }
                 break;
         }

@@ -36,7 +36,9 @@ class StoreAvailableCourseRequest extends FormRequest
                 $rules['eligibility'] = 'required|array|min:1';
                 $rules['eligibility.*.program_id'] = 'required|exists:programs,id';
                 $rules['eligibility.*.level_id'] = 'required|exists:levels,id';
-                $rules['eligibility.*.group'] = 'required|string|max:255';
+                // group_ids is a multi-select array of group numbers
+                $rules['eligibility.*.group_ids'] = 'required|array|min:1';
+                $rules['eligibility.*.group_ids.*'] = 'required|integer|min:1';
                 $rules['level_id'] = 'prohibited';
                 $rules['program_id'] = 'prohibited';
                 break;
@@ -119,9 +121,9 @@ class StoreAvailableCourseRequest extends FormRequest
             'eligibility.min' => 'Please add at least one eligibility pair (program and level).',
             'eligibility.*.program_id.required' => 'Please select a program for each eligibility row.',
             'eligibility.*.program_id.exists' => 'The selected program does not exist.',
-            'eligibility.*.group.required' => 'Please select a group for each eligibility row.',
-            'eligibility.*.group.string' => 'The group must be a string.',
-            'eligibility.*.group.max' => 'The group may not be greater than 255 characters.',
+            'eligibility.*.group_ids.required' => 'Please select at least one group for each eligibility row.',
+            'eligibility.*.group_ids.array' => 'Group selection must be an array.',
+            'eligibility.*.group_ids.*.integer' => 'Each selected group must be a valid number.',
             'eligibility.*.level_id.required' => 'Please select a level for each eligibility row.',
             'eligibility.*.level_id.exists' => 'The selected level does not exist.',
             

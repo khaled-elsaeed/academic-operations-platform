@@ -89,10 +89,26 @@ class AvailableCourseService
      */
     public function deleteAvailableCourse(int $id): void
     {
-        $availableCourse = AvailableCourse::find($id);
+        $availableCourse = AvailableCourse::with('schedules')->find($id);
         if (!$availableCourse) {
             throw new BusinessValidationException('Available course not found.');
         }
+
+        // Prevent deleting available course if there are enrollments
+        // Check direct enrollments linked by course+term
+        $directEnrollmentsCount = $availableCourse->enrollments()->count();
+
+        // Check enrollments attached to any of its schedules
+        $scheduleIds = $availableCourse->schedules->pluck('id')->toArray();
+        $scheduleEnrollmentsCount = 0;
+        if (!empty($scheduleIds)) {
+            $scheduleEnrollmentsCount = \App\Models\EnrollmentSchedule::whereIn('available_course_schedule_id', $scheduleIds)->count();
+        }
+
+        if ($directEnrollmentsCount > 0 || $scheduleEnrollmentsCount > 0) {
+            throw new BusinessValidationException('Cannot delete available course with existing enrollments.');
+        }
+
         $availableCourse->delete();
     }
 

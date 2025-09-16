@@ -217,9 +217,9 @@
       
       <!-- Group Number -->
       <div class="col-md-4">
-        <label class="form-label fw-semibold">Group Number</label>
-        <select class="form-select group-select">
-          <option value="">Select Group</option>
+        <label class="form-label fw-semibold">Groups</label>
+        <select multiple class="form-select group-select" style="min-height:120px;">
+          <option value="">Select Groups</option>
           <option value="1">Group 1</option>
           <option value="2">Group 2</option>
           <option value="3">Group 3</option>
@@ -512,7 +512,7 @@ const DropdownManager = {
     });
     
     $container.find('.group-select').each(function() {
-      Utils.initSelect2($(this), { placeholder: 'Select Group' });
+      Utils.initSelect2($(this), { placeholder: 'Select Groups', closeOnSelect: false });
     });
   }
 };
@@ -635,7 +635,8 @@ const ScheduleDetailsCardManager = {
     $card.find('.activity-type-select').attr('name', `schedule_details[${index}][activity_type]`).attr('data-index', index);
     $card.find('.schedule-day-select').attr('name', `schedule_details[${index}][schedule_day_id]`).attr('data-index', index);
     $card.find('.schedule-slot-select').attr('name', `schedule_details[${index}][schedule_slot_ids][]`).attr('data-index', index);
-  $card.find('.group-select').attr('name', `schedule_details[${index}][group_number]`).attr('data-index', index);
+    // Groups is now a multi-select; store as group_numbers[]
+    $card.find('.group-select').attr('name', `schedule_details[${index}][group_numbers][]`).attr('data-index', index);
     $card.find('.location-input').attr('name', `schedule_details[${index}][location]`).attr('data-index', index);
     $card.find('.min-capacity-input').attr('name', `schedule_details[${index}][min_capacity]`).attr('data-index', index);
     $card.find('.max-capacity-input').attr('name', `schedule_details[${index}][max_capacity]`).attr('data-index', index);
@@ -654,8 +655,9 @@ const ScheduleDetailsCardManager = {
     if (selected.activity_type) {
       $card.find('.activity-type-select').val(selected.activity_type);
     }
-    if (selected.group_number) {
-      $card.find('.group-select').val(selected.group_number);
+    if (selected.group_numbers) {
+      // Expecting an array of values
+      $card.find('.group-select').val(selected.group_numbers);
     }
     if (selected.location) {
       $card.find('.location-input').val(selected.location);
@@ -1040,18 +1042,19 @@ const FormManager = {
       const activity_type = $(this).find('.activity-type-select').val();
       const schedule_day_id = $(this).find('.schedule-day-select').val();
       const schedule_slot_ids = $(this).find('.schedule-slot-select').val() || [];
-      const group_number = $(this).find('.group-select').val();
+      // group_numbers is a multi-select returning an array
+      const group_numbers = $(this).find('.group-select').val() || [];
       const min_capacity = $(this).find('.min-capacity-input').val();
       const max_capacity = $(this).find('.max-capacity-input').val();
       const location = $(this).find('.location-input').val();
       
-      if (schedule_id && schedule_day_id !== "" && schedule_slot_ids.length > 0 && group_number) {
+      if (schedule_id && schedule_day_id !== "" && schedule_slot_ids.length > 0 && group_numbers.length > 0) {
         data.schedule_details.push({
           schedule_id,
           activity_type,
           schedule_day_id,
           schedule_slot_ids,
-          group_number,
+          group_numbers,
           min_capacity,
           max_capacity,
           location
@@ -1108,8 +1111,8 @@ const FormManager = {
         Utils.showError(`Please select at least one slot in Schedule Detail ${scheduleNum}.`);
         return false;
       }
-      if (!detail.group_number) {
-        Utils.showError(`Please select a group in Schedule Detail ${scheduleNum}.`);
+      if (!detail.group_numbers || !Array.isArray(detail.group_numbers) || detail.group_numbers.length === 0) {
+        Utils.showError(`Please select at least one group in Schedule Detail ${scheduleNum}.`);
         return false;
       }
 

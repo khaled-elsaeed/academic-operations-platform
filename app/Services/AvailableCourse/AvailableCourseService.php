@@ -569,14 +569,15 @@ class AvailableCourseService
      */
     public function deleteCourseDetail(int $detailId): void
     {
-        $detail = AvailableCourseSchedule::findOrFail($detailId);
+        $detail = AvailableCourseSchedule::withCount('enrollments')->findOrFail($detailId);
         
-        if($detail->enrollments->count() > 0){
+        if($detail->enrollments_count > 0){
             throw new BusinessValidationException('Cannot delete course detail with enrollments.');
         }
 
         $detail->delete();
     }
+
 
     /**
      * Check if a course detail already exists.

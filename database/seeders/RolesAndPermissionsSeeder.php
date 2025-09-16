@@ -114,6 +114,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'student.download',
             'enrollment.view',
             'enrollment.create',
+            'enrollment.export',
             'home.view',
             'home.advisor',
             // Account Settings Permissions for advisor

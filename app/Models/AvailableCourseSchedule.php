@@ -52,4 +52,12 @@ class AvailableCourseSchedule extends Model
         return $this->hasMany(ScheduleAssignment::class, 'available_course_schedule_id');
     }
 
+    /**
+     * Get all enrollment schedules attached to this available course schedule.
+     */
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(EnrollmentSchedule::class, 'available_course_schedule_id');
+    }
+
 }

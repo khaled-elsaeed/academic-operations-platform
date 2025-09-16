@@ -167,41 +167,54 @@ class UpdateAvailableCourseService
 
         if (isset($data['schedule_details']) && is_array($data['schedule_details'])) {
             foreach ($data['schedule_details'] as $detail) {
-                $courseDetail = AvailableCourseSchedule::create(
-                    [
+                // Support either singular 'group_number' or plural 'group_numbers' array
+                $groupNumbers = [];
+                if (!empty($detail['group_numbers']) && is_array($detail['group_numbers'])) {
+                    $groupNumbers = $detail['group_numbers'];
+                } elseif (!empty($detail['group_number'])) {
+                    $groupNumbers = [$detail['group_number']];
+                } else {
+                    $groupNumbers = [null];
+                }
+
+                $slotIds = $detail['schedule_slot_ids'] ?? [];
+
+                foreach ($groupNumbers as $groupNumber) {
+                    $courseDetail = AvailableCourseSchedule::create([
                         'available_course_id' => $availableCourse->id,
                         'activity_type' => $detail['activity_type'],
                         'location' => $detail['location'] ?? null,
-                        'group' => $detail['group_number'],
+                        'group' => $groupNumber !== null ? (int) $groupNumber : null,
                         'min_capacity' => $detail['min_capacity'] ?? 1,
                         'max_capacity' => $detail['max_capacity'] ?? 30,
-                ]);
-                $slotIds = $detail['schedule_slot_ids'] ?? [];
-                foreach ($slotIds as $index => $slotId) {
-                    $slot = ScheduleSlot::find($slotId);
-                    $slotOrder = $slot ? $slot->slot_order : ($index + 1);
-                    $slotInfo = count($slotIds) > 1 ? "Slots {$slotOrder}" : "Slot {$slotOrder}";
-                    if (count($slotIds) > 1 && $index === 0) {
-                        $firstSlot = ScheduleSlot::find($slotIds[0]);
-                        $lastSlot = ScheduleSlot::find(end($slotIds));
-                        if ($firstSlot && $lastSlot) {
-                            $slotInfo = "Slots {$firstSlot->slot_order}-{$lastSlot->slot_order}";
-                        }
-                    }
-                    $generatedTitle = $detail['title'] ?? "{$detail['activity_type']} - Group {$detail['group_number']} - {$slotInfo}";
-                    $generatedDescription = $detail['description'] ?? "Scheduled {$detail['activity_type']} for Group {$detail['group_number']} during {$slotInfo} at {$detail['location']}.";
-                    ScheduleAssignment::updateOrCreate([
-                        'schedule_slot_id' => $slotId,
-                        'type' => 'available_course',
-                        'available_course_schedule_id' => $courseDetail->id,
-                    ], [
-                        'title' => $generatedTitle,
-                        'description' => $generatedDescription,
-                        'enrolled' => $detail['enrolled'] ?? 0,
-                        'resources' => $detail['resources'] ?? null,
-                        'status' => 'scheduled',
-                        'notes' => $detail['notes'] ?? null,
                     ]);
+
+                    foreach ($slotIds as $index => $slotId) {
+                        $slot = ScheduleSlot::find($slotId);
+                        $slotOrder = $slot ? $slot->slot_order : ($index + 1);
+                        $slotInfo = count($slotIds) > 1 ? "Slots {$slotOrder}" : "Slot {$slotOrder}";
+                        if (count($slotIds) > 1 && $index === 0) {
+                            $firstSlot = ScheduleSlot::find($slotIds[0]);
+                            $lastSlot = ScheduleSlot::find(end($slotIds));
+                            if ($firstSlot && $lastSlot) {
+                                $slotInfo = "Slots {$firstSlot->slot_order}-{$lastSlot->slot_order}";
+                            }
+                        }
+                        $generatedTitle = $detail['title'] ?? "{$detail['activity_type']} - Group {$groupNumber} - {$slotInfo}";
+                        $generatedDescription = $detail['description'] ?? "Scheduled {$detail['activity_type']} for Group {$groupNumber} during {$slotInfo} at {$detail['location']}.";
+                        ScheduleAssignment::updateOrCreate([
+                            'schedule_slot_id' => $slotId,
+                            'type' => 'available_course',
+                            'available_course_schedule_id' => $courseDetail->id,
+                        ], [
+                            'title' => $generatedTitle,
+                            'description' => $generatedDescription,
+                            'enrolled' => $detail['enrolled'] ?? 0,
+                            'resources' => $detail['resources'] ?? null,
+                            'status' => 'scheduled',
+                            'notes' => $detail['notes'] ?? null,
+                        ]);
+                    }
                 }
             }
         }

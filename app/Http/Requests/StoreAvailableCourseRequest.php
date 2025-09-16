@@ -29,7 +29,7 @@ class StoreAvailableCourseRequest extends FormRequest
             'schedule_details.*.group_numbers'        => 'required|array|min:1',
             'schedule_details.*.group_numbers.*'      => 'required|integer|min:1',
             'schedule_details.*.min_capacity'        => 'required|integer|min:1',
-            'schedule_details.*.max_capacity'        => 'required|integer|gte:schedule_details.*.min_capacity',
+            'schedule_details.*.max_capacity'        => 'required|integer',
             'schedule_details.*.location'            => 'required|string|max:255',
         ];
 
@@ -101,6 +101,20 @@ class StoreAvailableCourseRequest extends FormRequest
                         );
                         break;
                     }
+                }
+            }
+
+            // Validate min/max capacity per schedule row
+            if (isset($detail['min_capacity']) && isset($detail['max_capacity'])) {
+                $min = $detail['min_capacity'];
+                $max = $detail['max_capacity'];
+
+                // cast to int so string numbers are compared numerically
+                if ((int) $max < (int) $min) {
+                    $validator->errors()->add(
+                        "schedule_details.{$index}.max_capacity",
+                        "Maximum capacity must be greater than or equal to minimum capacity for schedule detail " . ($index + 1) . "."
+                    );
                 }
             }
         }

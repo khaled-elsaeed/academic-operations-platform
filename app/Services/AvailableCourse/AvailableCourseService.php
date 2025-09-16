@@ -126,7 +126,12 @@ class AvailableCourseService
      * @return array
      * @throws BusinessValidationException
      */
-    public function getSchedules(int $availableCourseId, ?string $group = null): array
+    /**
+     * @param int $availableCourseId
+     * @param string|array|null $group Accept a single group, comma-separated string, or array of groups
+     * @return array
+     */
+    public function getSchedules(int $availableCourseId, $group = null): array
     {
         $availableCourse = AvailableCourse::with('schedules.scheduleAssignments.scheduleSlot')->find($availableCourseId);
 
@@ -134,10 +139,32 @@ class AvailableCourseService
             throw new BusinessValidationException('Available course not found.');
         }
 
-        // Filter schedules by group number if provided; otherwise include all groups
-        $filteredSchedules = ($group !== null && $group !== '')
-            ? $availableCourse->schedules->where('group', $group)
-            : $availableCourse->schedules;
+        // Normalize group input: support array, comma-separated string, or single value
+        $groups = null;
+        if (is_array($group)) {
+            $groups = array_values(array_filter($group, function($g) { return $g !== null && $g !== ''; }));
+        } elseif (is_string($group) && $group !== '') {
+            // allow comma separated or JSON array string
+            if (str_contains($group, ',')) {
+                $groups = array_map('trim', explode(',', $group));
+            } else {
+                // try to decode JSON array
+                $decoded = json_decode($group, true);
+                if (is_array($decoded)) {
+                    $groups = $decoded;
+                } else {
+                    $groups = [$group];
+                }
+            }
+        }
+
+        if ($groups !== null && count($groups) > 0) {
+            $filteredSchedules = $availableCourse->schedules->filter(function($s) use ($groups) {
+                return in_array((string)$s->group, array_map('strval', $groups), true);
+            });
+        } else {
+            $filteredSchedules = $availableCourse->schedules;
+        }
 
         // Group filtered schedules by activity_type
         $grouped = $filteredSchedules->groupBy('activity_type')->map(function ($schedules, $activityType) {

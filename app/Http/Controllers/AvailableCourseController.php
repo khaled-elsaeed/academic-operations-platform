@@ -235,15 +235,18 @@ class AvailableCourseController extends Controller
             ->with(['course', 'eligibilities'])
             ->get();
         $courses = $availableCourses->map(function ($availableCourse) use ($programId, $levelId) {
-            // Find the eligibility group for this student's program and level
-            $eligibility = $availableCourse->eligibilities->first(function ($elig) use ($programId, $levelId) {
+            // Find all eligibility groups for this student's program and level (may be multiple)
+            $eligibilitiesForStudent = $availableCourse->eligibilities->filter(function ($elig) use ($programId, $levelId) {
                 return $elig->program_id == $programId && $elig->level_id == $levelId;
-            });
+            })->values();
+
+            $groups = $eligibilitiesForStudent->pluck('group')->unique()->values()->all();
+
             return [
                 'id'                 => $availableCourse->course->id,
                 'name'               => $availableCourse->course->name,
                 'code'               => $availableCourse->course->code,
-                'group'              => $eligibility ? $eligibility->group : null,
+                'groups'             => $groups,
                 'credit_hours'       => $availableCourse->course->credit_hours,
                 'available_course_id'=> $availableCourse->id,
                 'remaining_capacity' => $availableCourse->remaining_capacity,

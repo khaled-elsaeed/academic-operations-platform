@@ -708,7 +708,6 @@ public function getSchedules(int $studentId, int $termId): array
                     'id' => $course->id,
                     'name' => $course->name, // From the enrollment->course relationship
                     'code' => $course->code,
-                    'fghfhg' => "fdaf",
                     'credit_hours' => $course->credit_hours,
                     'available_course_id' => $availableCourse->id,
                     'remaining_capacity' => ($availableCourseSchedule->max_capacity ?? 0) - $enrolledCount,

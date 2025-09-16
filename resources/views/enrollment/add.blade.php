@@ -993,20 +993,24 @@ const ActivitySelectionModule = {
       </div>
     `);
 
-    // Always send group to loadActivities
-    this.loadActivities(courseId, course.group);
+  // Always send groups to loadActivities (may be more than one)
+  // `course.groups` is an array returned by the backend when multiple eligibility groups exist
+  this.loadActivities(courseId, course.groups || []);
     $('#activitySelectionModal').data('course-id', courseId);
     $('#activitySelectionModal').modal('show');
   },
 
-  loadActivities(courseId, group) {
+  loadActivities(courseId, groups) {
     Utils.showLoading('#activitiesList', 'Loading course schedules...');
-    
+
     const url = window.routes.courseSchedules.replace(':id', courseId);
+    // If groups is an array, jQuery will serialize it as group[]=a&group[]=b which Laravel will interpret as array
+    const dataPayload = Array.isArray(groups) ? { group: groups } : { group: groups };
+
     $.ajax({
       url: url,
       method: 'GET',
-      data: { group: group },
+      data: dataPayload,
       success: (res) => {
         const activityTypes = res.data || [];
         $('#activitySelectionModal').data('activityTypes', activityTypes);

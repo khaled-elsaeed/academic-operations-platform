@@ -104,7 +104,7 @@ class CreateAvailableCourseService
                 if (empty($detail['schedule_slot_id']) && (empty($detail['schedule_slot_ids']) || !is_array($detail['schedule_slot_ids']))) {
                     throw new BusinessValidationException("Schedule slot ID(s) are required for schedule detail at index {$index}.");
                 }
-                if (empty($detail['group_number'])) {
+                if (empty($detail['group_numbers'])) {
                     throw new BusinessValidationException("Group number is required for schedule detail at index {$index}.");
                 }
                 if (empty($detail['activity_type'])) {
@@ -232,15 +232,9 @@ class CreateAvailableCourseService
     {
         if (isset($data['schedule_details']) && is_array($data['schedule_details'])) {
             foreach ($data['schedule_details'] as $detail) {
-                // Support either singular 'group_number' or plural 'group_numbers' array
                 $groupNumbers = [];
                 if (!empty($detail['group_numbers']) && is_array($detail['group_numbers'])) {
                     $groupNumbers = $detail['group_numbers'];
-                } elseif (!empty($detail['group_number'])) {
-                    $groupNumbers = [$detail['group_number']];
-                } else {
-                    // fallback to single null so existing logic still creates a schedule row (will be validated earlier)
-                    $groupNumbers = [null];
                 }
 
                 $slotIds = $detail['schedule_slot_ids'] ?? [];

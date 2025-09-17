@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\View\View;
-use App\Services\EnrollmentService;
+use App\Services\Enrollment\EnrollmentService;
 use App\Services\CreditHoursExceptionService;
 use App\Models\Enrollment;
 use App\Rules\AcademicAdvisorAccessRule;

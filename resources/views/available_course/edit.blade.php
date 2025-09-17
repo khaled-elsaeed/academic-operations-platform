@@ -571,8 +571,7 @@ const ScheduleDetailsCardManager = {
       </div>
     `;
     const groupSelect = `
-      <select class='form-select group-select' name='schedule_details[${index}][group_number]'>
-        <option value=''>Select Group</option>
+      <select class='form-select group-select' name='schedule_details[${index}][group_numbers][]' multiple>
         <option value='1'>Group 1</option>
         <option value='2'>Group 2</option>
         <option value='3'>Group 3</option>
@@ -676,7 +675,8 @@ const ScheduleDetailsCardManager = {
       $newCard.find('.activity-type-select').val(schedule.activity_type);
     }
     if (schedule.group) {
-      $newCard.find('.group-select').val(schedule.group);
+      // In DB the schedule may store single group; normalize to array for multi-select
+      $newCard.find('.group-select').val(Array.isArray(schedule.group) ? schedule.group : [schedule.group]);
     }
     if (schedule.min_capacity) {
       $newCard.find('.min-capacity-input').val(schedule.min_capacity);
@@ -1181,19 +1181,20 @@ const FormManager = {
       const activity_type = $(this).find('.activity-type-select').val();
       const schedule_day_id = $(this).find('.schedule-day-select').val();
       const schedule_slot_ids = $(this).find('.schedule-slot-select').val() || [];
-      const group_number = $(this).find('.group-select').val();
+  // collect group numbers as array (multi-select)
+  const group_number = $(this).find('.group-select').val() || [];
       const min_capacity = $(this).find('.min-capacity-input').val();
       const max_capacity = $(this).find('.max-capacity-input').val();
       const location = $(this).find('.location-input').val();
       const schedule_assignment_id = $(this).find('.schedule-assignment-id-input').val();
 
-      if (schedule_id && schedule_day_id !== "" && schedule_slot_ids.length > 0 && group_number) {
+      if (schedule_id && schedule_day_id !== "" && schedule_slot_ids.length > 0 && group_number.length > 0) {
         data.schedule_details.push({
           schedule_id,
           activity_type,
           schedule_day_id,
           schedule_slot_ids,
-          group_number,
+          group_numbers: group_number,
           min_capacity,
           max_capacity,
           location,
@@ -1261,8 +1262,8 @@ const FormManager = {
           return false;
         }
       }
-      if (!detail.group_number) {
-        Utils.showError(`Please select a group in Schedule Detail ${scheduleNum}.`);
+      if (!detail.group_numbers || !Array.isArray(detail.group_numbers) || detail.group_numbers.length === 0) {
+        Utils.showError(`Please select at least one group in Schedule Detail ${scheduleNum}.`);
         return false;
       }
       

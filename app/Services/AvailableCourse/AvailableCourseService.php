@@ -143,12 +143,10 @@ class AvailableCourseService
  */
 public function getSchedules(int $availableCourseId, $group = null): array
 {
-    $availableCourse = AvailableCourse::with('schedules.scheduleAssignments.scheduleSlot')
+    // Eager-load available course schedules and their assignments -> slots
+    $availableCourse = AvailableCourse::with(['schedules.scheduleAssignments.scheduleSlot'])
         ->find($availableCourseId);
 
-    if (!$availableCourse) {
-        throw new BusinessValidationException('Available course not found.');
-    }
     if (!$availableCourse) {
         throw new BusinessValidationException('Available course not found.');
     }
@@ -216,10 +214,13 @@ private function groupSchedulesByActivity($schedules): array
  */
 private function transformSchedule($schedule): array
 {
-    Log::error('Transforming schedule: ', $schedule->toArray());
-    $slots = $schedule->slots
-        ->map(fn($slot) => $slot)
-        ->filter();
+    // Lightweight info log for debugging
+    Log::info('Transforming schedule', ['schedule' => $schedule->toArray()]);
+
+    // Gather slots from schedule assignments (some schedules use assignments pointing to slots)
+    $slots = $schedule->scheduleAssignments->map(function ($assignment) {
+        return $assignment->scheduleSlot;
+    })->filter();
 
     $sortedSlots = $slots->isNotEmpty() ? $slots->sortBy('start_time')->values() : collect();
     $firstSlot = $sortedSlots->first();
@@ -237,9 +238,9 @@ private function transformSchedule($schedule): array
         'min_capacity' => $schedule->min_capacity,
         'max_capacity' => $schedule->max_capacity,
         'enrolled_count' => $enrolledCount,
-        'day_of_week' => $firstSlot?->day_of_week,
-        'start_time' => formatTime($firstSlot?->start_time),
-        'end_time' => formatTime($lastSlot?->end_time),
+        'day_of_week' => $firstSlot?->day_of_week ?? null,
+        'start_time' => $firstSlot ? formatTime($firstSlot->start_time) : null,
+        'end_time' => $lastSlot ? formatTime($lastSlot->end_time) : null,
     ];
 }
 

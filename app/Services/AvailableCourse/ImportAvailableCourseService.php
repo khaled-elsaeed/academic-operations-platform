@@ -155,12 +155,13 @@ class ImportAvailableCourseService
         $schedule = $this->findScheduleByCode($mappedData['schedule_code']);
 
         // Determine mode and existence
+        $group = $mappedData['group'] ?? 1;
         if (is_null($program) && is_null($level)) {
             $mode = 'universal';
             $existingCourse = $this->findUniversalAvailableCourse($course, $term);
         } else {
             $mode = 'individual';
-            $existingCourse = $this->findIndividualAvailableCourse($course, $term, $program, $level);
+            $existingCourse = $this->findIndividualAvailableCourse($course, $term, $program, $level, $group);
         }
 
         $operation = $existingCourse ? 'update' : 'create';
@@ -175,12 +176,12 @@ class ImportAvailableCourseService
 
             // If individual and both program & level are present, attach eligibility
             if ($mode === 'individual' && $program && $level) {
-                $this->ensureEligibilityExists($availableCourse, $program, $level);
+                $this->ensureEligibilityExists($availableCourse, $program, $level, $group);
             }
         } else {
             $availableCourse = $existingCourse;
             if ($mode === 'individual' && $program && $level) {
-                $this->ensureEligibilityExists($availableCourse, $program, $level);
+                $this->ensureEligibilityExists($availableCourse, $program, $level, $group);
             }
             $availableCourse->refresh();
         }
@@ -362,7 +363,7 @@ class ImportAvailableCourseService
             ->first();
     }
 
-    private function findIndividualAvailableCourse($course, $term, $program, $level): ?AvailableCourse
+    private function findIndividualAvailableCourse($course, $term, $program, $level, ?int $group = null): ?AvailableCourse
     {
         if (!$program || !$level) {
             return AvailableCourse::where('course_id', $course->id)
@@ -374,9 +375,12 @@ class ImportAvailableCourseService
         $withPair = AvailableCourse::where('course_id', $course->id)
             ->where('term_id', $term->id)
             ->where('mode', 'individual')
-            ->whereHas('eligibilities', function ($q) use ($program, $level) {
+            ->whereHas('eligibilities', function ($q) use ($program, $level, $group) {
                 $q->where('program_id', $program->id)
                   ->where('level_id', $level->id);
+                if (!is_null($group)) {
+                    $q->where('group', $group);
+                }
             })
             ->first();
 
@@ -390,17 +394,21 @@ class ImportAvailableCourseService
             ->first();
     }
 
-    private function ensureEligibilityExists(AvailableCourse $availableCourse, $program, $level): void
+    private function ensureEligibilityExists(AvailableCourse $availableCourse, $program, $level, ?int $group = 1): void
     {
+        $group = $group ?? 1;
+
         $exists = $availableCourse->eligibilities()
             ->where('program_id', $program->id)
             ->where('level_id', $level->id)
+            ->where('group', $group)
             ->exists();
 
         if (!$exists) {
             $availableCourse->eligibilities()->create([
                 'program_id' => $program->id,
                 'level_id' => $level->id,
+                'group' => $group,
             ]);
         }
     }

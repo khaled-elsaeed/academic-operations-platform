@@ -16,6 +16,9 @@ use App\Models\Enrollment;
 use App\Models\Student;
 use App\Models\Course;
 use App\Models\Term;
+use App\Models\AvailableCourse;
+use App\Models\AvailableCourseSchedule;
+use App\Models\EnrollmentSchedule;
 
 class ImportEnrollmentService
 {
@@ -113,7 +116,19 @@ class ImportEnrollmentService
 
         $term = $this->findTermByCode($row['term_code'] ?? '');
 
+        $availableCourseSchedules = $this->findAvailableCourseSchedule($row, $student, $course, $term);
+
         $enrollment = $this->createOrUpdateEnrollment($row, $student, $course, $term);
+
+        // Attach all available course schedules to the enrollment (avoid duplicates)
+        foreach ($availableCourseSchedules as $availableCourseSchedule) {
+            EnrollmentSchedule::firstOrCreate([
+                'enrollment_id' => $enrollment->id,
+                'available_course_schedule_id' => $availableCourseSchedule->id,
+            ], [
+                'status' => 'active',
+            ]);
+        }
 
         return $enrollment->wasRecentlyCreated ? 'created' : 'updated';
     }
@@ -186,5 +201,41 @@ class ImportEnrollmentService
         }
 
         return $term;
+    }
+
+    /**
+     * Find available course schedules for a student, course, and term.
+     *
+     * @param array $row
+     * @param Student $student
+     * @param Course $course
+     * @param Term $term
+     * @return Collection
+     * @throws BusinessValidationException
+     */
+    private function findAvailableCourseSchedule(array $row, Student $student, Course $course, Term $term): Collection
+    {
+        // Find the AvailableCourse entry for this course and term
+        $availableCourse = AvailableCourse::where('course_id', $course->id)
+            ->where('term_id', $term->id)
+            ->first();
+
+        if (!$availableCourse) {
+            throw new BusinessValidationException("No available course found for course '{$course->code}' in term '{$term->code}'.");
+        }
+
+        // Query schedules for the available course, optionally filtered by group
+        
+        $schedulesQuery = AvailableCourseSchedule::where('available_course_id', $availableCourse->id)
+        ->where('group', $row['group'] ?? null);
+
+
+        $schedules = $schedulesQuery->get();
+
+        if ($schedules->isEmpty()) {
+            throw new BusinessValidationException("No available schedules found for course '{$course->code}' in term '{$term->code}'" . (isset($row['group']) && $row['group'] !== '' ? " with group '{$row['group']}'." : '.'));
+        }
+
+        return $schedules;
     }
 }

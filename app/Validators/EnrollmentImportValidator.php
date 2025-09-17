@@ -20,6 +20,7 @@ class EnrollmentImportValidator
             'academic_id' => 'required|exists:students,academic_id',
             'course_code'         => 'required|exists:courses,code',
             'term_code'           => 'required|exists:terms,code',
+            'group'               => 'required|integer',
             'grade'               => 'nullable|in:A+,A,A-,B+,B,B-,C+,C,C-,D+,D,F,FL,FD,P,AU,W,I',
         ], [
             'academic_id.required' => 'Academic ID is required.',
@@ -28,6 +29,8 @@ class EnrollmentImportValidator
             'course_code.exists'           => 'Course code does not exist.',
             'term_code.required'           => 'Term code is required.',
             'term_code.exists'             => 'Term code does not exist.',
+            'group.required'               => 'Group is required.',
+            'group.integer'                => 'Group must be an integer.',
             'grade.in'                     => 'Grade must be one of: A+, A, A-, B+, B, B-, C+, C, C-, D+, D, F.',
         ]);
 

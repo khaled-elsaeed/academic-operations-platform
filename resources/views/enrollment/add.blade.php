@@ -993,8 +993,6 @@ const ActivitySelectionModule = {
       </div>
     `);
 
-  // Always send groups to loadActivities (may be more than one)
-  // `course.groups` is an array returned by the backend when multiple eligibility groups exist
   this.loadActivities(courseId, course.groups || []);
     $('#activitySelectionModal').data('course-id', courseId);
     $('#activitySelectionModal').modal('show');
@@ -1004,7 +1002,6 @@ const ActivitySelectionModule = {
     Utils.showLoading('#activitiesList', 'Loading course schedules...');
 
     const url = window.routes.courseSchedules.replace(':id', courseId);
-    // If groups is an array, jQuery will serialize it as group[]=a&group[]=b which Laravel will interpret as array
     const dataPayload = Array.isArray(groups) ? { group: groups } : { group: groups };
 
     $.ajax({
@@ -1753,15 +1750,27 @@ const ScheduleModule = {
     const slotParts = timeSlot.split(/[–-]/).map(t => t.trim());
     if (slotParts.length < 2) return false;
     
-    const slotStart = Utils.parseTime(slotParts[0]);
-    const slotEnd = Utils.parseTime(slotParts[1]);
-    const activityStart = Utils.parseTime(startTime);
-    const activityEnd = Utils.parseTime(endTime);
+    let slotStart = Utils.parseTime(slotParts[0]);
+    let slotEnd = Utils.parseTime(slotParts[1]);
+    let activityStart = Utils.parseTime(startTime);
+    let activityEnd = Utils.parseTime(endTime);
     
     if (slotStart === null || slotEnd === null || activityStart === null || activityEnd === null) {
       return false;
     }
-    
+
+    // Normalize slot end when the end appears earlier than or equal to the start
+    // This handles ranges like "12:20 – 1:10" where the second part is written without AM/PM
+    if (slotEnd <= slotStart) {
+      // assume the slot end is in the afternoon next hour block (add 12 hours)
+      slotEnd += 12 * 60;
+    }
+
+    // If activity end appears earlier than or equal to start (rare), try to normalize similarly
+    if (activityEnd <= activityStart && activityEnd < 12 * 60) {
+      activityEnd += 12 * 60;
+    }
+
     return (activityStart < slotEnd) && (activityEnd > slotStart);
   },
 

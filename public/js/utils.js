@@ -389,38 +389,38 @@ const Utils = {
     return cleanTime;
   },
 
-parseTime(timeStr) {
-    if (!timeStr) return null;
-    
-    timeStr = timeStr.toString().trim();
-    
-    // Handle 12-hour format (10:40 AM, 02:00 PM, 2:00 PM)
-    const time12Match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-    if (time12Match) {
-      let hours = parseInt(time12Match[1]);
-      const minutes = parseInt(time12Match[2]);
-      const ampm = time12Match[3].toUpperCase();
+  parseTime(timeStr) {
+      if (!timeStr) return null;
       
-      if (ampm === 'PM' && hours !== 12) {
-        hours += 12;
-      } else if (ampm === 'AM' && hours === 12) {
-        hours = 0;
+      timeStr = timeStr.toString().trim();
+      
+      // Handle 12-hour format (10:40 AM, 02:00 PM, 2:00 PM)
+      const time12Match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+      if (time12Match) {
+        let hours = parseInt(time12Match[1]);
+        const minutes = parseInt(time12Match[2]);
+        const ampm = time12Match[3].toUpperCase();
+        
+        if (ampm === 'PM' && hours !== 12) {
+          hours += 12;
+        } else if (ampm === 'AM' && hours === 12) {
+          hours = 0;
+        }
+        
+        return hours * 60 + minutes;
       }
       
-      return hours * 60 + minutes;
-    }
-    
-    // Handle 24-hour format as fallback
-    const time24Match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
-    if (time24Match) {
-      const hours = parseInt(time24Match[1]);
-      const minutes = parseInt(time24Match[2]);
-      return hours * 60 + minutes;
-    }
-    
-    console.warn('Could not parse time:', timeStr);
-    return null;
-  },
+      // Handle 24-hour format as fallback
+      const time24Match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+      if (time24Match) {
+        const hours = parseInt(time24Match[1]);
+        const minutes = parseInt(time24Match[2]);
+        return hours * 60 + minutes;
+      }
+      
+      console.warn('Could not parse time:', timeStr);
+      return null;
+    },
 
   formatTimeRange(startTime, endTime) {
     if (!startTime || !endTime) return 'Time TBA';

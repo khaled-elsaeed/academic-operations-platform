@@ -589,7 +589,7 @@ const TimeConflictModule = {
     
     return hasConflict;
   }
-
+  ,
   checkScheduleConflicts(newCourseData, currentCourseId) {
     const conflicts = [];
     

@@ -216,7 +216,7 @@ private function groupSchedulesByActivity($schedules): array
  */
 private function transformSchedule($schedule): array
 {
-    Log::error('Transforming schedule: ' , $schedule);
+    Log::error('Transforming schedule: ', $schedule->toArray());
     $slots = $schedule->slots
         ->map(fn($slot) => $slot)
         ->filter();

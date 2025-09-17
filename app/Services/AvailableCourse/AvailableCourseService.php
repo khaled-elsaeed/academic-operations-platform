@@ -214,10 +214,6 @@ private function groupSchedulesByActivity($schedules): array
  */
 private function transformSchedule($schedule): array
 {
-    // Lightweight info log for debugging
-    Log::info('Transforming schedule', ['schedule' => $schedule->toArray()]);
-
-    // Gather slots from schedule assignments (some schedules use assignments pointing to slots)
     $slots = $schedule->scheduleAssignments->map(function ($assignment) {
         return $assignment->scheduleSlot;
     })->filter();

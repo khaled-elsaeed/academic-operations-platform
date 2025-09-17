@@ -451,16 +451,27 @@ class ImportAvailableCourseService
         $slot = $mappedData['slot'] ?? null;
 
         if (empty($scheduleId) || empty($day) || empty($slot)) {
+            Log::info('Skipping schedule slot assignment due to missing scheduleId, day, or slot.', [
+                'schedule_id' => $scheduleId,
+                'day' => $day,
+                'slot' => $slot,
+            ]);
             return;
         }
 
         $schedule = Schedule::find($scheduleId);
         if (!$schedule) {
+            Log::info('Schedule not found for scheduleId.', ['schedule_id' => $scheduleId]);
             return;
         }
 
         $scheduleSlot = $this->findScheduleSlot($schedule, $day, $slot);
         if (!$scheduleSlot) {
+            Log::info('Schedule slot not found.', [
+                'schedule_id' => $scheduleId,
+                'day' => $day,
+                'slot' => $slot,
+            ]);
             return;
         }
 
@@ -469,10 +480,20 @@ class ImportAvailableCourseService
 
     private function findScheduleSlot(Schedule $schedule, string $day, $slot): ?ScheduleSlot
     {
-        return ScheduleSlot::where('schedule_id', $schedule->id)
+        $scheduleSlot = ScheduleSlot::where('schedule_id', $schedule->id)
             ->where('day_of_week', $day)
             ->where('slot_order', $slot)
             ->first();
+
+        if (!$scheduleSlot) {
+            Log::info('No matching schedule slot found.', [
+                'schedule_id' => $schedule->id,
+                'day_of_week' => $day,
+                'slot_order' => $slot,
+            ]);
+        }
+
+        return $scheduleSlot;
     }
 
     private function createOrUpdateScheduleAssignment(
@@ -494,6 +515,11 @@ class ImportAvailableCourseService
             'status' => 'scheduled',
             'notes' => null,
         ];
+
+        Log::info('Creating or updating schedule assignment.', [
+            'assignment_keys' => $assignmentKeys,
+            'assignment_values' => $assignmentValues,
+        ]);
 
         return ScheduleAssignment::updateOrCreate($assignmentKeys, $assignmentValues);
     }

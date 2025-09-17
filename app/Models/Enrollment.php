@@ -31,12 +31,14 @@ class Enrollment extends Model
      *
      * @return array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'grade' => 'string',
-        ];
-    }
+    /**
+     * Attribute casting for Eloquent
+     *
+     * @var array
+     */
+    protected $casts = [
+        'grade' => 'string',
+    ];
 
     /**
      * Get the student that owns the enrollment.

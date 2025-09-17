@@ -23,8 +23,12 @@ class ScheduleAssignment extends Model
         'notes'
     ];
 
+    /**
+     * Attribute casting for Eloquent
+     *
+     * @var array
+     */
     protected $casts = [
-        'capacity' => 'integer',
         'enrolled' => 'integer',
         'resources' => 'array'
     ];
@@ -32,12 +36,12 @@ class ScheduleAssignment extends Model
     // Relationships
     public function scheduleSlot(): BelongsTo
     {
-        return $this->belongsTo(ScheduleSlot::class);
+        return $this->belongsTo(ScheduleSlot::class, 'schedule_slot_id');
     }
 
     public function availableCourseSchedule(): BelongsTo
     {
-        return $this->belongsTo(AvailableCourseSchedule::class);
+        return $this->belongsTo(AvailableCourseSchedule::class, 'available_course_schedule_id');
     }
 
 

@@ -80,6 +80,9 @@ class AcademicAdvisorAccessController extends Controller
             'level_id' => 'required_without:all_levels|nullable|exists:levels,id',
             'program_id' => 'required_without:all_programs|nullable|exists:programs,id',
             'is_active' => 'required|boolean',
+            'pairs' => 'nullable|array',
+            'pairs.*.level_id' => 'nullable|exists:levels,id',
+            'pairs.*.program_id' => 'nullable|exists:programs,id',
         ]);
 
         try {
@@ -115,9 +118,14 @@ class AcademicAdvisorAccessController extends Controller
     {
         $request->validate([
             'advisor_id' => 'required|exists:users,id',
-            'level_id' => 'required|exists:levels,id',
-            'program_id' => 'required|exists:programs,id',
-            'is_active' => 'boolean'
+            'level_id' => 'nullable|exists:levels,id',
+            'program_id' => 'nullable|exists:programs,id',
+            'is_active' => 'boolean',
+            'pairs' => 'nullable|array',
+            'pairs.*.level_id' => 'nullable|exists:levels,id',
+            'pairs.*.program_id' => 'nullable|exists:programs,id',
+            'all_levels' => 'nullable|boolean',
+            'all_programs' => 'nullable|boolean'
         ]);
 
         try {

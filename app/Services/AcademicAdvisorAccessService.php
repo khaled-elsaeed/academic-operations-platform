@@ -142,19 +142,21 @@ class AcademicAdvisorAccessService
         $advisorId = $data['advisor_id'];
         $isActive = $data['is_active'];
         $created = [];
+        // If pairs provided, iterate over them
+        $pairs = $data['pairs'] ?? null;
 
         if (isset($data['all_programs']) && $data['all_programs']) {
             $programs = Program::pluck('id');
             foreach ($programs as $programId) {
                 $exists = AcademicAdvisorAccess::where([
                     'advisor_id' => $advisorId,
-                    'level_id' => $data['level_id'],
+                    'level_id' => $data['level_id'] ?? null,
                     'program_id' => $programId,
                 ])->exists();
                 if (!$exists) {
                     $created[] = AcademicAdvisorAccess::create([
                         'advisor_id' => $advisorId,
-                        'level_id' => $data['level_id'],
+                        'level_id' => $data['level_id'] ?? null,
                         'program_id' => $programId,
                         'is_active' => $isActive,
                     ]);
@@ -178,20 +180,41 @@ class AcademicAdvisorAccessService
                 }
             }
         } else {
-            $exists = AcademicAdvisorAccess::where([
-                'advisor_id' => $advisorId,
-                'level_id' => $data['level_id'],
-                'program_id' => $data['program_id'],
-            ])->exists();
-            if ($exists) {
-                throw new BusinessValidationException('Access rule already exists for this advisor, level, and program combination.');
+            // If pairs provided, create multiple; otherwise fall back to single values
+            if ($pairs && is_array($pairs) && count($pairs)) {
+                foreach ($pairs as $p) {
+                    $levelId = $p['level_id'] ?? null;
+                    $programId = $p['program_id'] ?? null;
+                    $exists = AcademicAdvisorAccess::where([
+                        'advisor_id' => $advisorId,
+                        'level_id' => $levelId,
+                        'program_id' => $programId,
+                    ])->exists();
+                    if (!$exists) {
+                        $created[] = AcademicAdvisorAccess::create([
+                            'advisor_id' => $advisorId,
+                            'level_id' => $levelId,
+                            'program_id' => $programId,
+                            'is_active' => $isActive,
+                        ]);
+                    }
+                }
+            } else {
+                $exists = AcademicAdvisorAccess::where([
+                    'advisor_id' => $advisorId,
+                    'level_id' => $data['level_id'] ?? null,
+                    'program_id' => $data['program_id'] ?? null,
+                ])->exists();
+                if ($exists) {
+                    throw new BusinessValidationException('Access rule already exists for this advisor, level, and program combination.');
+                }
+                $created[] = AcademicAdvisorAccess::create([
+                    'advisor_id' => $advisorId,
+                    'level_id' => $data['level_id'] ?? null,
+                    'program_id' => $data['program_id'] ?? null,
+                    'is_active' => $isActive,
+                ]);
             }
-            $created[] = AcademicAdvisorAccess::create([
-                'advisor_id' => $advisorId,
-                'level_id' => $data['level_id'],
-                'program_id' => $data['program_id'],
-                'is_active' => $isActive,
-            ]);
         }
 
         return [
@@ -220,14 +243,58 @@ class AcademicAdvisorAccessService
      */
     public function updateAccess(AcademicAdvisorAccess $access, array $data): AcademicAdvisorAccess
     {
-        $access->update([
-            'advisor_id' => $data['advisor_id'],
-            'level_id' => $data['level_id'],
-            'program_id' => $data['program_id'],
-            'is_active' => $data['is_active'] ?? true,
-        ]);
+        // For updates where multiple pairs are provided, we'll remove the current record
+        // and create new records for the advisor based on provided pairs.
+        $advisorId = $data['advisor_id'];
+        $isActive = $data['is_active'] ?? true;
 
-        return $access->load(['advisor', 'level', 'program']);
+        // Remove the single access record passed in (it will be replaced)
+        $access->delete();
+
+        // Recreate based on all_programs / all_levels / pairs or single values
+        $created = [];
+        $pairs = $data['pairs'] ?? null;
+
+        if (isset($data['all_programs']) && $data['all_programs']) {
+            $programs = Program::pluck('id');
+            foreach ($programs as $programId) {
+                $created[] = AcademicAdvisorAccess::create([
+                    'advisor_id' => $advisorId,
+                    'level_id' => $data['level_id'] ?? null,
+                    'program_id' => $programId,
+                    'is_active' => $isActive,
+                ]);
+            }
+        } elseif (isset($data['all_levels']) && $data['all_levels']) {
+            $levels = Level::pluck('id');
+            foreach ($levels as $levelId) {
+                $created[] = AcademicAdvisorAccess::create([
+                    'advisor_id' => $advisorId,
+                    'level_id' => $levelId,
+                    'program_id' => $data['program_id'] ?? null,
+                    'is_active' => $isActive,
+                ]);
+            }
+        } elseif ($pairs && is_array($pairs) && count($pairs)) {
+            foreach ($pairs as $p) {
+                $created[] = AcademicAdvisorAccess::create([
+                    'advisor_id' => $advisorId,
+                    'level_id' => $p['level_id'] ?? null,
+                    'program_id' => $p['program_id'] ?? null,
+                    'is_active' => $isActive,
+                ]);
+            }
+        } else {
+            $created[] = AcademicAdvisorAccess::create([
+                'advisor_id' => $advisorId,
+                'level_id' => $data['level_id'] ?? null,
+                'program_id' => $data['program_id'] ?? null,
+                'is_active' => $isActive,
+            ]);
+        }
+
+        // Return the first created as a representative (caller expects a single access)
+        return collect($created)->first()->load(['advisor', 'level', 'program']);
     }
 
     /**

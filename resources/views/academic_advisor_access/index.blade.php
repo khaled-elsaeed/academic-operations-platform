@@ -99,34 +99,20 @@
                             <option value="">Select Advisor</option>
                         </select>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="card p-2 h-100">
-                            <label for="level_id" class="form-label mb-2">Level <span class="text-danger">*</span></label>
-                            <div class="d-flex align-items-center gap-2">
-                                <select id="level_id" name="level_id" class="form-select flex-grow-1" required>
-                                    <option value="">Select Level</option>
-                                </select>
-                                <div class="form-check ms-2">
-                                    <input type="checkbox" id="all_levels" name="all_levels" class="form-check-input">
-                                    <label for="all_levels" class="form-check-label">All Levels</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="card p-2 h-100">
-                            <label for="program_id" class="form-label mb-2">Program <span class="text-danger">*</span></label>
-                            <div class="d-flex align-items-center gap-2">
-                                <select id="program_id" name="program_id" class="form-select flex-grow-1" required>
-                                    <option value="">Select Program</option>
-                                </select>
-                                <div class="form-check ms-2">
-                                    <input type="checkbox" id="all_programs" name="all_programs" class="form-check-input">
-                                    <label for="all_programs" class="form-check-label">All Programs</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+          <div class="col-12 mb-3">
+            <div class="card p-2">
+              <label class="form-label mb-2">Level & Program Pairs <span class="text-danger">*</span></label>
+              <div id="pairsContainer">
+                <!-- Pair rows will be injected here -->
+              </div>
+              <div class="mt-2">
+                <button type="button" id="addPairBtn" class="btn btn-sm btn-outline-primary">
+                  <i class="bx bx-plus me-1"></i> Add Pair
+                </button>
+              </div>
+              <div class="form-text mt-2">You can add multiple level & program pairs. Use the checkboxes to select "All Levels" or "All Programs" which will override pairs.</div>
+            </div>
+          </div>
                     <div class="col-md-6 mb-3">
                         <label for="is_active" class="form-label">Status</label>
                         <div class="form-check form-switch">
@@ -331,13 +317,19 @@ const DropdownManager = {
   loadLevels(selectedId = null) {
     return ApiService.fetchLevels()
       .done((response) => {
-        const select = $(SELECTORS.levelSelect);
-        select.empty().append('<option value="">Select Level</option>');
-        (response.data || response).forEach((level) => {
-          select.append($('<option>', { value: level.id, text: level.name }));
+        // populate all level selects
+        const rows = $('#pairsContainer').find('select[name^="level_id"]');
+        rows.each(function() {
+          const sel = $(this);
+          const current = sel.val();
+          sel.empty().append('<option value="">Select Level</option>');
+          (response.data || response).forEach((level) => {
+            sel.append($('<option>', { value: level.id, text: level.name }));
+          });
+          if (selectedId) sel.val(selectedId);
+          else sel.val(current);
+          sel.trigger('change');
         });
-        if (selectedId) select.val(selectedId);
-        select.trigger('change');
       })
       .fail(() => {
         Utils.showError('Failed to load levels');
@@ -346,17 +338,63 @@ const DropdownManager = {
   loadPrograms(selectedId = null) {
     return ApiService.fetchPrograms()
       .done((response) => {
-        const select = $(SELECTORS.programSelect);
-        select.empty().append('<option value="">Select Program</option>');
-        (response.data || response).forEach((program) => {
-          select.append($('<option>', { value: program.id, text: program.name }));
+        const rows = $('#pairsContainer').find('select[name^="program_id"]');
+        rows.each(function() {
+          const sel = $(this);
+          const current = sel.val();
+          sel.empty().append('<option value="">Select Program</option>');
+          (response.data || response).forEach((program) => {
+            sel.append($('<option>', { value: program.id, text: program.name }));
+          });
+          if (selectedId) sel.val(selectedId);
+          else sel.val(current);
+          sel.trigger('change');
         });
-        if (selectedId) select.val(selectedId);
-        select.trigger('change');
       })
       .fail(() => {
         Utils.showError('Failed to load programs');
       });
+  }
+};
+
+// Pair row template and manager
+const PairManager = {
+  pairIndex: 0,
+  createRow(levelId = '', programId = '') {
+    const idx = this.pairIndex++;
+    const row = $(
+      `<div class="d-flex gap-2 align-items-center mb-2 pair-row" data-idx="${idx}">
+          <select name="level_id[${idx}]" class="form-select level-select flex-grow-1"><option value="">Loading...</option></select>
+          <select name="program_id[${idx}]" class="form-select program-select flex-grow-1"><option value="">Loading...</option></select>
+          <button type="button" class="btn btn-outline-danger btn-sm remove-pair-btn"><i class="bx bx-trash"></i></button>
+        </div>`
+    );
+    if (levelId) row.find('select[name^="level_id"]').val(levelId);
+    if (programId) row.find('select[name^="program_id"]').val(programId);
+    return row;
+  },
+  addPair(levelId = '', programId = '') {
+    const row = this.createRow(levelId, programId);
+    $('#pairsContainer').append(row);
+    // initialize select2 on the new selects
+    row.find('.level-select, .program-select').select2({ theme: 'bootstrap-5', width: '100%', dropdownParent: $(SELECTORS.accessModal) });
+    // load options
+    DropdownManager.loadLevels();
+    DropdownManager.loadPrograms();
+  },
+  removePair(elem) {
+    $(elem).closest('.pair-row').remove();
+  },
+  collectPairs() {
+    const pairs = [];
+    $('#pairsContainer').find('.pair-row').each(function() {
+      const level = $(this).find('select[name^="level_id"]').val();
+      const program = $(this).find('select[name^="program_id"]').val();
+      if (level || program) {
+        pairs.push({ level_id: level || null, program_id: program || null });
+      }
+    });
+    return pairs;
   }
 };
 
@@ -437,14 +475,19 @@ const AdvisorAccessManager = {
     $(document).on('click', '.edit-access', this.editAccess.bind(this));
     $(document).on('click', '.delete-access', this.deleteAccess.bind(this));
     $(document).on('click', '.view-access', this.viewAccess.bind(this));
+    // pair row handlers
+    $(document).on('click', '#addPairBtn', function() { PairManager.addPair(); });
+    $(document).on('click', '.remove-pair-btn', function() { PairManager.removePair(this); });
   },
 
   openAddAccessModal() {
     currentAccessId = null;
     $(SELECTORS.accessForm)[0].reset();
     DropdownManager.loadAdvisors();
-    DropdownManager.loadLevels();
-    DropdownManager.loadPrograms();
+    // reset pairs container and add one empty pair
+    $('#pairsContainer').empty();
+    PairManager.pairIndex = 0;
+    PairManager.addPair();
     $(SELECTORS.isActiveSwitch).prop('checked', true);
     $(SELECTORS.allLevelsCheckbox).prop('checked', false);
     $(SELECTORS.allProgramsCheckbox).prop('checked', false);
@@ -464,13 +507,20 @@ const AdvisorAccessManager = {
         if (response.success) {
           const access = response.data;
           DropdownManager.loadAdvisors(access.advisor_id);
-          DropdownManager.loadLevels(access.level_id);
-          DropdownManager.loadPrograms(access.program_id);
+          // populate pairs
+          $('#pairsContainer').empty();
+          PairManager.pairIndex = 0;
+          if (access.pairs && access.pairs.length) {
+            access.pairs.forEach(p => PairManager.addPair(p.level_id, p.program_id));
+          } else {
+            // legacy single values
+            PairManager.addPair(access.level_id, access.program_id);
+          }
+          DropdownManager.loadLevels();
+          DropdownManager.loadPrograms();
           $(SELECTORS.isActiveSwitch).prop('checked', access.is_active);
           $(SELECTORS.allLevelsCheckbox).prop('checked', access.all_levels);
           $(SELECTORS.allProgramsCheckbox).prop('checked', access.all_programs);
-          $(SELECTORS.levelSelect).prop('disabled', access.all_levels);
-          $(SELECTORS.programSelect).prop('disabled', access.all_programs);
           $(SELECTORS.accessModal).modal('show');
         }
       })
@@ -481,12 +531,29 @@ const AdvisorAccessManager = {
   saveAccess() {
     $(SELECTORS.accessForm).on('submit', function(e) {
       e.preventDefault();
-      const formData = $(this).serialize();
-      
+
+      // Build a plain object from the form so we can normalize checkbox values
+      const formArray = $(this).serializeArray();
+      const data = {};
+      formArray.forEach(item => {
+        data[item.name] = item.value;
+      });
+
+      // Attach advisor and normalize is_active
+      data.advisor_id = $(SELECTORS.advisorSelect).val();
+      data.is_active = $(SELECTORS.isActiveSwitch).is(':checked') ? 1 : 0;
+
+      // Attach all_levels / all_programs
+      data.all_levels = $(SELECTORS.allLevelsCheckbox).is(':checked') ? 1 : 0;
+      data.all_programs = $(SELECTORS.allProgramsCheckbox).is(':checked') ? 1 : 0;
+
+      // Attach pairs
+      data.pairs = PairManager.collectPairs();
+
       // Close modal before making AJAX request
       $(SELECTORS.accessModal).modal('hide');
-      
-      ApiService.saveAccess(formData, currentAccessId)
+
+      ApiService.saveAccess(data, currentAccessId)
         .done(() => {
           $(SELECTORS.accessTable).DataTable().ajax.reload(null, false);
           Utils.showSuccess('Access rule has been saved successfully.');

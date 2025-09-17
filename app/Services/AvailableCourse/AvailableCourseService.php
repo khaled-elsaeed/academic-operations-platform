@@ -135,93 +135,118 @@ class AvailableCourseService
         ];
     }
 
-    /**
-     * Get all schedules for a given available course grouped by activity type.
-     *
-     * @param int $availableCourseId
-     * @return array
-     * @throws BusinessValidationException
-     */
-    /**
-     * @param int $availableCourseId
-     * @param string|array|null $group Accept a single group, comma-separated string, or array of groups
-     * @return array
-     */
-    public function getSchedules(int $availableCourseId, $group = null): array
-    {
-        $availableCourse = AvailableCourse::with('schedules.scheduleAssignments.scheduleSlot')->find($availableCourseId);
+    
+  /**
+ * @param int $availableCourseId
+ * @param string|array|null $group Accept a single group, comma-separated string, or array of groups
+ * @return array
+ * @throws BusinessValidationException
+ */
+public function getSchedules(int $availableCourseId, $group = null): array
+{
+    $availableCourse = $this->findAvailableCourse($availableCourseId);
 
-        if (!$availableCourse) {
-            throw new BusinessValidationException('Available course not found.');
-        }
+    $groups = $this->normalizeGroups($group);
 
-        // Normalize group input: support array, comma-separated string, or single value
-        $groups = null;
-        if (is_array($group)) {
-            $groups = array_values(array_filter($group, function($g) { return $g !== null && $g !== ''; }));
-        } elseif (is_string($group) && $group !== '') {
-            // allow comma separated or JSON array string
-            if (str_contains($group, ',')) {
-                $groups = array_map('trim', explode(',', $group));
-            } else {
-                // try to decode JSON array
-                $decoded = json_decode($group, true);
-                if (is_array($decoded)) {
-                    $groups = $decoded;
-                } else {
-                    $groups = [$group];
-                }
-            }
-        }
+    $filteredSchedules = $this->filterSchedulesByGroups($availableCourse->schedules, $groups);
 
-        if ($groups !== null && count($groups) > 0) {
-            $filteredSchedules = $availableCourse->schedules->filter(function($s) use ($groups) {
-                return in_array((string)$s->group, array_map('strval', $groups), true);
-            });
-        } else {
-            $filteredSchedules = $availableCourse->schedules;
-        }
+    return $this->groupSchedules($filteredSchedules);
+}
 
-        // Group filtered schedules by activity_type
-        $grouped = $filteredSchedules->groupBy('activity_type')->map(function ($schedules, $activityType) {
-            $activitySchedules = [];
-            foreach ($schedules as $schedule) {
-                // Collect related slots if any (may be empty)
-                $slots = $schedule->scheduleAssignments->map(function ($assignment) {
-                    return $assignment->scheduleSlot;
-                })->filter();
+/**
+ * Fetch course with required relationships or throw exception
+ */
+private function findAvailableCourse(int $id): AvailableCourse
+{
+    $availableCourse = AvailableCourse::with('schedules.scheduleAssignments.scheduleSlot')->find($id);
 
-                // Sort slots if present, otherwise keep nulls
-                $sortedSlots = $slots->isNotEmpty() ? $slots->sortBy('start_time')->values() : collect();
-                $firstSlot = $sortedSlots->first();
-                $lastSlot = $sortedSlots->last();
-
-                $enrolledCount = \App\Models\EnrollmentSchedule::whereHas('availableCourseSchedule', function($query) use ($schedule) {
-                    $query->where('id', $schedule->id);
-                })->count();
-
-                // Always include schedule entry; frontend will display 'TBA' when values are null
-                $activitySchedules[] = [
-                    'id' => $schedule->id,
-                    'activity_type' => $schedule->activity_type,
-                    'group_number' => $schedule->group,
-                    'location' => $schedule->location,
-                    'min_capacity' => $schedule->min_capacity,
-                    'max_capacity' => $schedule->max_capacity,
-                    'enrolled_count' => $enrolledCount,
-                    'day_of_week' => $firstSlot?->day_of_week,
-                    'start_time' => formatTime($firstSlot?->start_time),
-                    'end_time' => formatTime($lastSlot?->end_time),
-                ];
-            }
-            return [
-                'activity_type' => $activityType,
-                'schedules' => $activitySchedules
-            ];
-        })->values()->toArray();
-
-        return $grouped;
+    if (!$availableCourse) {
+        throw new BusinessValidationException('Available course not found.');
     }
+
+    return $availableCourse;
+}
+
+/**
+ * Normalize input groups into a clean array or null
+ */
+private function normalizeGroups($group): ?array
+{
+    if (is_array($group)) {
+        return array_values(array_filter($group, fn($g) => $g !== null && $g !== ''));
+    }
+
+    if (is_string($group) && $group !== '') {
+        if (str_contains($group, ',')) {
+            return array_map('trim', explode(',', $group));
+        }
+
+        $decoded = json_decode($group, true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+
+        return [$group];
+    }
+
+    return null;
+}
+
+/**
+ * Filter schedules by given groups, or return all
+ */
+private function filterSchedulesByGroups($schedules, ?array $groups)
+{
+    if ($groups && count($groups) > 0) {
+        return $schedules->filter(fn($s) =>
+            in_array((string)$s->group, array_map('strval', $groups), true)
+        );
+    }
+
+    return $schedules;
+}
+
+/**
+ * Group schedules by activity type and format response
+ */
+private function groupSchedules($schedules): array
+{
+    return $schedules->groupBy('activity_type')->map(function ($schedules, $activityType) {
+        $activitySchedules = [];
+
+        foreach ($schedules as $schedule) {
+            $slots = $schedule->scheduleAssignments->map(fn($assignment) => $assignment->scheduleSlot)->filter();
+
+            $sortedSlots = $slots->isNotEmpty() ? $slots->sortBy('start_time')->values() : collect();
+            $firstSlot   = $sortedSlots->first();
+            $lastSlot    = $sortedSlots->last();
+
+            $enrolledCount = \App\Models\EnrollmentSchedule::whereHas(
+                'availableCourseSchedule',
+                fn($query) => $query->where('id', $schedule->id)
+            )->count();
+
+            $activitySchedules[] = [
+                'id'             => $schedule->id,
+                'activity_type'  => $schedule->activity_type,
+                'group_number'   => $schedule->group,
+                'location'       => $schedule->location,
+                'min_capacity'   => $schedule->min_capacity,
+                'max_capacity'   => $schedule->max_capacity,
+                'enrolled_count' => $enrolledCount,
+                'day_of_week'    => $firstSlot?->day_of_week,
+                'start_time'     => formatTime($firstSlot?->start_time),
+                'end_time'       => formatTime($lastSlot?->end_time),
+            ];
+        }
+
+        return [
+            'activity_type' => $activityType,
+            'schedules'    => $activitySchedules,
+        ];
+    })->values()->toArray();
+}
+
 
     /**
      * Get eligibilities for a specific available course.
@@ -462,14 +487,15 @@ class AvailableCourseService
                     'activity_type' => $schedule->activity_type,
                     'location' => $schedule->location,
                     'slots' => $schedule->scheduleAssignments->map(function ($assignment) {
+                        $slot = $assignment->scheduleSlot;
                         return [
                             'schedule_assignment_id' => $assignment->id,
-                            'slot_id' => $assignment->scheduleSlot?->id,
-                            'schedule_id' => $assignment->scheduleSlot?->schedule_id,
-                            'day_of_week' => $assignment->scheduleSlot?->day_of_week,
-                            'start_time' => $assignment->scheduleSlot?->start_time,
-                            'end_time' => $assignment->scheduleSlot?->end_time,
-                            'slot_order' => $assignment->scheduleSlot?->slot_order,
+                            'slot_id' => $slot?->id,
+                            'schedule_id' => $slot?->schedule_id,
+                            'day_of_week' => $slot?->day_of_week,
+                            'start_time' => $slot ? formatTime($slot->start_time) : null,
+                            'end_time' => $slot ? formatTime($slot->end_time) : null,
+                            'slot_order' => $slot?->slot_order,
                         ];
                     })->toArray(),
                     'min_capacity' => $schedule->min_capacity ?? 1,

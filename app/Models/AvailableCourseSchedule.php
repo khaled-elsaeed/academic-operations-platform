@@ -12,6 +12,13 @@ class AvailableCourseSchedule extends Model
 {
     use HasFactory;
 
+    /**
+     * Always eager-load assignments and their slots to avoid missing data when accessing schedules.
+     *
+     * @var array
+     */
+    protected $with = ['scheduleAssignments.scheduleSlot'];
+
     protected $fillable = [
         'available_course_id',
         'group',

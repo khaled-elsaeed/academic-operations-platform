@@ -1613,7 +1613,7 @@ const ScheduleModule = {
   generateGrid(selectedActivities) {
     console.log('Generating grid with activities:', selectedActivities);
     
-    const days = ['Time', 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const days = ['Time', 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
     
     // Updated time slots to better match typical university schedules
     const timeSlots = [

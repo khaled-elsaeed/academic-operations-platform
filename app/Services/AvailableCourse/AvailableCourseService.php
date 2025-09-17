@@ -149,6 +149,9 @@ public function getSchedules(int $availableCourseId, $group = null): array
     if (!$availableCourse) {
         throw new BusinessValidationException('Available course not found.');
     }
+    if (!$availableCourse) {
+        throw new BusinessValidationException('Available course not found.');
+    }
 
     // Normalize and filter schedules
     $groups = $this->normalizeGroups($group);
@@ -480,14 +483,15 @@ private function transformSchedule($schedule): array
                     'activity_type' => $schedule->activity_type,
                     'location' => $schedule->location,
                     'slots' => $schedule->scheduleAssignments->map(function ($assignment) {
+                        $slot = $assignment->scheduleSlot;
                         return [
                             'schedule_assignment_id' => $assignment->id,
-                            'slot_id' => $assignment->scheduleSlot?->id,
-                            'schedule_id' => $assignment->scheduleSlot?->schedule_id,
-                            'day_of_week' => $assignment->scheduleSlot?->day_of_week,
-                            'start_time' => $assignment->scheduleSlot?->start_time,
-                            'end_time' => $assignment->scheduleSlot?->end_time,
-                            'slot_order' => $assignment->scheduleSlot?->slot_order,
+                            'slot_id' => $slot?->id,
+                            'schedule_id' => $slot?->schedule_id,
+                            'day_of_week' => $slot?->day_of_week,
+                            'start_time' => $slot ? formatTime($slot->start_time) : null,
+                            'end_time' => $slot ? formatTime($slot->end_time) : null,
+                            'slot_order' => $slot?->slot_order,
                         ];
                     })->toArray(),
                     'min_capacity' => $schedule->min_capacity ?? 1,

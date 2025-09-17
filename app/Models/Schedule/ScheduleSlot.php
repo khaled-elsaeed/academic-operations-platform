@@ -24,17 +24,19 @@ class ScheduleSlot extends Model
     ];
 
 
-    protected function casts(): array
-    {
-        return [
-            'start_time' => 'datetime:H:i:s',
-            'end_time' => 'datetime:H:i:s',
-            'duration_minutes' => 'integer',
-            'specific_date' => 'date',
-            'slot_order' => 'integer',
-            'is_active' => 'boolean'
-        ];
-    }
+    /**
+     * Attribute casting for Eloquent
+     *
+     * @var array
+     */
+    protected $casts = [
+        'start_time' => 'datetime:H:i:s',
+        'end_time' => 'datetime:H:i:s',
+        'duration_minutes' => 'integer',
+        'specific_date' => 'date',
+        'slot_order' => 'integer',
+        'is_active' => 'boolean'
+    ];
 
     // Relationships
     public function schedule(): BelongsTo

@@ -31,19 +31,21 @@ class Schedule extends Model
     ];
 
 
-    protected function casts(): array
-    {
-        return [
-            'start_date' => 'date',
-            'end_date' => 'date',
-            'day_starts_at' => 'datetime:H:i:s',
-            'day_ends_at' => 'datetime:H:i:s',
-            'slot_duration_minutes' => 'integer',
-            'break_duration_minutes' => 'integer',
-            'settings' => 'array',
-            'finalized_at' => 'datetime'
-        ];
-    }
+    /**
+     * Attribute casting for Eloquent
+     *
+     * @var array
+     */
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'day_starts_at' => 'datetime:H:i:s',
+        'day_ends_at' => 'datetime:H:i:s',
+        'slot_duration_minutes' => 'integer',
+        'break_duration_minutes' => 'integer',
+        'settings' => 'array',
+        'finalized_at' => 'datetime'
+    ];
     
     // Relationships
     public function scheduleType(): BelongsTo

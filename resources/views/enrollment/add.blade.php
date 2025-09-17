@@ -1617,17 +1617,14 @@ const ScheduleModule = {
     
     // Updated time slots to better match typical university schedules
     const timeSlots = [
-      '8:00 AM – 8:50 AM',
-      '9:00 AM – 9:50 AM', 
-      '10:00 AM – 10:50 AM',
-      '10:50 AM – 11:40 AM',  // This should catch your 10:40 AM start times
-      '11:40 AM – 12:30 PM',
-      '12:30 PM – 1:20 PM',   // This should catch your 12:20 PM start times
-      '1:20 PM – 2:10 PM',
-      '2:10 PM – 3:00 PM',    // This should catch your 2:00 PM start times
-      '3:00 PM – 3:50 PM',
-      '3:50 PM – 4:40 PM',
-      '4:40 PM – 5:30 PM'
+      '9:00 AM – 9:50 AM',
+      '9:50 AM – 10:40 AM',
+      '10:40 AM – 11:30 AM',
+      '11:30 AM – 12:20 PM',
+      '12:20 PM – 1:10 PM',
+      '1:10 PM – 2:00 PM',
+      '2:00 PM – 2:50 PM',
+      '2:50 PM – 3:40 PM'
     ];
     
     let html = '';

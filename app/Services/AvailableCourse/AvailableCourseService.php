@@ -186,32 +186,33 @@ class AvailableCourseService
         $grouped = $filteredSchedules->groupBy('activity_type')->map(function ($schedules, $activityType) {
             $activitySchedules = [];
             foreach ($schedules as $schedule) {
+                // Collect related slots if any (may be empty)
                 $slots = $schedule->scheduleAssignments->map(function ($assignment) {
                     return $assignment->scheduleSlot;
                 })->filter();
 
-                if ($slots->isNotEmpty()) {
-                    $sortedSlots = $slots->sortBy('start_time')->values();
-                    $firstSlot = $sortedSlots->first();
-                    $lastSlot = $sortedSlots->last();
+                // Sort slots if present, otherwise keep nulls
+                $sortedSlots = $slots->isNotEmpty() ? $slots->sortBy('start_time')->values() : collect();
+                $firstSlot = $sortedSlots->first();
+                $lastSlot = $sortedSlots->last();
 
-                    $enrolledCount = \App\Models\EnrollmentSchedule::whereHas('availableCourseSchedule', function($query) use ($schedule) {
-                        $query->where('id', $schedule->id);
-                    })->count();
+                $enrolledCount = \App\Models\EnrollmentSchedule::whereHas('availableCourseSchedule', function($query) use ($schedule) {
+                    $query->where('id', $schedule->id);
+                })->count();
 
-                    $activitySchedules[] = [
-                        'id' => $schedule->id,
-                        'activity_type' => $schedule->activity_type,
-                        'group_number' => $schedule->group,
-                        'location' => $schedule->location,
-                        'min_capacity' => $schedule->min_capacity,
-                        'max_capacity' => $schedule->max_capacity,
-                        'enrolled_count' => $enrolledCount,
-                        'day_of_week' => $firstSlot?->day_of_week,
-                        'start_time' => formatTime($firstSlot?->start_time),
-                        'end_time' => formatTime($lastSlot?->end_time),
-                    ];
-                }
+                // Always include schedule entry; frontend will display 'TBA' when values are null
+                $activitySchedules[] = [
+                    'id' => $schedule->id,
+                    'activity_type' => $schedule->activity_type,
+                    'group_number' => $schedule->group,
+                    'location' => $schedule->location,
+                    'min_capacity' => $schedule->min_capacity,
+                    'max_capacity' => $schedule->max_capacity,
+                    'enrolled_count' => $enrolledCount,
+                    'day_of_week' => $firstSlot?->day_of_week,
+                    'start_time' => formatTime($firstSlot?->start_time),
+                    'end_time' => formatTime($lastSlot?->end_time),
+                ];
             }
             return [
                 'activity_type' => $activityType,

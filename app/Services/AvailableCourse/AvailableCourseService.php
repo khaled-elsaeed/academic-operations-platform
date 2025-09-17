@@ -136,92 +136,110 @@ class AvailableCourseService
     }
 
     /**
-     * Get all schedules for a given available course grouped by activity type.
-     *
-     * @param int $availableCourseId
-     * @return array
-     * @throws BusinessValidationException
-     */
-    /**
-     * @param int $availableCourseId
-     * @param string|array|null $group Accept a single group, comma-separated string, or array of groups
-     * @return array
-     */
-    public function getSchedules(int $availableCourseId, $group = null): array
-    {
-        $availableCourse = AvailableCourse::with('schedules.scheduleAssignments.scheduleSlot')->find($availableCourseId);
+ * @param int $availableCourseId
+ * @param string|array|null $group Accept a single group, comma-separated string, or array of groups
+ * @return array
+ * @throws BusinessValidationException
+ */
+public function getSchedules(int $availableCourseId, $group = null): array
+{
+    $availableCourse = AvailableCourse::with('schedules.scheduleAssignments.scheduleSlot')
+        ->find($availableCourseId);
 
-        if (!$availableCourse) {
-            throw new BusinessValidationException('Available course not found.');
-        }
-
-        // Normalize group input: support array, comma-separated string, or single value
-        $groups = null;
-        if (is_array($group)) {
-            $groups = array_values(array_filter($group, function($g) { return $g !== null && $g !== ''; }));
-        } elseif (is_string($group) && $group !== '') {
-            // allow comma separated or JSON array string
-            if (str_contains($group, ',')) {
-                $groups = array_map('trim', explode(',', $group));
-            } else {
-                // try to decode JSON array
-                $decoded = json_decode($group, true);
-                if (is_array($decoded)) {
-                    $groups = $decoded;
-                } else {
-                    $groups = [$group];
-                }
-            }
-        }
-
-        if ($groups !== null && count($groups) > 0) {
-            $filteredSchedules = $availableCourse->schedules->filter(function($s) use ($groups) {
-                return in_array((string)$s->group, array_map('strval', $groups), true);
-            });
-        } else {
-            $filteredSchedules = $availableCourse->schedules;
-        }
-
-        // Group filtered schedules by activity_type
-        $grouped = $filteredSchedules->groupBy('activity_type')->map(function ($schedules, $activityType) {
-            $activitySchedules = [];
-            foreach ($schedules as $schedule) {
-                // Collect related slots if any (may be empty)
-                $slots = $schedule->scheduleAssignments->map(function ($assignment) {
-                    return $assignment->scheduleSlot;
-                })->filter();
-
-                // Sort slots if present, otherwise keep nulls
-                $sortedSlots = $slots->isNotEmpty() ? $slots->sortBy('start_time')->values() : collect();
-                $firstSlot = $sortedSlots->first();
-                $lastSlot = $sortedSlots->last();
-
-                $enrolledCount = \App\Models\EnrollmentSchedule::whereHas('availableCourseSchedule', function($query) use ($schedule) {
-                    $query->where('id', $schedule->id);
-                })->count();
-
-                // Always include schedule entry; frontend will display 'TBA' when values are null
-                $activitySchedules[] = [
-                    'id' => $schedule->id,
-                    'activity_type' => $schedule->activity_type,
-                    'group_number' => $schedule->group,
-                    'location' => $schedule->location,
-                    'min_capacity' => $schedule->min_capacity,
-                    'max_capacity' => $schedule->max_capacity,
-                    'enrolled_count' => $enrolledCount,
-                    'day_of_week' => $firstSlot?->day_of_week,
-                    'start_time' => formatTime($firstSlot?->start_time),
-                    'end_time' => formatTime($lastSlot?->end_time),
-                ];
-            }
-            return [
-                'activity_type' => $activityType,
-                'schedules' => $activitySchedules
-            ];
-        })->values()->toArray();
-
-        return $grouped;
+    if (!$availableCourse) {
+        throw new BusinessValidationException('Available course not found.');
     }
+
+    // Normalize and filter schedules
+    $groups = $this->normalizeGroups($group);
+    $filteredSchedules = $this->filterSchedulesByGroups($availableCourse->schedules, $groups);
+
+    // Transform into grouped result
+    return $this->groupSchedulesByActivity($filteredSchedules);
+}
+
+/**
+ * Normalize group input into an array of strings (or null if no filtering).
+ */
+private function normalizeGroups($group): ?array
+{
+    if (is_array($group)) {
+        return array_values(array_filter($group, fn($g) => $g !== null && $g !== ''));
+    }
+
+    if (is_string($group) && $group !== '') {
+        if (str_contains($group, ',')) {
+            return array_map('trim', explode(',', $group));
+        }
+
+        $decoded = json_decode($group, true);
+        return is_array($decoded) ? $decoded : [$group];
+    }
+
+    return null;
+}
+
+/**
+ * Filter schedules based on given groups (if any).
+ */
+private function filterSchedulesByGroups($schedules, ?array $groups)
+{
+    if ($groups === null || count($groups) === 0) {
+        return $schedules;
+    }
+
+    return $schedules->filter(function ($s) use ($groups) {
+        return in_array((string) $s->group, array_map('strval', $groups), true);
+    });
+}
+
+/**
+ * Group schedules by activity_type and transform each schedule.
+ */
+private function groupSchedulesByActivity($schedules): array
+{
+    return $schedules->groupBy('activity_type')->map(function ($schedules, $activityType) {
+        $activitySchedules = $schedules->map(fn($schedule) => $this->transformSchedule($schedule))->toArray();
+
+        return [
+            'activity_type' => $activityType,
+            'schedules' => $activitySchedules
+        ];
+    })->values()->toArray();
+}
+
+/**
+ * Transform a single schedule into API-friendly structure.
+ */
+private function transformSchedule($schedule): array
+{
+    log::error('Transforming schedule: ' , $schedule);
+    $slots = $schedule->slots
+        ->map(fn($slot) => $slot)
+        ->filter();
+
+    $sortedSlots = $slots->isNotEmpty() ? $slots->sortBy('start_time')->values() : collect();
+    $firstSlot = $sortedSlots->first();
+    $lastSlot = $sortedSlots->last();
+
+    $enrolledCount = \App\Models\EnrollmentSchedule::whereHas('availableCourseSchedule', function ($query) use ($schedule) {
+        $query->where('id', $schedule->id);
+    })->count();
+
+    return [
+        'id' => $schedule->id,
+        'activity_type' => $schedule->activity_type,
+        'group_number' => $schedule->group,
+        'location' => $schedule->location,
+        'min_capacity' => $schedule->min_capacity,
+        'max_capacity' => $schedule->max_capacity,
+        'enrolled_count' => $enrolledCount,
+        'day_of_week' => $firstSlot?->day_of_week,
+        'start_time' => formatTime($firstSlot?->start_time),
+        'end_time' => formatTime($lastSlot?->end_time),
+    ];
+}
+
 
     /**
      * Get eligibilities for a specific available course.

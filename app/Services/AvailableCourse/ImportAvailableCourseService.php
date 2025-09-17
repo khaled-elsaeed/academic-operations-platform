@@ -297,7 +297,7 @@ class ImportAvailableCourseService
             'program_code' => $row['program'] ?? null,
             'min_capacity' => (int)($row['min_capacity'] ?? 1),
             'max_capacity' => (int)($row['max_capacity'] ?? 30),
-            'schedule_code' => $row['schedule_code'] ?? null,
+            'schedule_code' => $row['schedule'] ?? null,
         ];
     }
 
@@ -460,6 +460,7 @@ class ImportAvailableCourseService
         }
 
         $schedule = Schedule::find($scheduleId);
+
         if (!$schedule) {
             Log::info('Schedule not found for scheduleId.', ['schedule_id' => $scheduleId]);
             return;

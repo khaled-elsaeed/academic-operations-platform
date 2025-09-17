@@ -120,9 +120,6 @@ class AcademicAdvisorAccessService
                     <a class="dropdown-item view-access" href="javascript:void(0);" data-id="' . $access->id . '">
                         <i class="bx bx-show me-1"></i> View
                     </a>
-                    <a class="dropdown-item edit-access" href="javascript:void(0);" data-id="' . $access->id . '">
-                        <i class="bx bx-edit-alt me-1"></i> Edit
-                    </a>
                     <a class="dropdown-item delete-access" href="javascript:void(0);" data-id="' . $access->id . '">
                         <i class="bx bx-trash text-danger me-1"></i> Delete
                     </a>

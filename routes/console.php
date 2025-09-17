@@ -1,14 +1,12 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
 
 Schedule::command('backup:run --only-db')
                 ->hourly()
-                ->withoutOverlapping()
-                ->runInBackground();
+                ->withoutOverlapping();
 
 // Clean up old backups daily at 2 AM
 Schedule::command('backup:clean')

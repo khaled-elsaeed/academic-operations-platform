@@ -96,13 +96,58 @@ const SELECTORS_DOCS = {
 // ===========================
 const UtilsDocs = {
   showSuccess(message) {
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: message, showConfirmButton: false, timer: 2000 });
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: message,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true
+    });
   },
 
-  showError(title, message) {
-    Swal.fire(title, message, 'error');
+  showError(message) {
+    Swal.fire({
+      title: 'Error',
+      html: message,
+      icon: 'error'
+    });
   },
 
+  toggleLoadingState(elementId, isLoading) {
+    const $value = $(`#${elementId}-value`);
+    const $loader = $(`#${elementId}-loader`);
+    const $updated = $(`#${elementId}-last-updated`);
+    const $updatedLoader = $(`#${elementId}-last-updated-loader`);
+
+    if (isLoading) {
+      $value.addClass('d-none');
+      $loader.removeClass('d-none');
+      $updated.addClass('d-none');
+      $updatedLoader.removeClass('d-none');
+    } else {
+      $value.removeClass('d-none');
+      $loader.addClass('d-none');
+      $updated.removeClass('d-none');
+      $updatedLoader.addClass('d-none');
+    }
+  },
+
+  replaceRouteId(route, id) {
+    return route.replace(':id', id);
+  },/**
+     * Hide the page loader overlay.
+     */
+    hidePageLoader() {
+      const loader = document.getElementById('pageLoader');
+      if (loader) {
+        loader.classList.add('fade-out');
+        // Restore scrollbars when loader is hidden
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+      }
+    }
   disableButton($btn, text) {
     $btn.prop('disabled', true).html(text);
   },
@@ -122,6 +167,7 @@ const UtilsDocs = {
     window.URL.revokeObjectURL(url);
   }
 };
+
 
 // ===========================
 // API SERVICE
@@ -192,7 +238,7 @@ const ExportDocsManager = {
       DropdownManagerDocs.loadPrograms(),
       DropdownManagerDocs.loadLevels()
     ).done(() => {
-        Utils.hidePageLoader();
+        UtilsDocs.hidePageLoader();
     });
   },
 

@@ -425,7 +425,6 @@ class ImportAvailableCourseService
             'available_course_id' => $availableCourse->id,
             'group' => $group,
             'activity_type' => $activityType,
-            'location' => $location ?? null,
         ];
 
         $scheduleValues = [

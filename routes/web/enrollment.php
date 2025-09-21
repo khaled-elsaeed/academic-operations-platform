@@ -27,6 +27,9 @@ Route::middleware(['auth'])
         // ===== Import/Export Operations =====
         Route::post('import', 'import')->name('import')->middleware('can:enrollment.import');
         Route::get('export', 'export')->name('export')->middleware('can:enrollment.export');
+    // Export multiple enrollment documents page & action
+    Route::get('export-documents', 'exportDocumentsPage')->name('exportDocuments.page')->middleware('can:enrollment.export');
+    Route::post('export-documents', 'exportDocuments')->name('exportDocuments')->middleware('can:enrollment.export');
         Route::post('remaining-credit-hours', 'getRemainingCreditHours')->name('remainingCreditHours')->middleware('can:enrollment.view');
 
         // ===== CRUD Operations =====

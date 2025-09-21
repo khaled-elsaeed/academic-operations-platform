@@ -247,6 +247,110 @@ class EnrollmentController extends Controller
     }
 
     /**
+     * Show the page for exporting enrollment documents (batch).
+     *
+     * @return View
+     */
+    public function exportDocumentsPage(): View
+    {
+        return view('enrollment.export_documents');
+    }
+
+    /**
+     * Export enrollment documents for students matching filters.
+     * Accepts: academic_id, national_id, program_id, level_id
+     * Returns: ZIP file of generated PDFs.
+     *
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
+     */
+    public function exportDocuments(Request $request)
+    {
+        $request->validate([
+            'academic_id' => 'nullable|string',
+            'national_id' => 'nullable|string',
+            'program_id' => 'nullable|exists:programs,id',
+            'level_id' => 'nullable|exists:levels,id',
+            'select_all_programs' => 'nullable|boolean',
+        ]);
+
+        try {
+            $query = \App\Models\Student::query();
+
+            if ($request->filled('academic_id')) {
+                $query->where('academic_id', $request->academic_id);
+            }
+
+            if ($request->filled('national_id')) {
+                $query->where('national_id', $request->national_id);
+            }
+
+            if ($request->filled('program_id')) {
+                $query->where('program_id', $request->program_id);
+            }
+
+            if ($request->filled('level_id')) {
+                $query->where('level_id', $request->level_id);
+            }
+
+            // If no individual identifier provided and select_all_programs not set,
+            // we will use program/level filters; otherwise if nothing given, return error.
+            $students = $query->get();
+
+            if ($students->isEmpty()) {
+                return errorResponse('No students found matching the provided filters.', [], 404);
+            }
+
+            $termId = $request->input('term_id');
+
+            $documentService = app(\App\Services\EnrollmentDocumentService::class);
+
+            // Temporary files for zipping
+            $files = [];
+
+            foreach ($students as $student) {
+                try {
+                    $result = $documentService->generatePdf($student, $termId);
+                    // result contains 'url' (public storage url) and 'filename'
+                    // convert url to storage path
+                    $publicPath = parse_url($result['url'], PHP_URL_PATH);
+                    $storagePath = public_path(ltrim($publicPath, '/'));
+                    if (file_exists($storagePath)) {
+                        $files[$result['filename']] = $storagePath;
+                    }
+                } catch (Exception $e) {
+                    // skip student if generation failed
+                    \Log::error('exportDocuments: failed for student ' . $student->id, ['error' => $e->getMessage()]);
+                }
+            }
+
+            if (empty($files)) {
+                return errorResponse('Failed to generate any documents.', [], 500);
+            }
+
+            $zipName = 'enrollment_documents_' . now()->format('Ymd_His') . '.zip';
+            $tempZip = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $zipName;
+
+            $zip = new \ZipArchive();
+            if ($zip->open($tempZip, \ZipArchive::CREATE) !== true) {
+                return errorResponse('Failed to create zip archive.', [], 500);
+            }
+
+            foreach ($files as $name => $path) {
+                $zip->addFile($path, $name);
+            }
+
+            $zip->close();
+
+            return response()->download($tempZip, $zipName)->deleteFileAfterSend(true);
+
+        } catch (Exception $e) {
+            logError('EnrollmentController@exportDocuments', $e, ['request' => $request->all()]);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
     * Get remaining credit hours for a student in a specific term.
     *
     * @param  Request  $request

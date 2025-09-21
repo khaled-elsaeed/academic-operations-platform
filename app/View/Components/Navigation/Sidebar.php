@@ -159,6 +159,13 @@ class Sidebar extends Component
                                     'active' => request()->routeIs('enrollments.add'),
                                     'permission' => 'enrollment.create',
                                 ],
+                                [
+                                    'title' => 'Export Documents',
+                                    'icon' => 'bx bx-file-archive',
+                                    'route' => route('enrollments.exportDocuments.page'),
+                                    'active' => request()->routeIs('enrollments.exportDocuments*'),
+                                    'permission' => 'enrollment.export',
+                                ],
                             ],
                         ],
                         [

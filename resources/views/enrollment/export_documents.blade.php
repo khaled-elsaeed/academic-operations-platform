@@ -46,7 +46,7 @@
                       <tr>
                         <th>Term (optional)</th>
                         <td>
-                          <select id="term_id" name="term_id" class="form-control">
+                          <select id="individual_term_id" name="term_id" class="form-control">
                             <option value="">All Terms</option>
                           </select>
                         </td>
@@ -119,18 +119,18 @@
 // ===========================
 // ROUTES & SELECTORS
 // ===========================
-const ROUTES_DOCS = {
+const ROUTES = {
   terms: '{{ route('terms.all.with_inactive') }}',
   programs: '{{ route('programs.all') }}',
   levels: '{{ route('levels.all') }}',
   exportDocuments: '{{ route('enrollments.exportDocuments') }}'
 };
 
-const SELECTORS_DOCS = {
+const SELECTORS = {
   form: '#exportDocumentsForm',
   submitBtn: '#exportDocsBtn',
-  termSelect: '#term_id',
-    groupTermSelect: '#group_term_id',
+  individualTermSelect: '#individual_term_id',
+  groupTermSelect: '#group_term_id',
   programSelect: '#program_id',
   levelSelect: '#level_id',
   academicId: '#academic_id',
@@ -232,12 +232,12 @@ const UtilsDocs = {
 const ApiDocs = {
   request(options) { return $.ajax(options); },
 
-  fetchTerms() { return this.request({ url: ROUTES_DOCS.terms, method: 'GET' }); },
-  fetchPrograms() { return this.request({ url: ROUTES_DOCS.programs, method: 'GET' }); },
-  fetchLevels() { return this.request({ url: ROUTES_DOCS.levels, method: 'GET' }); },
+  fetchTerms() { return this.request({ url: ROUTES.terms, method: 'GET' }); },
+  fetchPrograms() { return this.request({ url: ROUTES.programs, method: 'GET' }); },
+  fetchLevels() { return this.request({ url: ROUTES.levels, method: 'GET' }); },
 
   exportDocuments(formData) {
-    return fetch(ROUTES_DOCS.exportDocuments, {
+    return fetch(ROUTES.exportDocuments, {
       method: 'POST',
       headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
       body: formData
@@ -249,7 +249,20 @@ const ApiDocs = {
 // DROPDOWN MANAGER
 // ===========================
 const DropdownManagerDocs = {
-  loadTerms(selector = SELECTORS_DOCS.termSelect) {
+  loadTerms(selector = SELECTORS.individualTermSelect) {
+    return ApiDocs.fetchTerms()
+      .done(response => {
+        const terms = response.data || [];
+        const $s = $(selector);
+        $s.empty().append('<option value="">All Terms</option>');
+        terms.forEach(t => $s.append($('<option>', { value: t.id, text: t.name })));
+        
+
+      })
+      .fail(() => UtilsDocs.showError('Error', 'Failed to load terms'));
+  },
+
+  loadTerms(selector = SELECTORS.groupTermSelect) {
     return ApiDocs.fetchTerms()
       .done(response => {
         const terms = response.data || [];
@@ -260,7 +273,7 @@ const DropdownManagerDocs = {
       .fail(() => UtilsDocs.showError('Error', 'Failed to load terms'));
   },
 
-  loadPrograms(selector = SELECTORS_DOCS.programSelect) {
+  loadPrograms(selector = SELECTORS.programSelect) {
     return ApiDocs.fetchPrograms()
       .done(response => {
         const programs = response.data || [];
@@ -271,7 +284,7 @@ const DropdownManagerDocs = {
       .fail(() => UtilsDocs.showError('Error', 'Failed to load programs'));
   },
 
-  loadLevels(selector = SELECTORS_DOCS.levelSelect) {
+  loadLevels(selector = SELECTORS.levelSelect) {
     return ApiDocs.fetchLevels()
       .done(response => {
         const levels = response.data || [];
@@ -291,8 +304,8 @@ const ExportDocsManager = {
     this.bindEvents();
     // Load dropdowns: terms for both individual and groups term selects
     $.when(
-      DropdownManagerDocs.loadTerms(SELECTORS_DOCS.termSelect),
-      DropdownManagerDocs.loadTerms(SELECTORS_DOCS.groupTermSelect),
+      DropdownManagerDocs.loadTerms(SELECTORS.termSelect),
+      DropdownManagerDocs.loadTerms(SELECTORS.groupTermSelect),
       DropdownManagerDocs.loadPrograms(),
       DropdownManagerDocs.loadLevels()
     ).done(() => {
@@ -301,24 +314,24 @@ const ExportDocsManager = {
   },
 
   bindEvents() {
-    $(SELECTORS_DOCS.form).on('submit', this.handleSubmit.bind(this));
+    $(SELECTORS.form).on('submit', this.handleSubmit.bind(this));
   },
 
   async handleSubmit(e) {
     e.preventDefault();
-    const $btn = $(SELECTORS_DOCS.submitBtn);
+    const $btn = $(SELECTORS.submitBtn);
     UtilsDocs.disableButton($btn, '<i class="bx bx-loader-alt bx-spin me-1"></i>Generating...');
 
-    const formEl = document.querySelector(SELECTORS_DOCS.form);
+    const formEl = document.querySelector(SELECTORS.form);
     // Disable the term select that's inside the inactive tab so we don't submit duplicate 'term_id' fields.
     const $individualTab = $('#individual');
     const $groupsTab = $('#groups');
     if ($individualTab.hasClass('show active')) {
-      $(SELECTORS_DOCS.groupTermSelect).prop('disabled', true);
-      $(SELECTORS_DOCS.termSelect).prop('disabled', false);
+      $(SELECTORS.groupTermSelect).prop('disabled', true);
+      $(SELECTORS.termSelect).prop('disabled', false);
     } else {
-      $(SELECTORS_DOCS.groupTermSelect).prop('disabled', false);
-      $(SELECTORS_DOCS.termSelect).prop('disabled', true);
+      $(SELECTORS.groupTermSelect).prop('disabled', false);
+      $(SELECTORS.termSelect).prop('disabled', true);
     }
 
     const formData = new FormData(formEl);

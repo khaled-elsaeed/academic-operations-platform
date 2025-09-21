@@ -184,26 +184,26 @@
                 </h2>
             </div>
             <!-- ===== STUDENT INFORMATION SECTION ===== -->
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11px;">
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0 18px 0; font-size: 13px;">
                 <tr>
-                    <td style="padding: 4px 6px; border: 1px solid #ddd; width: 30%; font-weight: bold;">الرقم الأكاديمي:</td>
-                    <td style="padding: 4px 6px; border: 1px solid #ddd; width: 70%;">{{ $academic_number ?? '________' }}</td>
+                    <td style="padding: 8px 10px; border: 1px solid #ddd; width: 30%; font-weight: bold;">الرقم الأكاديمي:</td>
+                    <td style="padding: 8px 10px; border: 1px solid #ddd; width: 70%;">{{ $academic_number ?? '________' }}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 4px 6px; border: 1px solid #ddd; font-weight: bold;">اسم الطالب:</td>
-                    <td style="padding: 4px 6px; border: 1px solid #ddd;">{{ $student_name ?? '________' }}</td>
+                    <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: bold;">اسم الطالب:</td>
+                    <td style="padding: 8px 10px; border: 1px solid #ddd;">{{ $student_name ?? '________' }}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 4px 6px; border: 1px solid #ddd; font-weight: bold;">الرقم القومي:</td>
-                    <td style="padding: 4px 6px; border: 1px solid #ddd;">{{ $national_id ?? '________' }}</td>
+                    <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: bold;">الرقم القومي:</td>
+                    <td style="padding: 8px 10px; border: 1px solid #ddd;">{{ $national_id ?? '________' }}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 4px 6px; border: 1px solid #ddd; font-weight: bold;">اسم البرنامج:</td>
-                    <td style="padding: 4px 6px; border: 1px solid #ddd; font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 11px;">{{ $program_name ?? '________' }}</td>
+                    <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: bold;">اسم البرنامج:</td>
+                    <td style="padding: 8px 10px; border: 1px solid #ddd; font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 12px;">{{ $program_name ?? '________' }}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 4px 6px; border: 1px solid #ddd; font-weight: bold;">المعدل التراكمي:</td>
-                    <td style="padding: 4px 6px; border: 1px solid #ddd; font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 11px;">{{ $cgpa ?? '________' }}</td>
+                    <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: bold;">المعدل التراكمي:</td>
+                    <td style="padding: 8px 10px; border: 1px solid #ddd; font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 12px;">{{ $cgpa ?? '________' }}</td>
                 </tr>
             </table>
             <!-- ===== NOTICE SECTION ===== -->

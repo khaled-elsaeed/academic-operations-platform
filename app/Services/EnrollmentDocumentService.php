@@ -477,22 +477,34 @@ class EnrollmentDocumentService
      */
     public function exportDocumentsByFilters(array $filters): array
     {
-        $query = Student::query();
 
-        if (!empty($filters['academic_id'])) {
-            $query->where('academic_id', $filters['academic_id']);
+        // Validate minimum required filters
+        $termId = $filters['term_id'] ?? null;
+        if (empty($termId)) {
+            throw new Exception('term_id is required.');
         }
 
-        if (!empty($filters['national_id'])) {
-            $query->where('national_id', $filters['national_id']);
-        }
+        // Determine mode: individual if academic_id or national_id provided; otherwise group
+        $isIndividual = !empty($filters['academic_id']) || !empty($filters['national_id']);
 
-        if (!empty($filters['program_id'])) {
-            $query->where('program_id', $filters['program_id']);
-        }
+        if ($isIndividual) {
+            // Individual export must have academic_id or national_id (already true)
+            $query = Student::query();
+            if (!empty($filters['academic_id'])) {
+                $query->where('academic_id', $filters['academic_id']);
+            }
+            if (!empty($filters['national_id'])) {
+                $query->where('national_id', $filters['national_id']);
+            }
+        } else {
+            // Group export must provide program_id and level_id
+            if (empty($filters['program_id']) || empty($filters['level_id'])) {
+                throw new Exception('For group export please provide both program_id and level_id.');
+            }
 
-        if (!empty($filters['level_id'])) {
-            $query->where('level_id', $filters['level_id']);
+            $query = Student::query();
+            $query->where('program_id', $filters['program_id'])
+                  ->where('level_id', $filters['level_id']);
         }
 
         $students = $query->get();
@@ -500,8 +512,6 @@ class EnrollmentDocumentService
         if ($students->isEmpty()) {
             throw new Exception('No students found matching the provided filters.');
         }
-
-        $termId = $filters['term_id'] ?? null;
 
         $files = [];
 

@@ -266,20 +266,62 @@ class EnrollmentController extends Controller
      */
     public function exportDocuments(Request $request)
     {
+        // term_id is required for both individual and group exports
         $request->validate([
             'academic_id' => 'nullable|string',
             'national_id' => 'nullable|string',
             'program_id' => 'nullable|exists:programs,id',
             'level_id' => 'nullable|exists:levels,id',
-            'term_id' => 'nullable|exists:terms,id',
+            'term_id' => 'required|exists:terms,id',
         ]);
 
         try {
             $filters = $request->only(['academic_id', 'national_id', 'program_id', 'level_id', 'term_id']);
+
+            // Determine mode: individual if academic_id or national_id provided; otherwise group
+            $isIndividual = !empty($filters['academic_id']) || !empty($filters['national_id']);
+
+            if ($isIndividual) {
+                // ensure at least one identifier provided (already true by $isIndividual), nothing else required
+            } else {
+                // group export: require program_id and level_id
+                if (empty($filters['program_id']) || empty($filters['level_id'])) {
+                    return errorResponse('For group export please provide both program_id and level_id along with term_id.', [], 422);
+                }
+            }
+
             /** @var \App\Services\EnrollmentDocumentService $documentService */
             $documentService = app(\App\Services\EnrollmentDocumentService::class);
-            $result = $documentService->exportDocumentsByFilters($filters);
 
+            if ($isIndividual) {
+                // Individual: generate a single PDF for the specific student and return it (no ZIP)
+                // Resolve the student via academic_id or national_id
+                $student = null;
+                if (!empty($filters['academic_id'])) {
+                    $student = \App\Models\Student::where('academic_id', $filters['academic_id'])->first();
+                }
+                if (!$student && !empty($filters['national_id'])) {
+                    $student = \App\Models\Student::where('national_id', $filters['national_id'])->first();
+                }
+
+                if (!$student) {
+                    return errorResponse('Student not found with the provided identifier.', [], 404);
+                }
+
+                $pdfResult = $documentService->generatePdf($student, $filters['term_id']);
+                // $pdfResult contains ['url' => '/storage/documents/enrollments/pdf/...', 'filename' => '...']
+                $publicPath = parse_url($pdfResult['url'], PHP_URL_PATH);
+                $storagePath = public_path(ltrim($publicPath, '/'));
+
+                if (!file_exists($storagePath)) {
+                    return errorResponse('Generated PDF not found.', [], 500);
+                }
+
+                return response()->download($storagePath, $pdfResult['filename'])->deleteFileAfterSend(false);
+            }
+
+            // Group: generate PDFs for matching students and return ZIP
+            $result = $documentService->exportDocumentsByFilters($filters);
             return response()->download($result['temp_zip'], $result['zip_name'])->deleteFileAfterSend(true);
         } catch (Exception $e) {
             logError('EnrollmentController@exportDocuments', $e, ['request' => $request->all()]);

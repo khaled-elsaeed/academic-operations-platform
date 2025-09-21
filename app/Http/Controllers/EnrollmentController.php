@@ -311,8 +311,6 @@ class EnrollmentController extends Controller
             foreach ($students as $student) {
                 try {
                     $result = $documentService->generatePdf($student, $termId);
-                    // result contains 'url' (public storage url) and 'filename'
-                    // convert url to storage path
                     $publicPath = parse_url($result['url'], PHP_URL_PATH);
                     $storagePath = public_path(ltrim($publicPath, '/'));
                     if (file_exists($storagePath)) {

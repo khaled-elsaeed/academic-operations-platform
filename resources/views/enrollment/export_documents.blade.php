@@ -10,57 +10,102 @@
         icon="bx bx-file-archive"
     />
 
-    <div class="card">
-        <div class="card-body">
-            <form id="exportDocumentsForm" method="POST" action="{{ route('enrollments.exportDocuments') }}">
-                @csrf
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label for="academic_id" class="form-label">Academic ID</label>
-                        <input type="text" id="academic_id" name="academic_id" class="form-control" placeholder="Search by Academic ID">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="national_id" class="form-label">National ID</label>
-                        <input type="text" id="national_id" name="national_id" class="form-control" placeholder="Search by National ID">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="term_id" class="form-label">Term (optional)</label>
-                        <select id="term_id" name="term_id" class="form-control">
+  <div class="card">
+    <div class="card-body">
+      <form id="exportDocumentsForm" method="POST" action="{{ route('enrollments.exportDocuments') }}">
+        @csrf
+
+        <ul class="nav nav-tabs mb-3" id="exportTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="individual-tab" data-bs-toggle="tab" data-bs-target="#individual" type="button" role="tab" aria-controls="individual" aria-selected="true">Individual</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="groups-tab" data-bs-toggle="tab" data-bs-target="#groups" type="button" role="tab" aria-controls="groups" aria-selected="false">Groups</button>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          <div class="tab-pane fade show active" id="individual" role="tabpanel" aria-labelledby="individual-tab">
+            <div class="row g-3">
+              <div class="col-12">
+                <div class="table-responsive">
+                  <table class="table table-borderless mb-0">
+                    <tbody>
+                      <tr>
+                        <th style="width:200px">Academic ID</th>
+                        <td>
+                          <input type="text" id="academic_id" name="academic_id" class="form-control" placeholder="Search by Academic ID">
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>National ID</th>
+                        <td>
+                          <input type="text" id="national_id" name="national_id" class="form-control" placeholder="Search by National ID">
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Term (optional)</th>
+                        <td>
+                          <select id="term_id" name="term_id" class="form-control">
                             <option value="">All Terms</option>
-                        </select>
-                    </div>
+                          </select>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
 
-                    <div class="col-md-4">
-                        <label for="program_id" class="form-label">Program (optional)</label>
-                        <select id="program_id" name="program_id" class="form-control">
+          <div class="tab-pane fade" id="groups" role="tabpanel" aria-labelledby="groups-tab">
+            <div class="row g-3">
+              <div class="col-12">
+                <div class="table-responsive">
+                  <table class="table table-borderless mb-0">
+                    <tbody>
+                      <tr>
+                        <th style="width:200px">Program</th>
+                        <td>
+                          <select id="program_id" name="program_id" class="form-control">
                             <option value="">All Programs</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label for="level_id" class="form-label">Level (optional)</label>
-                        <select id="level_id" name="level_id" class="form-control">
+                          </select>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Level</th>
+                        <td>
+                          <select id="level_id" name="level_id" class="form-control">
                             <option value="">All Levels</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-4 d-flex align-items-end">
-                        <div class="form-check">
+                          </select>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th></th>
+                        <td>
+                          <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="select_all_programs" name="select_all_programs" value="1">
                             <label class="form-check-label" for="select_all_programs">Select all programs</label>
-                        </div>
-                    </div>
-
-                    <div class="col-12">
-                        <button type="submit" id="exportDocsBtn" class="btn btn-primary">
-                            <i class="bx bx-download me-1"></i> Generate & Download ZIP
-                        </button>
-                        <a href="{{ route('enrollments.index') }}" class="btn btn-outline-secondary">Back</a>
-                    </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-            </form>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <div class="mt-3">
+          <button type="submit" id="exportDocsBtn" class="btn btn-primary">
+            <i class="bx bx-download me-1"></i> Generate & Download ZIP
+          </button>
+          <a href="{{ route('enrollments.index') }}" class="btn btn-outline-secondary">Back</a>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
 @endsection
 
@@ -153,7 +198,6 @@ const UtilsDocs = {
     const loader = document.getElementById('pageLoader');
     if (loader) {
       loader.classList.add('fade-out');
-      // Restore scrollbars when loader is hidden
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
     }

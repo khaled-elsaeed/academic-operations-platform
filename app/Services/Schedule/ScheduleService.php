@@ -91,7 +91,7 @@ class ScheduleService
                 'id' => $schedule->scheduleType->id,
                 'name' => $schedule->scheduleType->name,
                 'is_repetitive' => $schedule->scheduleType->is_repetitive,
-                'repetitive_pattern' => $schedule->scheduleType->repetitive_pattern,
+                'repetitive_pattern' => $schedule->scheduleType->repetition_pattern,
             ] : null,
             'slots' => $schedule->slots->map(function ($slot) {
                 return [

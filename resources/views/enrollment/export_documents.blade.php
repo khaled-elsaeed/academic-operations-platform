@@ -81,12 +81,13 @@
                         </td>
                       </tr>
                       <tr>
-                        <th></th>
+                      </tr>
+                      <tr>
+                        <th>Term (optional)</th>
                         <td>
-                          <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="select_all_programs" name="select_all_programs" value="1">
-                            <label class="form-check-label" for="select_all_programs">Select all programs</label>
-                          </div>
+                          <select id="group_term_id" name="term_id" class="form-control">
+                            <option value="">All Terms</option>
+                          </select>
                         </td>
                       </tr>
                     </tbody>
@@ -129,11 +130,12 @@ const SELECTORS_DOCS = {
   form: '#exportDocumentsForm',
   submitBtn: '#exportDocsBtn',
   termSelect: '#term_id',
+    groupTermSelect: '#group_term_id',
   programSelect: '#program_id',
   levelSelect: '#level_id',
   academicId: '#academic_id',
   nationalId: '#national_id',
-  selectAllPrograms: '#select_all_programs'
+    // select_all_programs removed from UI per request
 };
 
 // ===========================
@@ -287,8 +289,10 @@ const DropdownManagerDocs = {
 const ExportDocsManager = {
   init() {
     this.bindEvents();
+    // Load dropdowns: terms for both individual and groups term selects
     $.when(
-      DropdownManagerDocs.loadTerms(),
+      DropdownManagerDocs.loadTerms(SELECTORS_DOCS.termSelect),
+      DropdownManagerDocs.loadTerms(SELECTORS_DOCS.groupTermSelect),
       DropdownManagerDocs.loadPrograms(),
       DropdownManagerDocs.loadLevels()
     ).done(() => {
@@ -306,6 +310,17 @@ const ExportDocsManager = {
     UtilsDocs.disableButton($btn, '<i class="bx bx-loader-alt bx-spin me-1"></i>Generating...');
 
     const formEl = document.querySelector(SELECTORS_DOCS.form);
+    // Disable the term select that's inside the inactive tab so we don't submit duplicate 'term_id' fields.
+    const $individualTab = $('#individual');
+    const $groupsTab = $('#groups');
+    if ($individualTab.hasClass('show active')) {
+      $(SELECTORS_DOCS.groupTermSelect).prop('disabled', true);
+      $(SELECTORS_DOCS.termSelect).prop('disabled', false);
+    } else {
+      $(SELECTORS_DOCS.groupTermSelect).prop('disabled', false);
+      $(SELECTORS_DOCS.termSelect).prop('disabled', true);
+    }
+
     const formData = new FormData(formEl);
 
     try {

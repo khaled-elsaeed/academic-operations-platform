@@ -6,9 +6,12 @@ use App\Models\Student;
 use App\Models\Term;
 use Exception;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Mpdf\Mpdf;
 use PhpOffice\PhpWord\TemplateProcessor;
+use ZipArchive;
+use Carbon\Carbon;
 
 class EnrollmentDocumentService
 {
@@ -462,5 +465,78 @@ class EnrollmentDocumentService
             'error' => $exception->getMessage(),
             'trace' => $exception->getTraceAsString()
         ]);
+    }
+
+    /**
+     * Export enrollment documents for students matching filters.
+     * Returns temp zip path and zip filename.
+     *
+     * @param array $filters
+     * @return array
+     * @throws Exception
+     */
+    public function exportDocumentsByFilters(array $filters): array
+    {
+        $query = Student::query();
+
+        if (!empty($filters['academic_id'])) {
+            $query->where('academic_id', $filters['academic_id']);
+        }
+
+        if (!empty($filters['national_id'])) {
+            $query->where('national_id', $filters['national_id']);
+        }
+
+        if (!empty($filters['program_id'])) {
+            $query->where('program_id', $filters['program_id']);
+        }
+
+        if (!empty($filters['level_id'])) {
+            $query->where('level_id', $filters['level_id']);
+        }
+
+        $students = $query->get();
+
+        if ($students->isEmpty()) {
+            throw new Exception('No students found matching the provided filters.');
+        }
+
+        $termId = $filters['term_id'] ?? null;
+
+        $files = [];
+
+        foreach ($students as $student) {
+            try {
+                $result = $this->generatePdf($student, $termId);
+                $publicPath = parse_url($result['url'], PHP_URL_PATH);
+                $storagePath = public_path(ltrim($publicPath, '/'));
+                if (file_exists($storagePath)) {
+                    $files[$result['filename']] = $storagePath;
+                }
+            } catch (Exception $e) {
+                // log and continue
+                $this->logError('exportDocumentsByFilters', $student->id, $termId, $e);
+            }
+        }
+
+        if (empty($files)) {
+            throw new Exception('Failed to generate any documents.');
+        }
+
+        $zipName = 'enrollment_documents_' . Carbon::now()->format('Ymd_His') . '.zip';
+        $tempZip = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $zipName;
+
+        $zip = new ZipArchive();
+        if ($zip->open($tempZip, ZipArchive::CREATE) !== true) {
+            throw new Exception('Failed to create zip archive.');
+        }
+
+        foreach ($files as $name => $path) {
+            $zip->addFile($path, $name);
+        }
+
+        $zip->close();
+
+        return ['temp_zip' => $tempZip, 'zip_name' => $zipName];
     }
 }

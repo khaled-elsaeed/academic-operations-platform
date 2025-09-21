@@ -439,15 +439,17 @@ const SlotManager = {
     ApiService.fetchAllSchedules()
       .done(response => {
         $select.empty().append('<option value="">Select Schedule</option>');
-        
+
         if (response.data?.length > 0) {
           response.data.forEach(schedule => {
-            $select.append(`<option value="${schedule.id}" data-pattern="${schedule.schedule_type.repetition_pattern}">
+            // support both 'repetitive_pattern' and legacy 'repetition_pattern'
+            const pattern = (schedule.schedule_type && (schedule.schedule_type.repetitive_pattern ?? schedule.schedule_type.repetition_pattern)) ?? '';
+            $select.append(`<option value="${schedule.id}" data-pattern="${pattern}">
               ${schedule.title} 
             </option>`);
           });
         }
-        
+
         $select.prop('disabled', false);
       })
       .fail(xhr => {
@@ -483,9 +485,11 @@ const SlotManager = {
     $('.schedule-info-section').show();
     
     // Update schedule pattern text
+    // support both 'repetitive_pattern' and 'repetition_pattern' property names
+    const pattern = (schedule.schedule_type && (schedule.schedule_type.repetitive_pattern ?? schedule.schedule_type.repetition_pattern)) ?? null;
     $('#schedulePatternText').text(
-      schedule.schedule_type.is_repetitive && schedule.schedule_type.repetition_pattern === 'weekly' 
-        ? 'This is a weekly repeating schedule. Please select a day of the week.' 
+      schedule.schedule_type.is_repetitive && pattern === 'weekly'
+        ? 'This is a weekly repeating schedule. Please select a day of the week.'
         : 'This is a date range schedule. Please select a specific date.'
     );
 
@@ -505,7 +509,7 @@ const SlotManager = {
     $('#day_of_week, #specific_date').val('').prop('required', false);
 
     // Show/hide fields based on schedule pattern
-    if (schedule.schedule_type.is_repetitive && schedule.schedule_type.repetition_pattern === 'weekly') {
+    if (schedule.schedule_type.is_repetitive && pattern === 'weekly') {
       $('#daySelectionField').fadeIn();
       $('#day_of_week').prop('required', true);
     } else {

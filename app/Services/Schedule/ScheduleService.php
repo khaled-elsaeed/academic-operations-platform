@@ -97,6 +97,10 @@ class ScheduleService
                     'label' => $slot->label ?? null,
                 ];
             })->toArray(),
+            'schedule_type' => [
+                'is_repetitive' => $schedule->scheduleType?->is_repetitive,
+                'repetitive_pattern' => $schedule->scheduleType?->repetitive_pattern,
+            ]
         ];
     }
 

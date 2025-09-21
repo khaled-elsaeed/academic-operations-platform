@@ -649,13 +649,30 @@ const SlotManager = {
   handleFormSubmit() {
     $('#slotForm').on('submit', function(e) {
       e.preventDefault();
-      $('#schedule_id').val($('#schedule_id').select2('val'));
+      // Ensure a schedule is selected (select2 may hide the native select or it may be disabled while loading)
+      const scheduleVal = (typeof $('#schedule_id').select2 === 'function') ? $('#schedule_id').select2('val') : $('#schedule_id').val();
+
+      if (!scheduleVal) {
+        // mark invalid and prevent submit
+        $('#schedule_id').addClass('is-invalid');
+        $('#schedule_id').siblings('.invalid-feedback').text('Please select a schedule.');
+        return;
+      }
+
+      // make sure the native select is enabled so it is included in serialization
+      if ($('#schedule_id').prop('disabled')) {
+        $('#schedule_id').prop('disabled', false);
+      }
+
+      // explicitly set the native select value from select2 (if used)
+      $('#schedule_id').val(scheduleVal);
+
       const formData = $(this).serialize();
       const $submitBtn = $('#slotModal button[type="submit"]');
       const originalText = $submitBtn.text();
-      
+
       $submitBtn.prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i>Saving...');
-      
+
       ApiService.saveSlot(formData, SlotManager.currentSlotId)
         .done(() => {
           $('#slotModal').modal('hide');

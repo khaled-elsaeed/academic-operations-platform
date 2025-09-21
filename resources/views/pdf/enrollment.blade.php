@@ -15,7 +15,7 @@
 
         /* ===== BASE STYLES ===== */
         body, th, td {
-            font-size: 0.85rem; /* reduced base font */
+            font-size: 1.1rem;
             font-family: 'KFGQPC', Arial, sans-serif;
             font-weight: normal;
             direction: rtl;
@@ -68,8 +68,8 @@
         .header-logo-section {
             display: table-cell;
             vertical-align: middle;
-            width: 50px;
-            padding: 2px;
+            width: 60px;
+            padding: 5px;
         }
         
         .header-text-section {
@@ -79,27 +79,27 @@
         }
         
         .header-logo {
-            height: 40px;
+            height: 50px;
             width: auto;
-            max-width: 50px;
+            max-width: 60px;
         }
         
         .header-text-arabic {
             font-family: 'KFGQPC', Arial, sans-serif;
-            font-size: 10px;
+            font-size: 12px;
             font-weight: bold;
             color: #333;
-            line-height: 1.1;
+            line-height: 1.3;
             text-align: right;
             direction: rtl;
         }
         
         .header-text-english {
             font-family: 'KFGQPC', Arial, sans-serif;
-            font-size: 10px;
+            font-size: 12px;
             font-weight: bold;
             color: #333;
-            line-height: 1.1;
+            line-height: 1.3;
             text-align: left;
             direction: ltr;
         }
@@ -108,21 +108,20 @@
         .gry-color *,
         .gry-color {
             color: #000;
-            padding: 2px;
+            padding: 5px;
             border-color: transparent;
         }
 
         /* ===== PAGE SETTINGS ===== */
         @page {
-            margin: 18pt 12pt 18pt 12pt; /* tighter page margins */
+            margin: 40pt 15pt 40pt 15pt;
             header: page-header;
             footer: page-footer;
         }
 
         /* ===== PAGE BREAK STYLES ===== */
         .page-break {
-            /* keep class for compatibility but avoid forcing a page break */
-            page-break-before: avoid;
+            page-break-before: always;
         }
     </style>
 </head>
@@ -172,77 +171,77 @@
         </htmlpageheader>
         
         <!-- ===== FIRST PAGE CONTENT ===== -->
-    <div style="padding: 30px 10px 10px 10px; margin-top: 20px;">
+        <div style="padding: 80px 15px 20px 15px; margin-top: 80px;">
             <!-- ===== EGYPT FLAG SECTION ===== -->
-            <div style="text-align: center; margin-bottom: 12px;">
-                <img src="{{ public_path('pdf/egypt_flag.png') }}" alt="Egypt Flag" style="height:26px; width:auto; max-width:220px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="{{ public_path('pdf/egypt_flag.png') }}" alt="Egypt Flag" style="height:40px; width:700px;">
             </div>
             <!-- ===== DOCUMENT TITLE ===== -->
-            <div style="text-align: center; margin-bottom: 14px;">
-                <h2 style="font-family: 'KFGQPC', Arial, sans-serif; font-size: 13px; font-weight: bold; color: #333; margin: 0; line-height:1.1;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h2 style="font-family: 'KFGQPC', Arial, sans-serif; font-size: 18px; font-weight: bold; color: #333; margin: 0;">
                     نموذج ارشاد الطلاب لفصل {{ $semester }} {{ $academic_year }} المستوى {{ $level }}
                 </h2>
             </div>
             <!-- ===== STUDENT INFORMATION SECTION ===== -->
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0 18px 0; font-size: 13px;">
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
                 <tr>
-                    <td style="padding: 8px 10px; border: 1px solid #ddd; width: 30%; font-weight: bold;">الرقم الأكاديمي:</td>
-                    <td style="padding: 8px 10px; border: 1px solid #ddd; width: 70%;">{{ $academic_number ?? '________' }}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; width: 30%; font-weight: bold;">الرقم الأكاديمي:</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; width: 70%;">{{ $academic_number ?? '________' }}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: bold;">اسم الطالب:</td>
-                    <td style="padding: 8px 10px; border: 1px solid #ddd;">{{ $student_name ?? '________' }}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">اسم الطالب:</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ $student_name ?? '________' }}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: bold;">الرقم القومي:</td>
-                    <td style="padding: 8px 10px; border: 1px solid #ddd;">{{ $national_id ?? '________' }}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">الرقم القومي:</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{{ $national_id ?? '________' }}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: bold;">اسم البرنامج:</td>
-                    <td style="padding: 8px 10px; border: 1px solid #ddd; font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 12px;">{{ $program_name ?? '________' }}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">اسم البرنامج:</td>
+                    <td style="padding: 6px; border: 1px solid #ddd; font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 13px;">{{ $program_name ?? '________' }}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 8px 10px; border: 1px solid #ddd; font-weight: bold;">المعدل التراكمي:</td>
-                    <td style="padding: 8px 10px; border: 1px solid #ddd; font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 12px;">{{ $cgpa ?? '________' }}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">المعدل التراكمي:</td>
+                    <td style="padding: 6px; border: 1px solid #ddd; font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 13px;">{{ $cgpa ?? '________' }}</td>
                 </tr>
             </table>
             <!-- ===== NOTICE SECTION ===== -->
-            <div style="margin-bottom: 10px; text-align: justify; line-height: 1.25;">
-                <p style="margin: 0; font-size: 10.5px;">
+            <div style="margin-bottom: 30px; text-align: justify; line-height: 1.6;">
+                <p style="margin: 0; font-size: 14px;">
                     نحيطكم علماً بأن المقررات المسجلة في فصل {{ $semester }} من العام الأكاديمي الحالي {{ $academic_year }} الخاصة بك هي على النحو التالي:
                 </p>
             </div>
             <!-- ===== COURSES TABLE SECTION (LAST THING ON PAGE 1) ===== -->
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 10px;">
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px;">
                 <thead>
                     <tr style="background-color: #f5f5f5; border: 1px solid #000;">
-                        <th style="padding: 4px 6px; border: 1px solid #000; text-align: center; font-weight: bold; width: 8%;">م</th>
-                        <th style="padding: 4px 6px; border: 1px solid #000; text-align: center; font-weight: bold; width: 22%;">كود المقرر</th>
-                        <th style="padding: 4px 6px; border: 1px solid #000; text-align: center; font-weight: bold; width: 50%;">اسم المقرر</th>
-                        <th style="padding: 4px 6px; border: 1px solid #000; text-align: center; font-weight: bold; width: 20%;">عدد ساعات المقرر</th>
+                        <th style="padding: 6px; border: 1px solid #000; text-align: center; font-weight: bold; width: 10%;">م</th>
+                        <th style="padding: 6px; border: 1px solid #000; text-align: center; font-weight: bold; width: 20%;">كود المقرر</th>
+                        <th style="padding: 6px; border: 1px solid #000; text-align: center; font-weight: bold; width: 50%;">اسم المقرر</th>
+                        <th style="padding: 6px; border: 1px solid #000; text-align: center; font-weight: bold; width: 20%;">عدد ساعات المقرر</th>
                     </tr>
                 </thead>
                 <tbody>
                     @php $maxRows = 10; @endphp
                     @for ($i = 1; $i <= $maxRows; $i++)
                         <tr>
-                            <td style="padding: 4px 6px; border: 1px solid #000; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">{{ $i }}</td>
-                            <td style="padding: 4px 6px; border: 1px solid #000; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">
+                            <td style="padding: 6px; border: 1px solid #000; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">{{ $i }}</td>
+                            <td style="padding: 6px; border: 1px solid #000; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">
                                 {{ ${'course_code_' . $i} ?? '________' }}
                             </td>
-                            <td style="padding: 4px 6px; border: 1px solid #000; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">
+                            <td style="padding: 6px; border: 1px solid #000; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">
                                 {{ ${'course_title_' . $i} ?? '________' }}
                             </td>
-                            <td style="padding: 4px 6px; border: 1px solid #000; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">
+                            <td style="padding: 6px; border: 1px solid #000; text-align: center; font-family: 'DejaVu Sans', Arial, sans-serif;">
                                 {{ ${'course_hours_' . $i} ?? '________' }}
                             </td>
                         </tr>
                     @endfor
                     <tr style="border-top: 2px solid #000; border-bottom: 1px solid #000;">
-                        <td colspan="3" style="padding: 4px 6px; border: 1px solid #000; border-top: 2px solid #000; border-bottom: 2px solid #000; font-weight: bold; text-align: right; background-color: #f5f5f5;">
+                        <td colspan="3" style="padding: 6px; border: 1px solid #000; border-top: 2px solid #000; border-bottom: 2px solid #000; font-weight: bold; text-align: right; background-color: #f5f5f5;">
                             إجمالي عدد الساعات المسجلة
                         </td>
-                        <td style="padding: 4px 6px; border: 1px solid #000; border-top: 2px solid #000; border-bottom: 2px solid #000; font-weight: bold; text-align: center; background-color: #f5f5f5; font-family: 'DejaVu Sans', Arial, sans-serif;">
+                        <td style="padding: 6px; border: 1px solid #000; border-top: 2px solid #000; border-bottom: 2px solid #000; font-weight: bold; text-align: center; background-color: #f5f5f5; font-family: 'DejaVu Sans', Arial, sans-serif;">
                             {{ $total_hours ?? '________' }}
                         </td>
                     </tr>
@@ -250,13 +249,14 @@
             </table>
         </div>
 
-        <!-- ===== SECOND PAGE CONTENT (no forced page break) ===== -->
-        <div>
-            <div style="padding: 8px 10px 6px 10px; margin-top: 6px;">
+        <!-- ===== PAGE BREAK - START SECOND PAGE ===== -->
+        <div class="page-break">
+            <!-- ===== SECOND PAGE CONTENT ===== -->
+            <div style="padding: 80px 15px 20px 15px; margin-top: 80px;">
                 <!-- ===== NOTES SECTION ===== -->
                 <div style="margin: 20px 0 20px 0;">
                     <strong>ملاحظات:</strong>
-                    <ul style="font-size: 10.5px; margin-top: 6px; margin-bottom: 0; padding-right: 16px; line-height:1.2;">
+                    <ul style="font-size: 14px; margin-top: 8px; margin-bottom: 0; padding-right: 20px;">
                         <li>يتعهد الطالب بتسجيل المقررات علي نظام معلومات الطالب <span style="font-family: 'DejaVu Sans', Arial, sans-serif;">SIS</span> مطابق تماما للتسجيل الورقي الذي قام بالتوقيع عليه.</li>
                         <li>في حالة رغبة الطالب في اجراء أي تعديل في تسجيل المقررات خلال فترة التسجيل الممكنة أن يتم ذلك بموافقة وتوقيع المرشد الأكاديمي أولاً.</li>
                         <li>أيضا إتاحة المقرر في الفصل {{ $semester }} يعتمد علي اكتمال الحد الأدنى لفتح المقرر طبقا للأعداد المقررة بلائحة الجامعة.</li>
@@ -265,7 +265,7 @@
                 </div>
                 
                 <!-- ===== SIGNATURES SECTION ===== -->
-                <div style="margin-top: 20px;">
+                <div style="margin-top: 60px;">
                     <table class="text-right sm-padding small strong">
                         <thead>
                             <tr>
@@ -292,7 +292,7 @@
                     </table>
                 </div>
                 
-                <div style="margin-top: 12px;margin-bottom:10px">
+                <div style="margin-top: 20px;margin-bottom:16px">
                     <table class="text-right sm-padding small strong">
                         <thead>
                             <tr>
@@ -320,8 +320,8 @@
                 </div>
                 
                 <!-- ===== ADDITIONAL INFORMATION SECTION ===== -->
-                <div style="text-align: center; margin-top: 12px;">
-                    <span style="font-size: 12px; color: #333; font-family: 'KFGQPC', Arial, sans-serif; font-weight: bold;">
+                <div style="text-align: center; margin-top: 20px;">
+                    <span style="font-size: 18px; color: #333; font-family: 'KFGQPC', Arial, sans-serif; font-weight: bold;">
                         مع تمنياتنا بالتوفيق والنجاح
                     </span>
                 </div>

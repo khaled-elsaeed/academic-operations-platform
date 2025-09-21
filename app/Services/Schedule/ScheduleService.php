@@ -80,13 +80,19 @@ class ScheduleService
             'id' => $schedule->id,
             'title' => $schedule->title,
             'status' => $schedule->status,
-            'schedule_type' => $schedule->scheduleType?->name,
-            'term' => $schedule->term?->name,
+            // keep a simple 'type' string for backward compatibility
             'type' => $schedule->scheduleType?->name,
+            'term' => $schedule->term?->name,
             'day_starts_at' => $schedule->day_starts_at ? formatDate($schedule->day_starts_at) : null,
             'day_ends_at' => $schedule->day_ends_at ? formatDate($schedule->day_ends_at) : null,
             'created_at' => $schedule->created_at ? formatDate($schedule->created_at) : null,
             'updated_at' => $schedule->updated_at ? formatDate($schedule->updated_at) : null,
+            'schedule_type' => $schedule->scheduleType ? [
+                'id' => $schedule->scheduleType->id,
+                'name' => $schedule->scheduleType->name,
+                'is_repetitive' => $schedule->scheduleType->is_repetitive,
+                'repetitive_pattern' => $schedule->scheduleType->repetitive_pattern,
+            ] : null,
             'slots' => $schedule->slots->map(function ($slot) {
                 return [
                     'id' => $slot->id,
@@ -97,10 +103,8 @@ class ScheduleService
                     'label' => $slot->label ?? null,
                 ];
             })->toArray(),
-            'schedule_type' => [
-                'is_repetitive' => $schedule->scheduleType?->is_repetitive,
-                'repetitive_pattern' => $schedule->scheduleType?->repetitive_pattern,
-            ]
+            // return schedule_type as an object with useful fields
+            
         ];
     }
 

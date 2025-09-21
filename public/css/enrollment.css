@@ -272,12 +272,16 @@
 /* Weekly Schedule Improvements */
 .schedule-grid {
   display: grid;
-  grid-template-columns: 120px repeat(7, 1fr);
-  gap: 2px;
+  /* 1 for Time column + variable number of time-slot columns */
+  --time-cols: 8; /* fallback: 8 time slots */
+  grid-template-columns: 160px repeat(var(--time-cols), minmax(120px, 1fr));
+  gap: 6px;
   background-color: #dee2e6;
   border-radius: 0.5rem;
-  overflow: hidden;
+  overflow: auto;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 8px;
+  box-sizing: border-box;
 }
 
 .schedule-header,
@@ -396,10 +400,11 @@
 }
 
 /* Mobile Responsiveness */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
   .schedule-grid {
-    grid-template-columns: 80px repeat(7, 1fr);
-    font-size: 0.7rem;
+    /* Keep columns but allow smaller min widths and enable horizontal scroll */
+    grid-template-columns: 120px repeat(var(--time-cols), minmax(100px, 1fr));
+    font-size: 0.8rem;
   }
   
   .schedule-header,
@@ -512,10 +517,10 @@
 }
 
 /* Tablet responsiveness */
-@media (min-width: 769px) and (max-width: 1024px) {
+@media (min-width: 769px) and (max-width: 1200px) {
   .schedule-grid {
-    grid-template-columns: 100px repeat(7, 1fr);
-    font-size: 0.8rem;
+    grid-template-columns: 140px repeat(var(--time-cols), minmax(100px, 1fr));
+    font-size: 0.85rem;
   }
   
   .credit-hours-item {
@@ -587,10 +592,20 @@
     font-size: 0.875rem;
   }
   
-  /* Schedule grid ultra compact */
+  /* On very small screens we switch to stacked day blocks for readability */
   .schedule-grid {
-    grid-template-columns: 60px repeat(7, 1fr);
-    font-size: 0.6rem;
+    display: block;
+    padding: 0;
+  }
+
+  /* Build day-blocks via JS or by using existing markup; fallback layout styles */
+  .day-header {
+    display: block;
+    padding: 10px 12px;
+  }
+
+  .schedule-cell {
+    padding: 8px 10px;
   }
   
   .schedule-header,

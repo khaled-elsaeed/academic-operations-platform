@@ -1613,8 +1613,10 @@ const ScheduleModule = {
   generateGrid(selectedActivities) {
     console.log('Generating grid with activities:', selectedActivities);
     
-    const days = ['Time', 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
-    
+
+    // We'll render rows per day and columns per time slot (transpose)
+    const days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+
     // Updated time slots to better match typical university schedules
     const timeSlots = [
       '9:00 AM – 9:50 AM',
@@ -1626,55 +1628,59 @@ const ScheduleModule = {
       '2:00 PM – 2:50 PM',
       '2:50 PM – 3:40 PM'
     ];
-    
+
     let html = '';
-    
-    // Create headers
-    days.forEach(day => {
-      html += `<div class="schedule-header">${day}</div>`;
+
+    // Ensure CSS grid knows how many time columns we will render
+    const scheduleEl = document.getElementById('weeklySchedule');
+    if (scheduleEl && scheduleEl.style) {
+      scheduleEl.style.setProperty('--time-cols', timeSlots.length);
+    }
+
+    // Create top-left header (Time) and column headers for each time slot
+    html += `<div class="schedule-header">Time</div>`;
+    timeSlots.forEach(slot => {
+      html += `<div class="schedule-header time-slot-header">${slot}</div>`;
     });
-    
-    // Create time slots
-    timeSlots.forEach(timeSlot => {
-      html += `<div class="schedule-cell time-slot">${timeSlot}</div>`;
-      
-      for (let dayIndex = 1; dayIndex < days.length; dayIndex++) {
-        const dayName = days[dayIndex].toLowerCase();
-        
-        const activitiesInSlot = selectedActivities.filter(item => {
+
+    // For each day, create a row: day name cell followed by one cell per time slot
+    days.forEach(day => {
+      html += `<div class="schedule-header day-header">${day}</div>`; // left-most column for day name
+
+      timeSlots.forEach(timeSlot => {
+        // find activities matching this day and time slot
+        const activitiesInCell = selectedActivities.filter(item => {
           if (!item.activity || !item.activity.day_of_week) {
             console.log('Missing day_of_week for activity:', item);
             return false;
           }
-          
-          // FIX: Handle case insensitive day matching
-          const scheduleDayOfWeek = item.activity.day_of_week.toLowerCase();
-          const dayMatches = scheduleDayOfWeek === dayName;
-          
+
+          const scheduleDay = item.activity.day_of_week.toLowerCase();
+          const dayMatches = scheduleDay === day.toLowerCase();
           const timeMatches = this.isActivityInTimeSlot(timeSlot, item.activity.start_time, item.activity.end_time);
-          
+
           if (dayMatches && timeMatches) {
-            console.log(`Activity matched: ${item.course.name} on ${dayName} at ${item.activity.start_time}-${item.activity.end_time}`);
+            console.log(`Activity matched: ${item.course.name} on ${day} at ${item.activity.start_time}-${item.activity.end_time}`);
           }
-          
+
           return dayMatches && timeMatches;
         });
-        
-        if (activitiesInSlot.length > 0) {
-          const isConflict = activitiesInSlot.length > 1;
+
+        if (activitiesInCell.length > 0) {
+          const isConflict = activitiesInCell.length > 1;
           const cellClasses = `schedule-cell has-class ${isConflict ? 'has-conflict' : ''}`;
-          
+
           let cellContent = '';
-          activitiesInSlot.forEach((classItem, index) => {
+          activitiesInCell.forEach((classItem, index) => {
             const activity = classItem.activity;
             const course = classItem.course;
-            
+
             const isEnrolledCourse = classItem.source === 'old_schedule';
             const badgeClass = isEnrolledCourse ? 'bg-info' : 'bg-success';
             const sourceLabel = isEnrolledCourse ? 'Enrolled' : 'Selected';
-            
+
             if (index > 0) cellContent += '<hr class="my-1" style="margin: 2px 0; border-color: rgba(255,255,255,0.3);">';
-            
+
             cellContent += `
               <div class="class-info ${index > 0 ? 'mt-1' : ''}">
                 <div class="class-title">${course.name}</div>
@@ -1687,11 +1693,11 @@ const ScheduleModule = {
               </div>
             `;
           });
-          
-          const tooltipContent = activitiesInSlot.map(item => 
+
+          const tooltipContent = activitiesInCell.map(item => 
             `${item.course.name} - Group ${item.group} (${item.activity.activity_type}) ${item.activity.start_time} – ${item.activity.end_time}${item.activity.location ? ' @ ' + item.activity.location : ''} [${item.source === 'old_schedule' ? 'Enrolled' : 'Selected'}]`
           ).join(' | ');
-          
+
           html += `
             <div class="${cellClasses}" title="${tooltipContent}" data-bs-toggle="tooltip" data-bs-placement="top">
               ${cellContent}
@@ -1701,9 +1707,9 @@ const ScheduleModule = {
         } else {
           html += `<div class="schedule-cell"></div>`;
         }
-      }
+      });
     });
-    
+
     $('#weeklySchedule').html(html);
     
     // Initialize tooltips

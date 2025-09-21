@@ -66,82 +66,181 @@
 
 @push('scripts')
 <script>
+/**
+ * Export Documents page script - modular style to match enrollment index page
+ */
+
+// ===========================
+// ROUTES & SELECTORS
+// ===========================
 const ROUTES_DOCS = {
   terms: '{{ route('terms.all.with_inactive') }}',
   programs: '{{ route('programs.all') }}',
   levels: '{{ route('levels.all') }}',
+  exportDocuments: '{{ route('enrollments.exportDocuments') }}'
 };
 
-function loadSelectOptions() {
-  $.get(ROUTES_DOCS.terms).done(res => {
-    const $t = $('#term_id');
-    $t.empty().append('<option value="">All Terms</option>');
-    (res.data || []).forEach(term => $t.append($('<option>', { value: term.id, text: term.name })));
-  });
+const SELECTORS_DOCS = {
+  form: '#exportDocumentsForm',
+  submitBtn: '#exportDocsBtn',
+  termSelect: '#term_id',
+  programSelect: '#program_id',
+  levelSelect: '#level_id',
+  academicId: '#academic_id',
+  nationalId: '#national_id',
+  selectAllPrograms: '#select_all_programs'
+};
 
-  $.get(ROUTES_DOCS.programs).done(res => {
-    const $p = $('#program_id');
-    $p.empty().append('<option value="">All Programs</option>');
-    (res.data || []).forEach(program => $p.append($('<option>', { value: program.id, text: program.name })));
-  });
+// ===========================
+// UTILITIES
+// ===========================
+const UtilsDocs = {
+  showSuccess(message) {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: message, showConfirmButton: false, timer: 2000 });
+  },
 
-  $.get(ROUTES_DOCS.levels).done(res => {
-    const $l = $('#level_id');
-    $l.empty().append('<option value="">All Levels</option>');
-    (res.data || []).forEach(level => $l.append($('<option>', { value: level.id, text: level.name })));
-  });
-}
+  showError(title, message) {
+    Swal.fire(title, message, 'error');
+  },
 
-$(function(){
-  loadSelectOptions();
+  disableButton($btn, text) {
+    $btn.prop('disabled', true).html(text);
+  },
 
-  $('#exportDocumentsForm').on('submit', function(e){
-    e.preventDefault();
-    const $btn = $('#exportDocsBtn');
-    const form = this;
-    $btn.prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i>Generating...');
+  enableButton($btn, html) {
+    $btn.prop('disabled', false).html(html);
+  },
 
-    const formData = new FormData(form);
+  downloadBlob(blob, filename) {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  }
+};
 
-    fetch(form.action, {
+// ===========================
+// API SERVICE
+// ===========================
+const ApiDocs = {
+  request(options) { return $.ajax(options); },
+
+  fetchTerms() { return this.request({ url: ROUTES_DOCS.terms, method: 'GET' }); },
+  fetchPrograms() { return this.request({ url: ROUTES_DOCS.programs, method: 'GET' }); },
+  fetchLevels() { return this.request({ url: ROUTES_DOCS.levels, method: 'GET' }); },
+
+  exportDocuments(formData) {
+    return fetch(ROUTES_DOCS.exportDocuments, {
       method: 'POST',
-      headers: {
-        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-      },
+      headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
       body: formData
-    }).then(async (res) => {
+    });
+  }
+};
+
+// ===========================
+// DROPDOWN MANAGER
+// ===========================
+const DropdownManagerDocs = {
+  loadTerms(selector = SELECTORS_DOCS.termSelect) {
+    return ApiDocs.fetchTerms()
+      .done(response => {
+        const terms = response.data || [];
+        const $s = $(selector);
+        $s.empty().append('<option value="">All Terms</option>');
+        terms.forEach(t => $s.append($('<option>', { value: t.id, text: t.name })));
+      })
+      .fail(() => UtilsDocs.showError('Error', 'Failed to load terms'));
+  },
+
+  loadPrograms(selector = SELECTORS_DOCS.programSelect) {
+    return ApiDocs.fetchPrograms()
+      .done(response => {
+        const programs = response.data || [];
+        const $s = $(selector);
+        $s.empty().append('<option value="">All Programs</option>');
+        programs.forEach(p => $s.append($('<option>', { value: p.id, text: p.name })));
+      })
+      .fail(() => UtilsDocs.showError('Error', 'Failed to load programs'));
+  },
+
+  loadLevels(selector = SELECTORS_DOCS.levelSelect) {
+    return ApiDocs.fetchLevels()
+      .done(response => {
+        const levels = response.data || [];
+        const $s = $(selector);
+        $s.empty().append('<option value="">All Levels</option>');
+        levels.forEach(l => $s.append($('<option>', { value: l.id, text: l.name })));
+      })
+      .fail(() => UtilsDocs.showError('Error', 'Failed to load levels'));
+  }
+};
+
+// ===========================
+// EXPORT DOCS MANAGER
+// ===========================
+const ExportDocsManager = {
+  init() {
+    this.bindEvents();
+    // load dropdowns in parallel
+    $.when(
+      DropdownManagerDocs.loadTerms(),
+      DropdownManagerDocs.loadPrograms(),
+      DropdownManagerDocs.loadLevels()
+    ).done(() => {
+        Utils.hidePageLoader();
+    });
+  },
+
+  bindEvents() {
+    $(SELECTORS_DOCS.form).on('submit', this.handleSubmit.bind(this));
+  },
+
+  async handleSubmit(e) {
+    e.preventDefault();
+    const $btn = $(SELECTORS_DOCS.submitBtn);
+    UtilsDocs.disableButton($btn, '<i class="bx bx-loader-alt bx-spin me-1"></i>Generating...');
+
+    const formEl = document.querySelector(SELECTORS_DOCS.form);
+    const formData = new FormData(formEl);
+
+    try {
+      const res = await ApiDocs.exportDocuments(formData);
+
       if (!res.ok) {
-        const json = await res.json().catch(()=> ({}));
-        const message = json.message || 'Export failed';
-        Swal.fire('Error', message, 'error');
-        $btn.prop('disabled', false).html('<i class="bx bx-download me-1"></i> Generate & Download ZIP');
+        const json = await res.json().catch(() => ({}));
+        const message = json.message || 'Export failed. Please check your input.';
+        UtilsDocs.showError('Error', message);
+        UtilsDocs.enableButton($btn, '<i class="bx bx-download me-1"></i> Generate & Download ZIP');
         return;
       }
 
-      // Streamed response: convert to blob and download
       const blob = await res.blob();
       const disposition = res.headers.get('Content-Disposition') || '';
       let filename = 'enrollment_documents.zip';
       const match = /filename="?([^";]+)"?/.exec(disposition);
       if (match) filename = match[1];
 
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-
-      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Download started', showConfirmButton: false, timer: 2000 });
-      $btn.prop('disabled', false).html('<i class="bx bx-download me-1"></i> Generate & Download ZIP');
-    }).catch(err => {
+      UtilsDocs.downloadBlob(blob, filename);
+      UtilsDocs.showSuccess('Download started');
+    } catch (err) {
       console.error(err);
-      Swal.fire('Error', 'Failed to export documents', 'error');
-      $btn.prop('disabled', false).html('<i class="bx bx-download me-1"></i> Generate & Download ZIP');
-    });
-  });
+      UtilsDocs.showError('Error', 'Failed to export documents');
+    } finally {
+      UtilsDocs.enableButton($btn, '<i class="bx bx-download me-1"></i> Generate & Download ZIP');
+    }
+  }
+};
+
+// ===========================
+// INIT
+// ===========================
+$(document).ready(() => {
+  ExportDocsManager.init();
 });
 </script>
 @endpush

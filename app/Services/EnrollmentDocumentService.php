@@ -116,6 +116,60 @@ class EnrollmentDocumentService
         return ['url' => $url, 'filename' => $filename];
     }
 
+    /**
+     * Generate a professional timetable PDF for a student and optional term.
+     *
+     * @param Student $student
+     * @param int|null $termId
+     * @return array
+     */
+    public function generateTimetablePdf(Student $student, ?int $termId = null): array
+    {
+        $this->setResourceLimits();
+
+        // Load student with enrollments and their schedules
+        $studentWithEnrollments = Student::with(['enrollments.course', 'enrollments.enrollmentSchedules', 'program', 'level'])->findOrFail($student->id);
+        $enrollments = $this->filterEnrollmentsByTerm($studentWithEnrollments->enrollments, $termId);
+        $this->validateEnrollments($enrollments, $student->id, $termId);
+
+        // Prepare a simple timetable data structure: day => [slots]
+        $timetable = [];
+        foreach ($enrollments as $enrollment) {
+            $schedules = $enrollment->enrollmentSchedules ?? [];
+            foreach ($schedules as $slot) {
+                // slot is expected to have day, start_time, end_time, location
+                $day = $slot->day ?? 'Unknown';
+                $timetable[$day][] = [
+                    'course_code' => $enrollment->course->code ?? '',
+                    'course_title' => $enrollment->course->title ?? '',
+                    'start_time' => $slot->start_time ?? '',
+                    'end_time' => $slot->end_time ?? '',
+                    'location' => $slot->location ?? '',
+                    'type' => $slot->type ?? '',
+                ];
+            }
+        }
+
+        // Term info
+        $term = $termId ? Term::find($termId) : null;
+        $data = [
+            'student' => $this->prepareStudentData($studentWithEnrollments),
+            'program' => $studentWithEnrollments->program->name ?? '',
+            'level' => $studentWithEnrollments->level->name ?? '',
+            'timetable' => $timetable,
+            'semester' => $term ? $this->mapSeason($term->season) : self::DEFAULT_SEMESTER,
+            'academic_year' => $term ? $term->year : self::DEFAULT_ACADEMIC_YEAR,
+            'generated_at' => Carbon::now('Africa/Cairo')->translatedFormat('l d/m/Y h:i A')
+        ];
+
+        $html = view('pdf.timetable', $data)->render();
+        $filename = 'timetable_' . $student->academic_id . '_' . time() . '.pdf';
+        $pdfContent = $this->generatePdfContent($html, $filename);
+        $url = $this->saveToPublicStorage($pdfContent, self::PDF_STORAGE_PATH . $filename);
+
+        return ['url' => $url, 'filename' => $filename];
+    }
+
     public function hasEnrollments(Student $student, ?int $termId = null): bool
     {
         $query = $student->enrollments();

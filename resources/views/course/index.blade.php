@@ -136,6 +136,34 @@
         </x-slot>
     </x-ui.modal>
 
+    {{-- Manage Prerequisites Modal --}}
+    <x-ui.modal
+        id="prereqModal"
+        title="Manage Prerequisites"
+        size="lg"
+        :scrollable="false"
+        class="prereq-modal"
+    >
+        <x-slot name="slot">
+            <input type="hidden" id="prereq_course_id">
+            <div class="mb-3">
+                <label for="prerequisite_select" class="form-label">Add Prerequisite</label>
+                <select id="prerequisite_select" class="form-control select2">
+                    <option value="">Select Course</option>
+                </select>
+                <button class="btn btn-primary mt-2" id="addPrereqBtn">Add</button>
+            </div>
+            <hr>
+            <h6>Existing Prerequisites</h6>
+            <ul id="prereqList" class="list-group">
+                <!-- loaded via AJAX -->
+            </ul>
+        </x-slot>
+        <x-slot name="footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        </x-slot>
+    </x-ui.modal>
+
 </div>
 @endsection
 
@@ -149,11 +177,14 @@ const ROUTES = {
     all: '{{ route('faculties.all') }}'
   },
   courses: {
+    all: '{{ route('courses.all') }}',
     stats: '{{ route('courses.stats') }}',
     store: '{{ route('courses.store') }}',
     show: '{{ route('courses.show', ':id') }}',
     destroy: '{{ route('courses.destroy', ':id') }}',
     datatable: '{{ route('courses.datatable') }}',
+    storePrereq: '{{ url('courses/:id/prerequisites') }}',
+    destroyPrereq: '{{ url('courses/:id/prerequisites/:prereq') }}',
   }
 };
 
@@ -168,6 +199,8 @@ const SELECTORS = {
   searchTitle: '#search_title',
   searchFaculty: '#search_faculty',
   facultySelect: '#faculty_id',
+  prereqModal: '#prereqModal',
+  prerequisiteSelect: '#prerequisite_select',
 };
 
 // ===========================
@@ -213,17 +246,17 @@ const Utils = {
     return route.replace(':id', id);
   },
   /**
-     * Hide the page loader overlay.
-     */
-    hidePageLoader() {
-      const loader = document.getElementById('pageLoader');
-      if (loader) {
-        loader.classList.add('fade-out');
-        // Restore scrollbars when loader is hidden
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
-      }
+   * Hide the page loader overlay.
+   */
+  hidePageLoader() {
+    const loader = document.getElementById('pageLoader');
+    if (loader) {
+      loader.classList.add('fade-out');
+      // Restore scrollbars when loader is hidden
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
     }
+  },
 };
 
 // ===========================
@@ -239,8 +272,19 @@ const ApiService = {
   fetchFaculties() {
     return this.request({ url: ROUTES.faculties.all, method: 'GET' });
   },
+  fetchAllCourses() {
+    return this.request({ url: ROUTES.courses.all, method: 'GET' });
+  },
   fetchCourse(id) {
     return this.request({ url: Utils.replaceRouteId(ROUTES.courses.show, id), method: 'GET' });
+  },
+  addPrerequisite(courseId, data) {
+    const finalUrl = ROUTES.courses.storePrereq.replace(':id', courseId);
+    return this.request({ url: finalUrl, method: 'POST', data });
+  },
+  removePrerequisite(courseId, prerequisiteId) {
+    const finalUrl = ROUTES.courses.destroyPrereq.replace(':id', courseId).replace(':prereq', prerequisiteId);
+    return this.request({ url: finalUrl, method: 'DELETE' });
   },
   saveCourse(data, id = null) {
     const url = id ? Utils.replaceRouteId(ROUTES.courses.show, id) : ROUTES.courses.store;
@@ -273,6 +317,24 @@ const DropdownManager = {
       .fail(() => {
         Utils.showError('Failed to load faculties');
       });
+  },
+  
+  loadCoursesForPrereq(currentCourseId) {
+    return ApiService.fetchAllCourses()
+      .done((response) => {
+        const courses = response.data;
+        const $select = $(SELECTORS.prerequisiteSelect);
+        $select.empty().append('<option value="">Select Course</option>');
+        courses.forEach((course) => {
+          if (course.id !== Number(currentCourseId)) {
+            $select.append($('<option>', { value: course.id, text: course.name || `${course.code} - ${course.title}` }));
+          }
+        });
+        $select.trigger('change');
+      })
+      .fail(() => {
+        Utils.showError('Failed to load courses');
+      });
   }
 };
 
@@ -284,26 +346,26 @@ const StatsManager = {
     Utils.toggleLoadingState('courses', true);
     Utils.toggleLoadingState('with-prerequisites', true);
     Utils.toggleLoadingState('without-prerequisites', true);
+    
     ApiService.fetchCourseStats()
       .done((response) => {
         const data = response.data;
-        $('#courses-value').text(data.total.total ?? '--');
-        $('#courses-last-updated').text(data.total.lastUpdateTime ?? '--');
-        $('#with-prerequisites-value').text(data.withPrerequisites.total ?? '--');
-        $('#with-prerequisites-last-updated').text(data.withPrerequisites.lastUpdateTime ?? '--');
-        $('#without-prerequisites-value').text(data.withoutPrerequisites.total ?? '--');
-        $('#without-prerequisites-last-updated').text(data.withoutPrerequisites.lastUpdateTime ?? '--');
-        Utils.toggleLoadingState('courses', false);
-        Utils.toggleLoadingState('with-prerequisites', false);
-        Utils.toggleLoadingState('without-prerequisites', false);
+        $('#courses-value').text(data.total?.total ?? '--');
+        $('#courses-last-updated').text(data.total?.lastUpdateTime ?? '--');
+        $('#with-prerequisites-value').text(data.withPrerequisites?.total ?? '--');
+        $('#with-prerequisites-last-updated').text(data.withPrerequisites?.lastUpdateTime ?? '--');
+        $('#without-prerequisites-value').text(data.withoutPrerequisites?.total ?? '--');
+        $('#without-prerequisites-last-updated').text(data.withoutPrerequisites?.lastUpdateTime ?? '--');
       })
       .fail(() => {
         $('#courses-value, #with-prerequisites-value, #without-prerequisites-value').text('N/A');
         $('#courses-last-updated, #with-prerequisites-last-updated, #without-prerequisites-last-updated').text('N/A');
+        Utils.showError('Failed to load course statistics');
+      })
+      .always(() => {
         Utils.toggleLoadingState('courses', false);
         Utils.toggleLoadingState('with-prerequisites', false);
         Utils.toggleLoadingState('without-prerequisites', false);
-        Utils.showError('Failed to load course statistics');
       });
   }
 };
@@ -322,6 +384,7 @@ const CourseManager = {
       $(SELECTORS.courseModal).modal('show');
     });
   },
+
   handleCourseFormSubmit() {
     $(SELECTORS.courseForm).on('submit', function (e) {
       e.preventDefault();
@@ -329,7 +392,9 @@ const CourseManager = {
       const formData = $(SELECTORS.courseForm).serialize();
       const $submitBtn = $(SELECTORS.saveCourseBtn);
       const originalText = $submitBtn.text();
+      
       $submitBtn.prop('disabled', true).text('Saving...');
+      
       ApiService.saveCourse(formData, courseId || null)
         .done(() => {
           $(SELECTORS.courseModal).modal('hide');
@@ -347,6 +412,7 @@ const CourseManager = {
         });
     });
   },
+
   handleEditCourse() {
     $(document).on('click', '.editCourseBtn', function () {
       const courseId = $(this).data('id');
@@ -367,6 +433,7 @@ const CourseManager = {
         });
     });
   },
+
   handleDeleteCourse() {
     $(document).on('click', '.deleteCourseBtn', function () {
       const courseId = $(this).data('id');
@@ -393,6 +460,95 @@ const CourseManager = {
         }
       });
     });
+  },
+
+  handleManagePrerequisites() {
+    // Open modal
+    $(document).on('click', '.managePrereqBtn', function () {
+      const courseId = $(this).data('id');
+      $('#prereq_course_id').val(courseId);
+      $('#prereqList').empty();
+      
+      // Load all courses into select
+      DropdownManager.loadCoursesForPrereq(courseId);
+
+      // Load existing prerequisites
+      ApiService.fetchCourse(courseId)
+        .done((res) => {
+          const course = res.data ? res.data : res;
+          const prereqs = course.prerequisites || [];
+          const $list = $('#prereqList');
+          $list.empty();
+          
+          if (prereqs.length === 0) {
+            $list.append('<li class="list-group-item">No prerequisites.</li>');
+          } else {
+            prereqs.forEach(p => {
+              const $li = $(`<li class="list-group-item d-flex justify-content-between align-items-center">${p.name || p.code + ' - ' + p.title}</li>`);
+              const $btn = $(`<button class="btn btn-sm btn-danger ms-2 removePrereqBtn" data-prereqid="${p.id}"><i class="bx bx-trash"></i></button>`);
+              $li.append($btn);
+              $list.append($li);
+            });
+          }
+          $(SELECTORS.prereqModal).modal('show');
+        })
+        .fail(() => {
+          Utils.showError('Failed to load course prerequisites.');
+        });
+    });
+
+    // Add prerequisite
+    $(document).on('click', '#addPrereqBtn', function () {
+      const courseId = $('#prereq_course_id').val();
+      const prerequisiteId = $(SELECTORS.prerequisiteSelect).val();
+      
+      if (!prerequisiteId) {
+        Utils.showError('Please select a course to add as prerequisite.');
+        return;
+      }
+      
+      ApiService.addPrerequisite(courseId, { prerequisite_id: prerequisiteId })
+        .done(() => {
+          Utils.showSuccess('Prerequisite added.');
+          $(SELECTORS.prereqModal).modal('hide');
+          $(SELECTORS.coursesTable).DataTable().ajax.reload(null, false);
+          StatsManager.loadCourseStats();
+        })
+        .fail((xhr) => {
+          const message = xhr.responseJSON?.message || 'Failed to add prerequisite.';
+          Utils.showError(message);
+        });
+    });
+
+    // Remove prerequisite
+    $(document).on('click', '.removePrereqBtn', function () {
+      const courseId = $('#prereq_course_id').val();
+      const prereqId = $(this).data('prereqid');
+      
+      Swal.fire({
+        title: 'Remove prerequisite?',
+        text: "This action cannot be undone!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, remove it!'
+      }).then((res) => {
+        if (res.isConfirmed) {
+          ApiService.removePrerequisite(courseId, prereqId)
+            .done(() => {
+              Utils.showSuccess('Prerequisite removed.');
+              $(SELECTORS.prereqModal).modal('hide');
+              $(SELECTORS.coursesTable).DataTable().ajax.reload(null, false);
+              StatsManager.loadCourseStats();
+            })
+            .fail((xhr) => {
+              const message = xhr.responseJSON?.message || 'Failed to remove prerequisite.';
+              Utils.showError(message);
+            });
+        }
+      });
+    });
   }
 };
 
@@ -405,6 +561,7 @@ const SearchManager = {
     this.bindSearchEvents();
     DropdownManager.loadFaculties(SELECTORS.searchFaculty);
   },
+
   initSearchSelect2() {
     $(SELECTORS.searchFaculty).select2({
       theme: 'bootstrap-5',
@@ -414,11 +571,13 @@ const SearchManager = {
       dropdownParent: $('#courseSearchCollapse')
     });
   },
+
   bindSearchEvents() {
     $(SELECTORS.clearFiltersBtn).on('click', () => {
       $(`${SELECTORS.searchCode}, ${SELECTORS.searchTitle}, ${SELECTORS.searchFaculty}`).val('').trigger('change');
       $(SELECTORS.coursesTable).DataTable().ajax.reload();
     });
+    
     $(`${SELECTORS.searchCode}, ${SELECTORS.searchTitle}, ${SELECTORS.searchFaculty}`).on('keyup change', () => {
       $(SELECTORS.coursesTable).DataTable().ajax.reload();
     });
@@ -437,6 +596,16 @@ const Select2Manager = {
       width: '100%',
       dropdownParent: $(SELECTORS.courseModal)
     });
+  },
+
+  initPrereqModalSelect2() {
+    $(SELECTORS.prerequisiteSelect).select2({
+      theme: 'bootstrap-5',
+      placeholder: 'Select Course',
+      allowClear: true,
+      width: '100%',
+      dropdownParent: $(SELECTORS.prereqModal)
+    });
   }
 };
 
@@ -450,10 +619,11 @@ const CourseManagementApp = {
     CourseManager.handleCourseFormSubmit();
     CourseManager.handleEditCourse();
     CourseManager.handleDeleteCourse();
+    CourseManager.handleManagePrerequisites();
     Select2Manager.initCourseModalSelect2();
+    Select2Manager.initPrereqModalSelect2();
     SearchManager.initializeAdvancedSearch();
     Utils.hidePageLoader();
-
   }
 };
 
@@ -461,4 +631,4 @@ $(document).ready(() => {
   CourseManagementApp.init();
 });
 </script>
-@endpush 
+@endpush

@@ -236,4 +236,28 @@ class StudentController extends Controller
             return errorResponse('Failed to generate Word document.', [], 500);
         }
     }
+
+    /**
+     * Download timetable as a server-generated PDF.
+     *
+     * @param Student $student
+     * @return JsonResponse
+     */
+    public function downloadTimetable(Student $student): JsonResponse
+    {
+        try {
+            $termId = request()->query('term_id');
+            $serviceResponse = $this->studentService->downloadTimetableDocument($student, $termId);
+            $data = $serviceResponse;
+            return response()->json(['url' => $data['url'] ?? null]);
+        } catch (BusinessValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        } catch (Exception $e) {
+            logError('StudentController@downloadTimetable', $e, ['student_id' => $student->id]);
+            return errorResponse('Failed to generate timetable PDF.', [], 500);
+        }
+    }
 } 

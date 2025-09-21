@@ -39,6 +39,8 @@ Route::middleware(['auth'])
         Route::delete('{student}', 'destroy')->name('destroy')->middleware('can:student.delete');
 
         // ===== Download Operations =====
-        Route::get('{student}/download/pdf', 'downloadPdf')->name('download.pdf')->middleware('can:student.download');
-        Route::get('{student}/download/word', 'downloadWord')->name('download.word')->middleware('can:student.download');
+    Route::get('{student}/download/pdf', 'downloadPdf')->name('download.pdf')->middleware('can:student.download');
+    Route::get('{student}/download/word', 'downloadWord')->name('download.word')->middleware('can:student.download');
+    // Timetable download (server-side generated PDF)
+    Route::get('{student}/download/timetable', 'downloadTimetable')->name('download.timetable')->middleware('can:student.download');
     });

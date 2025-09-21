@@ -1594,7 +1594,6 @@ const ScheduleModule = {
 
           $('#weeklyScheduleCard').show();
           this.generateGrid(EnrollmentState.selectedActivities);
-          this.highlightConflicts(EnrollmentState.selectedActivities);
         } else {
           EnrollmentState.selectedActivities = [];
           $('#weeklyScheduleCard').hide();
@@ -1791,9 +1790,7 @@ const ScheduleModule = {
         });
       }
     });
-    
-    console.log('All activities for schedule:', EnrollmentState.selectedActivities);
-    
+        
     if (EnrollmentState.selectedActivities.length === 0) {
       $('#weeklyScheduleCard').hide();
       $('#scheduleConflictAlert').hide();
@@ -1804,7 +1801,6 @@ const ScheduleModule = {
     $('#weeklyScheduleCard').show();
     $('#downloadTimetableBtn').show();
     this.generateGrid(EnrollmentState.selectedActivities);
-    this.highlightConflicts(EnrollmentState.selectedActivities);
   }
 };
 
@@ -1896,18 +1892,6 @@ const EnrollmentSubmissionModule = {
       return;
     }
     
-    // Final hard check: block submission if any conflicts exist
-    const conflicts = ScheduleModule.getCurrentConflicts();
-    if (conflicts.length > 0) {
-      TimeConflictModule.showConflictWarning(conflicts.map(c => ({
-        conflictingCourse: c.activity1.course.name,
-        conflictingActivity: c.activity1.activity,
-        newActivity: c.activity2.activity,
-        conflictType: c.activity1.source === 'old_schedule' ? 'enrolled_course' : 'selected_course'
-      })), () => {}, () => {});
-      return;
-    }
-
     this.processEnrollment();
   },
 

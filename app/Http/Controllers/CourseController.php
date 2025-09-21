@@ -220,4 +220,49 @@ class CourseController extends Controller
             return errorResponse('Failed to fetch prerequisites.', [], 500);
         }
     }
+
+    /**
+     * Attach a prerequisite to a course.
+     *
+     * @param Request $request
+     * @param Course $course
+     * @return JsonResponse
+     */
+    public function storePrerequisite(Request $request, Course $course): JsonResponse
+    {
+        $request->validate([
+            'prerequisite_id' => 'required|exists:courses,id',
+            'order' => 'nullable|integer|min:1'
+        ]);
+
+        try {
+            $prereq = $this->courseService->addPrerequisite($course->id, (int)$request->prerequisite_id, $request->order ? (int)$request->order : null);
+            return successResponse('Prerequisite added successfully.', $prereq);
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('CourseController@storePrerequisite', $e, ['course_id' => $course->id, 'request' => $request->all()]);
+            return errorResponse('Failed to add prerequisite.', [], 500);
+        }
+    }
+
+    /**
+     * Remove a prerequisite from a course.
+     *
+     * @param Course $course
+     * @param int $prerequisiteId
+     * @return JsonResponse
+     */
+    public function destroyPrerequisite(Course $course, int $prerequisiteId): JsonResponse
+    {
+        try {
+            $this->courseService->removePrerequisite($course->id, $prerequisiteId);
+            return successResponse('Prerequisite removed successfully.');
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('CourseController@destroyPrerequisite', $e, ['course_id' => $course->id, 'prerequisite_id' => $prerequisiteId]);
+            return errorResponse('Failed to remove prerequisite.', [], 500);
+        }
+    }
 } 

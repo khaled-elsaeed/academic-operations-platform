@@ -194,6 +194,31 @@ class StudentService
     }
 
     /**
+     * Generate and download a timetable PDF for a student and optional term.
+     *
+     * @param Student $student
+     * @param int|null $termId
+     * @return array
+     * @throws BusinessValidationException
+     */
+    public function downloadTimetableDocument(Student $student, ?int $termId = null): array
+    {
+        if ($termId !== null) {
+            $term = Term::find($termId);
+            if (!$term) {
+                throw new BusinessValidationException('The selected term does not exist.');
+            }
+        }
+
+        if (!$this->enrollmentDocumentService->hasEnrollments($student, $termId)) {
+            $msg = 'No enrollments found for this student' . ($termId ? ' in the selected term' : '');
+            throw new BusinessValidationException($msg);
+        }
+
+        return $this->enrollmentDocumentService->generateTimetablePdf($student, $termId);
+    }
+
+    /**
      * Helper to check if a student exists by academic email, academic ID, or national ID.
      *
      * @param array $data

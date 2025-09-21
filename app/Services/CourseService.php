@@ -235,6 +235,9 @@ class CourseService
                     <i class="bx bx-dots-vertical-rounded"></i>
                 </button>
                 <div class="dropdown-menu">
+                    <a class="dropdown-item managePrereqBtn" href="javascript:void(0);" data-id="' . $course->id . '">
+                        <i class="bx bx-link-alt me-1"></i> Manage Prerequisites
+                    </a>
                     <a class="dropdown-item editCourseBtn" href="javascript:void(0);" data-id="' . $course->id . '">
                         <i class="bx bx-edit-alt me-1"></i> Edit
                     </a>
@@ -271,5 +274,68 @@ class CourseService
         if (!empty($searchFaculty)) {
             $query->where('courses.faculty_id', $searchFaculty);
         }
+    }
+
+    /**
+     * Attach a prerequisite to a course.
+     *
+     * @param int $courseId
+     * @param int $prerequisiteId
+     * @param int|null $order
+     * @return CoursePrerequisite
+     * @throws BusinessValidationException
+     */
+    public function addPrerequisite(int $courseId, int $prerequisiteId, ?int $order = null): CoursePrerequisite
+    {
+        if ($courseId === $prerequisiteId) {
+            throw new BusinessValidationException('A course cannot be a prerequisite of itself.');
+        }
+
+        // Ensure both courses exist
+        $course = Course::find($courseId);
+        $prereq = Course::find($prerequisiteId);
+        if (!$course || !$prereq) {
+            throw new BusinessValidationException('Course or prerequisite not found.');
+        }
+
+        // Prevent duplicate
+        $exists = CoursePrerequisite::where('course_id', $courseId)
+            ->where('prerequisite_id', $prerequisiteId)
+            ->exists();
+        if ($exists) {
+            throw new BusinessValidationException('This prerequisite already exists for the course.');
+        }
+
+        // Determine order: if not provided, set to 1 + max existing order
+        if ($order === null) {
+            $maxOrder = CoursePrerequisite::where('course_id', $courseId)->max('order');
+            $order = $maxOrder ? $maxOrder + 1 : 1;
+        }
+
+        return CoursePrerequisite::create([
+            'course_id' => $courseId,
+            'prerequisite_id' => $prerequisiteId,
+            'order' => $order,
+        ]);
+    }
+
+    /**
+     * Remove a prerequisite from a course.
+     *
+     * @param int $courseId
+     * @param int $prerequisiteId
+     * @return void
+     * @throws BusinessValidationException
+     */
+    public function removePrerequisite(int $courseId, int $prerequisiteId): void
+    {
+        $pr = CoursePrerequisite::where('course_id', $courseId)
+            ->where('prerequisite_id', $prerequisiteId)
+            ->first();
+        if (!$pr) {
+            throw new BusinessValidationException('The specified prerequisite relationship does not exist.');
+        }
+
+        $pr->delete();
     }
 } 

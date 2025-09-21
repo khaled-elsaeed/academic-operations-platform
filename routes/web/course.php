@@ -17,6 +17,9 @@ Route::middleware(['auth'])
         Route::get('stats', 'stats')->name('stats')->middleware('can:course.view');
         Route::get('all', 'all')->name('all');
         Route::post('prerequisites', 'getPrerequisites')->name('prerequisites');
+    // Manage prerequisites for a specific course
+    Route::post('{course}/prerequisites', 'storePrerequisite')->name('prerequisites.store')->middleware('can:course.edit');
+    Route::delete('{course}/prerequisites/{prerequisiteId}', 'destroyPrerequisite')->name('prerequisites.destroy')->middleware('can:course.edit');
 
         // ===== CRUD Operations =====
         // List & View

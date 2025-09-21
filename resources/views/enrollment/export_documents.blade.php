@@ -107,9 +107,19 @@ const UtilsDocs = {
     });
   },
 
-  showError(message) {
+  // showError(title, message) — supports both showError(message) and showError(title, message)
+  showError(titleOrMessage, maybeMessage) {
+    let title = 'Error';
+    let message = '';
+    if (typeof maybeMessage === 'undefined') {
+      message = titleOrMessage || '';
+    } else {
+      title = titleOrMessage || title;
+      message = maybeMessage || '';
+    }
+
     Swal.fire({
-      title: 'Error',
+      title: title,
       html: message,
       icon: 'error'
     });
@@ -136,18 +146,19 @@ const UtilsDocs = {
 
   replaceRouteId(route, id) {
     return route.replace(':id', id);
-  },/**
-     * Hide the page loader overlay.
-     */
-    hidePageLoader() {
-      const loader = document.getElementById('pageLoader');
-      if (loader) {
-        loader.classList.add('fade-out');
-        // Restore scrollbars when loader is hidden
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
-      }
+  },
+
+  // Hide the page loader overlay.
+  hidePageLoader() {
+    const loader = document.getElementById('pageLoader');
+    if (loader) {
+      loader.classList.add('fade-out');
+      // Restore scrollbars when loader is hidden
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
     }
+  },
+
   disableButton($btn, text) {
     $btn.prop('disabled', true).html(text);
   },
@@ -232,7 +243,6 @@ const DropdownManagerDocs = {
 const ExportDocsManager = {
   init() {
     this.bindEvents();
-    // load dropdowns in parallel
     $.when(
       DropdownManagerDocs.loadTerms(),
       DropdownManagerDocs.loadPrograms(),

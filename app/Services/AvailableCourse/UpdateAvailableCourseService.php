@@ -28,6 +28,9 @@ class UpdateAvailableCourseService
             // Validate required data
             $this->validateRequiredData($data);
 
+            // Check for duplicates (excluding current record)
+            $this->validateNoDuplicates($availableCourse, $data);
+
             // Update the AvailableCourse
             $this->updateAvailableCourseRecord($availableCourse, $data);
 
@@ -42,7 +45,7 @@ class UpdateAvailableCourseService
     }
 
     /**
-     * Validate required data for creating an available course.
+     * Validate required data for updating an available course.
      *
      * @param array $data
      * @throws BusinessValidationException
@@ -65,7 +68,6 @@ class UpdateAvailableCourseService
                 throw new BusinessValidationException('Invalid eligibility mode. Must be one of: ' . implode(', ', $validModes));
             }
 
-
         // 3. Validate eligibility mode requirements
         switch ($eligibilityMode) {
             case 'all_programs':
@@ -83,15 +85,17 @@ class UpdateAvailableCourseService
                     throw new BusinessValidationException('Eligibility array is required for individual eligibility mode.');
                 }
                 foreach ($data['eligibility'] as $pair) {
-                    if (empty($pair['program_id']) || empty($pair['level_id']) || !isset($pair['group'])) {
-                        throw new BusinessValidationException('Each eligibility pair must have program_id, level_id');
+                    if (empty($pair['program_id']) || empty($pair['level_id']) || !isset($pair['group_ids'])) {
+                        throw new BusinessValidationException('Each eligibility pair must have program_id, level_id, and at least one group.');
+                    }
+                    if (!is_array($pair['group_ids']) || count($pair['group_ids']) === 0) {
+                        throw new BusinessValidationException('Each eligibility pair must include at least one group id.');
                     }
                 }
                 break;
             case 'universal':
                 break;
         }
-
 
         // 4. Validate schedule details
         if (isset($data['schedule_details']) && is_array($data['schedule_details'])) {
@@ -131,6 +135,73 @@ class UpdateAvailableCourseService
         }
     }
 
+    /**
+     * Validate that there are no duplicate available courses for the given data (excluding current record).
+     *
+     * @param AvailableCourse $availableCourse
+     * @param array $data
+     * @throws BusinessValidationException
+     * @return void
+     */
+    public function validateNoDuplicates(AvailableCourse $availableCourse, array $data): void
+    {
+        $courseId = $data['course_id'];
+        $termId = $data['term_id'];
+        $eligibilityMode = $data['mode'] ?? 'individual';
+
+        if ($eligibilityMode === 'universal') {
+            $exists = AvailableCourse::where('mode', 'universal')
+                ->where('course_id', $courseId)
+                ->where('term_id', $termId)
+                ->where('id', '!=', $availableCourse->id)
+                ->exists();
+            if ($exists) {
+                throw new BusinessValidationException('A universal available course for this Course and Term already exists.');
+            }
+        } else {
+            $conflict = false;
+            switch ($eligibilityMode) {
+                case 'all_programs':
+                    $levelId = $data['level_id'];
+                    $conflict = AvailableCourse::where('course_id', $courseId)
+                        ->where('term_id', $termId)
+                        ->where('id', '!=', $availableCourse->id)
+                        ->whereHas('eligibilities', function ($q) use ($levelId) {
+                            $q->where('level_id', $levelId);
+                        })->exists();
+                    break;
+                case 'all_levels':
+                    $programId = $data['program_id'];
+                    $conflict = AvailableCourse::where('course_id', $courseId)
+                        ->where('term_id', $termId)
+                        ->where('id', '!=', $availableCourse->id)
+                        ->whereHas('eligibilities', function ($q) use ($programId) {
+                            $q->where('program_id', $programId);
+                        })->exists();
+                    break;
+                case 'individual':
+                default:
+                    foreach ($data['eligibility'] as $pair) {
+                        $groupIds = is_array($pair['group_ids']) ? $pair['group_ids'] : (isset($pair['group']) ? [$pair['group']] : []);
+                        foreach ($groupIds as $g) {
+                            $conflict = AvailableCourse::where('course_id', $courseId)
+                                ->where('term_id', $termId)
+                                ->where('id', '!=', $availableCourse->id)
+                                ->whereHas('eligibilities', function ($q) use ($pair, $g) {
+                                    $q->where('program_id', $pair['program_id'])
+                                      ->where('level_id', $pair['level_id'])
+                                      ->where('group', (int) $g);
+                                })->exists();
+                            if ($conflict) break 2;
+                        }
+                    }
+                    break;
+            }
+            if ($conflict) {
+                throw new BusinessValidationException('An available course with the same Course, Term, Program, and Level already exists.');
+            }
+        }
+    }
 
     /**
      * Update the AvailableCourse record.
@@ -151,7 +222,6 @@ class UpdateAvailableCourseService
             'mode' => $eligibilityMode,
         ]);
     }
-
 
     /**
      * Handle schedule details and update assignments for the available course.
@@ -177,9 +247,9 @@ class UpdateAvailableCourseService
                 foreach ($groupNumbers as $groupNumber) {
                     $courseDetail = AvailableCourseSchedule::create([
                         'available_course_id' => $availableCourse->id,
-                        'activity_type' => $detail['activity_type'],
-                        'location' => $detail['location'] ?? null,
                         'group' => $groupNumber !== null ? (int) $groupNumber : null,
+                        'activity_type' => $detail['activity_type'] ?? null,
+                        'location' => $detail['location'] ?? null,
                         'min_capacity' => $detail['min_capacity'] ?? 1,
                         'max_capacity' => $detail['max_capacity'] ?? 30,
                     ]);
@@ -197,11 +267,10 @@ class UpdateAvailableCourseService
                         }
                         $generatedTitle = $detail['title'] ?? "{$detail['activity_type']} - Group {$groupNumber} - {$slotInfo}";
                         $generatedDescription = $detail['description'] ?? "Scheduled {$detail['activity_type']} for Group {$groupNumber} during {$slotInfo} at {$detail['location']}.";
-                        ScheduleAssignment::updateOrCreate([
+                        ScheduleAssignment::create([
                             'schedule_slot_id' => $slotId,
                             'type' => 'available_course',
                             'available_course_schedule_id' => $courseDetail->id,
-                        ], [
                             'title' => $generatedTitle,
                             'description' => $generatedDescription,
                             'enrolled' => $detail['enrolled'] ?? 0,
@@ -214,7 +283,6 @@ class UpdateAvailableCourseService
             }
         }
     }
-
 
     /**
      * Handle eligibility assignment for the available course.
@@ -256,21 +324,24 @@ class UpdateAvailableCourseService
                 break;
             case 'individual':
             default:
-                $pairs = collect($data['eligibility'])
-                    ->filter(function ($pair) {
-                        return isset($pair['program_id']) && isset($pair['level_id']) && isset($pair['group']);
-                    })
-                    ->map(function ($pair) {
-                        return [
-                            'program_id' => $pair['program_id'],
-                            'level_id' => $pair['level_id'],
-                            'group' => (int) $pair['group'],
-                        ];
-                    })
-                    ->values()
-                    ->toArray();
-                if (!empty($pairs)) {
-                    $availableCourse->setProgramLevelPairs($pairs);
+                // Expand group_ids into individual pairs (same as create service)
+                $expanded = [];
+                foreach ($data['eligibility'] as $pair) {
+                    $programId = $pair['program_id'] ?? null;
+                    $levelId = $pair['level_id'] ?? null;
+                    $groupIds = is_array($pair['group_ids']) ? $pair['group_ids'] : (isset($pair['group']) ? [$pair['group']] : []);
+                    foreach ($groupIds as $g) {
+                        if ($programId && $levelId && $g) {
+                            $expanded[] = [
+                                'program_id' => $programId,
+                                'level_id' => $levelId,
+                                'group' => (int) $g,
+                            ];
+                        }
+                    }
+                }
+                if (!empty($expanded)) {
+                    $availableCourse->setProgramLevelPairs($expanded);
                 }
                 break;
         }

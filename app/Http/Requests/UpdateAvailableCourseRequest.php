@@ -31,7 +31,7 @@ class UpdateAvailableCourseRequest extends FormRequest
             'schedule_details.*.min_capacity'             => 'required|integer|min:1',
             'schedule_details.*.max_capacity'             => 'required|integer|gte:schedule_details.*.min_capacity',
             'schedule_details.*.schedule_assignment_id'   => 'nullable|integer|exists:schedule_assignments,id',
-            'schedule_details.*.location'                 => 'required|string|max:255',
+            'schedule_details.*.location'                 => 'nullable|string|max:255',
         ];
 
         switch ($eligibilityMode) {
@@ -155,9 +155,6 @@ class UpdateAvailableCourseRequest extends FormRequest
             'schedule_details.*.max_capacity.gte' => 'Maximum capacity must be greater than or equal to minimum capacity.',
             'schedule_details.*.schedule_assignment_id.exists' => 'The selected schedule assignment does not exist.',
             'schedule_details.*.schedule_assignment_id.integer' => 'Schedule assignment ID must be a valid number.',
-            'schedule_details.*.location.required' => 'Please enter a location for each schedule row.',
-            'schedule_details.*.location.string' => 'Location must be a valid string.',
-            'schedule_details.*.location.max' => 'Location must not exceed 255 characters.',
         ];
     }
 }

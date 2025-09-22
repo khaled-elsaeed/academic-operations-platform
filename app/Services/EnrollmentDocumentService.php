@@ -84,7 +84,7 @@ class EnrollmentDocumentService
         $pdfData['semester'] = $term ? $this->mapSeason($term->season) : self::DEFAULT_SEMESTER;
         $pdfData['academic_year'] = $term ? $term->year : self::DEFAULT_ACADEMIC_YEAR;
 
-        $pdfData['enrollment_date'] = \Carbon\Carbon::now('Africa/Cairo')->translatedFormat('l d/m/Y h:i A');
+        $pdfData['enrollment_date'] = \Carbon\Carbon::now('Africa/Cairo')->translatedFormat('l d/m/Y h:i A') . ' بتاريخ ';
         $pdfData['cgpa'] = $student->cgpa ?? 0.0;
 
         $html = view('pdf.enrollment', $pdfData)->render();

@@ -772,8 +772,10 @@ const CourseModule = {
     let html = '';
     
     courses.forEach((course) => {
-      const capacityClass = course.remaining_capacity > 10 ? 'success' : 
-                          course.remaining_capacity > 5 ? 'warning' : 'danger';
+  const remainingRaw = parseInt(course.remaining_capacity) || 0;
+  const capacityClass = remainingRaw > 10 ? 'success' : 
+            remainingRaw > 5 ? 'warning' : 'danger';
+  const remainingText = remainingRaw === 0 ? 'No spots left' : (remainingRaw === 1 ? '1 spot left' : `${remainingRaw} spots left`);
       
       const coursePrereqs = prerequisites.filter(p => 
         p.required_for_course_id == course.available_course_id
@@ -820,7 +822,7 @@ const CourseModule = {
                 <div class="text-end">
                   <span class="badge bg-${capacityClass} capacity-badge mb-2">
                     <i class="bx bx-group me-1"></i>
-                    ${course.remaining_capacity} spots left
+                    ${remainingText}
                   </span>
                   ${hasUnfulfilledPrereqs ? '<div><span class="badge bg-danger text-white"><i class="bx bx-lock me-1"></i>Prerequisites Required</span></div>' : ''}
                   ${hasScheduleConflicts ? '<div><span class="badge bg-warning text-dark"><i class="bx bx-error-circle me-1"></i>Schedule Conflict</span></div>' : ''}

@@ -232,7 +232,7 @@ class AvailableCourseController extends Controller
         $exceptionForDifferentLevels = $validated['exceptionForDifferentLevels'];
         $availableCourses = AvailableCourse::available($programId, $levelId, $termId, $exceptionForDifferentLevels)
             ->notEnrolled($studentId, $termId)
-            ->with(['course', 'eligibilities'])
+            ->with(['course', 'eligibilities', 'schedules'])
             ->get();
         $courses = $availableCourses->map(function ($availableCourse) use ($programId, $levelId) {
             // Find all eligibility groups for this student's program and level (may be multiple)
@@ -242,6 +242,26 @@ class AvailableCourseController extends Controller
 
             $groups = $eligibilitiesForStudent->pluck('group')->unique()->values()->all();
 
+            // Determine remaining capacity based on schedule-level capacities when present.
+            // If schedules with max_capacity exist, compute remaining per schedule for the given term
+            $scheduleRemains = [];
+                $totalRemaining = 0;
+                foreach ($availableCourse->schedules as $sched) {
+                    if ($sched->max_capacity !== null && $sched->max_capacity !== '') {
+                        $enrolledCount = \App\Models\EnrollmentSchedule::where('available_course_schedule_id', $sched->id)
+                            ->whereHas('enrollment', function ($q) use ($availableCourse) {
+                                $q->where('term_id', $availableCourse->term_id);
+                            })->count();
+                        $rem = (int)$sched->max_capacity - $enrolledCount;
+                        if ($rem > 0) {
+                            $totalRemaining += $rem;
+                        }
+                    }
+                }
+
+                // If any schedule produced a positive remaining, use the sum. Otherwise fallback to the course remaining_capacity.
+                $remainingCapacityValue = $totalRemaining > 0 ? $totalRemaining : $availableCourse->remaining_capacity;
+
             return [
                 'id'                 => $availableCourse->course->id,
                 'name'               => $availableCourse->course->name,
@@ -249,7 +269,7 @@ class AvailableCourseController extends Controller
                 'groups'             => $groups,
                 'credit_hours'       => $availableCourse->course->credit_hours,
                 'available_course_id'=> $availableCourse->id,
-                'remaining_capacity' => $availableCourse->remaining_capacity,
+                'remaining_capacity' => $remainingCapacityValue,
             ];
         });
         return response()->json([

@@ -572,14 +572,36 @@ const ScheduleDetailsCardManager = {
     `;
     const groupSelect = `
       <select class='form-select group-select' name='schedule_details[${index}][group_numbers][]' multiple>
-        <option value='1'>Group 1</option>
-        <option value='2'>Group 2</option>
-        <option value='3'>Group 3</option>
-        <option value='4'>Group 4</option>
-        <option value='5'>Group 5</option>
-        <option value='6'>Group 6</option>
-        <option value='7'>Group 7</option>
-        <option value='8'>Group 8</option>
+      <option value='1'>Group 1</option>
+      <option value='2'>Group 2</option>
+      <option value='3'>Group 3</option>
+      <option value='4'>Group 4</option>
+      <option value='5'>Group 5</option>
+      <option value='6'>Group 6</option>
+      <option value='7'>Group 7</option>
+      <option value='8'>Group 8</option>
+      <option value='9'>Group 9</option>
+      <option value='10'>Group 10</option>
+      <option value='11'>Group 11</option>
+      <option value='12'>Group 12</option>
+      <option value='13'>Group 13</option>
+      <option value='14'>Group 14</option>
+      <option value='15'>Group 15</option>
+      <option value='16'>Group 16</option>
+      <option value='17'>Group 17</option>
+      <option value='18'>Group 18</option>
+      <option value='19'>Group 19</option>
+      <option value='20'>Group 20</option>
+      <option value='21'>Group 21</option>
+      <option value='22'>Group 22</option>
+      <option value='23'>Group 23</option>
+      <option value='24'>Group 24</option>
+      <option value='25'>Group 25</option>
+      <option value='26'>Group 26</option>
+      <option value='27'>Group 27</option>
+      <option value='28'>Group 28</option>
+      <option value='29'>Group 29</option>
+      <option value='30'>Group 30</option>
       </select>
     `;
     const minCapacityInput = `<input type='number' class='form-control min-capacity-input' name='schedule_details[${index}][min_capacity]' placeholder='Min' min='1'>`;

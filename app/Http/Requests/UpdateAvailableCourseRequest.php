@@ -36,10 +36,15 @@ class UpdateAvailableCourseRequest extends FormRequest
 
         switch ($eligibilityMode) {
             case 'individual':
+                // eligibility rows: program_id, level_id and either group (legacy single) or group_ids (array)
                 $rules['eligibility'] = 'required|array|min:1';
                 $rules['eligibility.*.program_id'] = 'required|exists:programs,id';
                 $rules['eligibility.*.level_id'] = 'required|exists:levels,id';
-                $rules['eligibility.*.group'] = 'required|string|max:255';
+                // support new array of groups
+                $rules['eligibility.*.group_ids'] = 'nullable|array';
+                $rules['eligibility.*.group_ids.*'] = 'integer|min:1|max:30';
+                // support legacy single group value
+                $rules['eligibility.*.group'] = 'nullable|integer|min:1|max:30';
                 $rules['level_id'] = 'prohibited';
                 $rules['program_id'] = 'prohibited';
                 break;
@@ -95,6 +100,23 @@ class UpdateAvailableCourseRequest extends FormRequest
                             );
                             break;
                         }
+                    }
+                }
+            }
+
+            // Additional validation: for individual mode, each eligibility row must include at least one group
+            $eligibilityMode = $this->input('mode', 'individual');
+            if ($eligibilityMode === 'individual') {
+                $eligibilities = $this->input('eligibility', []);
+                foreach ($eligibilities as $i => $row) {
+                    $hasGroupIds = isset($row['group_ids']) && is_array($row['group_ids']) && count($row['group_ids']) > 0;
+                    $hasGroup = isset($row['group']) && $row['group'] !== null && $row['group'] !== '';
+
+                    if (! $hasGroupIds && ! $hasGroup) {
+                        $validator->errors()->add(
+                            "eligibility.{$i}.group_ids",
+                            "Please select at least one group (group_ids) or provide a group number for eligibility row " . ($i + 1) . "."
+                        );
                     }
                 }
             }

@@ -87,7 +87,8 @@ class EnrollmentService
             ]);
             // Validate credit hours limit BEFORE creating enrollments
             $this->validateCreditHoursLimit($student, $term, $requestedCreditHours);
-            // Create enrollments only after validation passes
+            // Pass optional course_schedule_mapping from input for schedule-level capacity checks
+            $this->validateAvailableCourseScheduleCapacity($availableCourses, $term->id, $data['course_schedule_mapping'] ?? null);
             $enrollments = [];
             foreach ($availableCourses as $availableCourse) {
                 $enrollment = $this->createEnrollment([
@@ -365,6 +366,110 @@ class EnrollmentService
                 'errors' => $validator->errors()->all(),
             ]);
             throw new BusinessValidationException($validator->errors()->first('credit_hours'));
+        }
+    }
+
+    /**
+     * Validate available course and schedule capacities before creating enrollments.
+     *
+     * @param array $availableCourses Array of AvailableCourse models
+     * @param int $termId
+     * @param array|string|null $courseScheduleMapping Optional mapping of available_course_id => JSON-encoded array of available_course_schedule_ids
+     * @throws BusinessValidationException
+     */
+    private function validateAvailableCourseScheduleCapacity(array $availableCourses, int $termId, $courseScheduleMapping = null): void
+    {
+        // Normalize mapping to array if JSON string provided
+        if (is_string($courseScheduleMapping)) {
+            $decoded = json_decode($courseScheduleMapping, true);
+            $courseScheduleMapping = is_array($decoded) ? $decoded : null;
+        }
+
+        // Build counters for requested seats per course and per schedule within this batch
+        $requestedSeatsPerCourse = [];
+        $requestedSeatsPerSchedule = [];
+
+        if (is_array($courseScheduleMapping)) {
+            foreach ($courseScheduleMapping as $acId => $payload) {
+                $items = $payload;
+                if (is_string($items)) {
+                    $items = json_decode($items, true) ?: [];
+                }
+                if (!is_array($items)) continue;
+
+                $requestedSeatsPerCourse[intval($acId)] = count($items) > 0 ? count($items) : ($requestedSeatsPerCourse[intval($acId)] ?? 0);
+                foreach ($items as $schedId) {
+                    $sid = intval($schedId);
+                    $requestedSeatsPerSchedule[$sid] = ($requestedSeatsPerSchedule[$sid] ?? 0) + 1;
+                }
+            }
+        }
+
+        foreach ($availableCourses as $availableCourse) {
+            if (!($availableCourse instanceof AvailableCourse)) {
+                // attempt to load model if id provided
+                $availableCourse = AvailableCourse::find($availableCourse);
+                if (!$availableCourse) continue;
+            }
+
+            // Count existing enrollments for this available course (by course_id and term)
+            $totalEnrolled = Enrollment::where('course_id', $availableCourse->course_id)
+                ->where('term_id', $termId)
+                ->count();
+
+            // Add requested seats for this course from mapping if mapping doesn't specify schedule-level selection
+            $requestedForThisCourse = $requestedSeatsPerCourse[$availableCourse->id] ?? 0;
+
+            // If available course has max_capacity defined, ensure we don't exceed it including requested seats
+            if ($availableCourse->max_capacity !== null && $availableCourse->max_capacity !== '') {
+                $capacity = (int) $availableCourse->max_capacity;
+                if (($totalEnrolled + $requestedForThisCourse) > $capacity) {
+                    $courseName = $availableCourse->course?->name ?? 'Course';
+                    throw new BusinessValidationException("Not enough seats for {$courseName}. Remaining seats: " . max(0, $capacity - $totalEnrolled));
+                }
+            }
+
+            // If a schedule mapping is provided for this available course, validate each selected schedule capacity
+            if (is_array($courseScheduleMapping) && isset($courseScheduleMapping[$availableCourse->id])) {
+                $selected = $courseScheduleMapping[$availableCourse->id];
+                // selected might be JSON encoded string or array
+                if (is_string($selected)) {
+                    $selected = json_decode($selected, true) ?: [];
+                }
+
+                if (is_array($selected) && count($selected) > 0) {
+                    // Validate all selected schedule ids
+                    foreach ($selected as $schedId) {
+                        $schedId = intval($schedId);
+                        // Find the AvailableCourseSchedule record
+                        $acs = \App\Models\AvailableCourseSchedule::find($schedId);
+                        if (!$acs) {
+                            throw new BusinessValidationException("Selected schedule (ID: {$schedId}) is invalid for available course ID {$availableCourse->id}.");
+                        }
+
+                        // Ensure schedule belongs to this available course
+                        if ($acs->available_course_id != $availableCourse->id) {
+                            throw new BusinessValidationException("Selected schedule (ID: {$schedId}) does not belong to available course ID {$availableCourse->id}.");
+                        }
+
+                        // Count enrolled students for this schedule within the same term
+                        $enrolledCount = EnrollmentSchedule::where('available_course_schedule_id', $acs->id)
+                            ->whereHas('enrollment', function ($q) use ($termId) {
+                                $q->where('term_id', $termId);
+                            })->count();
+
+                        // Add requested seats for this schedule from the batch
+                        $requestedForThisSchedule = $requestedSeatsPerSchedule[$acs->id] ?? 0;
+
+                        if ($acs->max_capacity !== null && $acs->max_capacity !== '') {
+                            $cap = (int) $acs->max_capacity;
+                            if (($enrolledCount + $requestedForThisSchedule) > $cap) {
+                                throw new BusinessValidationException("Selected schedule for Group {$acs->group} (Schedule ID: {$acs->id}) does not have enough seats. Remaining: " . max(0, $cap - $enrolledCount));
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

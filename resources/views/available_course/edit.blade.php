@@ -92,8 +92,8 @@
                         <tr>
                           <th style="width:40px;">#</th>
                           <th>Program</th>
-                          <th>Level</th>
-                          <th>Group</th>
+                            <th>Level</th>
+                            <th style="width:80px;">Group</th>
                           <th style="width:40px;"></th>
                         </tr>
                       </thead>
@@ -237,6 +237,42 @@
     flex-direction: column;
     gap: 1rem !important;
   }
+}
+
+/* Multiple select styling */
+.schedule-slot-select[multiple] {
+  min-height: 120px !important;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.schedule-slot-select[multiple] option {
+  padding: 8px 12px;
+  margin: 2px 0;
+  border-radius: 4px;
+}
+
+.schedule-slot-select[multiple] option:checked {
+  background: #5a6acf !important;
+  color: white !important;
+}
+
+.slot-feedback {
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  color: #dc3545;
+}
+
+.selected-slots-summary {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+
+.selected-slots-summary .slot-summary-text {
+  font-weight: 500;
+  color: #5a6acf;
 }
 </style>
 @endpush
@@ -390,19 +426,43 @@ const DropdownManager = {
     switch(mode) {
       case ModeS.ALL_PROGRAMS:
         if (availableCourse.eligibilities && availableCourse.eligibilities.length > 0) {
-          $('#allProgramsLevelSelect').val(availableCourse.eligibilities[0].level_id);
+          $('#allProgramsLevelSelect').val(availableCourse.eligibilities[0].level_id).trigger('change');
         }
         break;
       case ModeS.ALL_LEVELS:
         if (availableCourse.eligibilities && availableCourse.eligibilities.length > 0) {
-          $('#allLevelsProgramSelect').val(availableCourse.eligibilities[0].program_id);
+          $('#allLevelsProgramSelect').val(availableCourse.eligibilities[0].program_id).trigger('change');
         }
         break;
       case ModeS.INDIVIDUAL:
         // Load individual eligibility pairs
         if (availableCourse.eligibilities && availableCourse.eligibilities.length > 0) {
+          const map = {};
+
           availableCourse.eligibilities.forEach(eligibility => {
-            EligibilityTableManager.addRow(eligibility.program_id, eligibility.level_id, eligibility.group);
+            const programId = eligibility.program_id;
+            const levelId = eligibility.level_id;
+            const key = `${programId}::${levelId}`;
+
+            // normalize groups: support group_ids (array) or legacy group (single)
+            let groups = [];
+            if (eligibility.group_ids && Array.isArray(eligibility.group_ids)) {
+              groups = eligibility.group_ids.map(String);
+            } else if (eligibility.group !== undefined && eligibility.group !== null) {
+              groups = Array.isArray(eligibility.group) ? eligibility.group.map(String) : [String(eligibility.group)];
+            }
+
+            if (!map[key]) {
+              map[key] = { program_id: programId, level_id: levelId, groups: new Set() };
+            }
+
+            groups.forEach(g => map[key].groups.add(String(g)));
+          });
+
+          // Create a row per unique program+level pair with aggregated groups
+          Object.values(map).forEach(item => {
+            const groupsArray = Array.from(item.groups);
+            EligibilityTableManager.addRow(item.program_id, item.level_id, groupsArray);
           });
         } else {
           EligibilityTableManager.addRow(); // Add empty row
@@ -452,7 +512,7 @@ const DropdownManager = {
     });
     
     $container.find('.group-select').each(function() {
-      Utils.initSelect2($(this), { placeholder: 'Select Group' });
+      Utils.initSelect2($(this), { placeholder: 'Select Group', closeOnSelect: false });
     });
   }
 };
@@ -465,7 +525,8 @@ const EligibilityTableManager = {
     // Create empty selects to be populated later
     let programSelect = `<select class='form-select program-select' name='eligibility[${index}][program_id]'></select>`;
     let levelSelect = `<select class='form-select level-select' name='eligibility[${index}][level_id]'></select>`;
-    let groupInput = `<input type='number' min='1' class='form-control group-input' name='eligibility[${index}][group]' value='${selectedGroup}' style='width:70px;'>`;
+    // Group is a multi-select (group_ids)
+    let groupInput = `<select multiple class='form-select group-select' name='eligibility[${index}][group_ids][]' style='width:120px;'></select>`;
 
     return `
       <tr>
@@ -504,6 +565,8 @@ const EligibilityTableManager = {
 
     // Populate the selects using Utils.populateSelect
     const $newRow = $('#eligibilityTable tbody tr:last');
+    // Initialize Select2 first so populateSelect can trigger select2-specific events
+
     Utils.populateSelect(
       $newRow.find('.program-select'),
       DropdownManager.programOptions,
@@ -528,8 +591,18 @@ const EligibilityTableManager = {
       },
       true // isSelect2
     );
-    // Initialize Select2 for the new row
+    // Populate group select options (1..30 groups to cover all possible groups)
+    const $groupSelect = $newRow.find('.group-select');
+    for (let g = 1; g <= 30; g++) {
+      const isSelected = Array.isArray(selectedGroup) ? selectedGroup.includes(String(g)) : String(selectedGroup) === String(g);
+      $groupSelect.append(`<option value="${g}" ${isSelected ? 'selected' : ''}>Group ${g}</option>`);
+    }
+
+    // Initialize Select2 for the new row (including group multi-select)
     DropdownManager.initEligibilitySelect2($newRow);
+    $groupSelect.each(function() {
+      Utils.initSelect2($(this), { placeholder: 'Select Group', closeOnSelect: false });
+    });
   },
 
   removeRow($button) {
@@ -694,11 +767,13 @@ const ScheduleDetailsCardManager = {
 
     // Set other selected values
     if (schedule.activity_type) {
-      $newCard.find('.activity-type-select').val(schedule.activity_type);
+      $newCard.find('.activity-type-select').val(schedule.activity_type).trigger('change');
     }
-    if (schedule.group) {
-      // In DB the schedule may store single group; normalize to array for multi-select
-      $newCard.find('.group-select').val(Array.isArray(schedule.group) ? schedule.group : [schedule.group]);
+    // Prefer `group_numbers` (new schema), fallback to `group` (legacy)
+    if (schedule.group_numbers) {
+      $newCard.find('.group-select').val(Array.isArray(schedule.group_numbers) ? schedule.group_numbers : [schedule.group_numbers]).trigger('change');
+    } else if (schedule.group) {
+      $newCard.find('.group-select').val(Array.isArray(schedule.group) ? schedule.group : [schedule.group]).trigger('change');
     }
     if (schedule.min_capacity) {
       $newCard.find('.min-capacity-input').val(schedule.min_capacity);
@@ -716,6 +791,9 @@ const ScheduleDetailsCardManager = {
 
     // Initialize Select2 for the new card
     DropdownManager.initScheduleDetailSelect2($newCard);
+
+  // Trigger change on schedule select so dependent selects (day/slots) can update if needed
+  $newCard.find('.schedule-select').trigger('change');
 
     // If there's existing schedule data, load days/slots
     if (schedule.slots?.[0]?.schedule_id) {
@@ -1189,10 +1267,11 @@ const FormManager = {
       $('#eligibilityTable tbody tr').each(function() {
         const program_id = $(this).find('.program-select').val();
         const level_id = $(this).find('.level-select').val();
-        const group = $(this).find('.group-input').val();
+        // group-select is a multi-select returning an array of group ids
+        const group_ids = $(this).find('.group-select').val() || [];
 
         if (program_id && level_id) {
-          data.eligibility.push({ program_id, level_id, group });
+          data.eligibility.push({ program_id, level_id, group_ids });
         }
       });
     }

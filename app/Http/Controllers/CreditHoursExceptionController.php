@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use Exception;
 use App\Exceptions\BusinessValidationException;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CreditHoursExceptionController extends Controller
 {
@@ -207,6 +208,42 @@ class CreditHoursExceptionController extends Controller
         } catch (Exception $e) {
             logError('CreditHoursExceptionController@stats', $e);
             return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
+     * Import credit hours exceptions from uploaded file.
+     */
+    public function import(Request $request): JsonResponse
+    {
+        $request->validate([
+            'exceptions_file' => 'required|file|mimes:xlsx,xls'
+        ]);
+
+        try {
+            $result = $this->exceptionService->importExceptions($request->file('exceptions_file'));
+            return successResponse($result['message'], [
+                'imported_count' => $result['imported_count'],
+                'errors' => $result['errors']
+            ]);
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], 422);
+        } catch (Exception $e) {
+            logError('CreditHoursExceptionController@import', $e, ['request' => $request->all()]);
+            return errorResponse('Failed to import credit hours exceptions.', [], 500);
+        }
+    }
+
+    /**
+     * Download the import template for credit hours exceptions.
+     */
+    public function downloadTemplate()
+    {
+        try {
+            return $this->exceptionService->downloadTemplate();
+        } catch (Exception $e) {
+            logError('CreditHoursExceptionController@downloadTemplate', $e);
+            return errorResponse('Failed to download template.', [], 500);
         }
     }
 } 

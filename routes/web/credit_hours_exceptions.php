@@ -18,6 +18,10 @@ Route::middleware(['auth'])
         Route::get('students', 'getStudents')->name('students')->middleware('can:credit_hours_exception.view');
         Route::get('terms', 'getTerms')->name('terms')->middleware('can:credit_hours_exception.view');
 
+        // ===== Import & Template (must be before {exception}) =====
+        Route::post('import', 'import')->name('import')->middleware('can:credit_hours_exception.create');
+        Route::get('download-template', 'downloadTemplate')->name('download-template')->middleware('can:credit_hours_exception.view');
+
         // ===== CRUD Operations =====
         // List & View
         Route::get('/', 'index')->name('index')->middleware('can:credit_hours_exception.view');
@@ -33,4 +37,5 @@ Route::middleware(['auth'])
         
         // Delete
         Route::delete('{exception}', 'destroy')->name('destroy')->middleware('can:credit_hours_exception.delete');
+
     }); 

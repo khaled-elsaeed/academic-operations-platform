@@ -5,9 +5,16 @@ namespace App\Services;
 use App\Models\CreditHoursException;
 use App\Models\Student;
 use App\Models\Term;
+use App\Imports\CreditHoursExceptionsImport;
+use App\Validators\CreditHoursExceptionImportValidator;
+use App\Exports\CreditHoursExceptionsTemplateExport;
 use App\Models\User;
 use App\Exceptions\BusinessValidationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Yajra\DataTables\DataTables;
 use Illuminate\Support\Str;
 
@@ -225,6 +232,116 @@ class CreditHoursExceptionService
                 'lastUpdateTime' => $latest ? formatDate($latest) : 'Never',
             ],
         ];
+    }
+
+    /**
+     * Import credit hours exceptions from an uploaded Excel file.
+     *
+     * @param UploadedFile $file
+     * @return array
+     */
+    public function importExceptions(UploadedFile $file): array
+    {
+        $import = new CreditHoursExceptionsImport();
+        \Maatwebsite\Excel\Facades\Excel::import($import, $file);
+        $rows = $import->rows ?? collect();
+        return $this->importExceptionsFromRows($rows);
+    }
+
+    /**
+     * Import credit hours exceptions from rows of data.
+     *
+     * @param Collection $rows
+     * @return array
+     */
+    public function importExceptionsFromRows(Collection $rows): array
+    {
+        $errors = [];
+        $created = 0;
+        $updated = 0;
+
+        foreach ($rows as $index => $row) {
+            $rowNum = $index + 2;
+            try {
+                DB::transaction(function () use ($row, $rowNum, &$created, &$updated) {
+                    $result = $this->processImportRow($row->toArray(), $rowNum);
+                    $result === 'created' ? $created++ : $updated++;
+                });
+            } catch (ValidationException $e) {
+                $errors[] = [
+                    'row' => $rowNum,
+                    'errors' => $e->errors()["Row {$rowNum}"] ?? [],
+                    'original_data' => $row->toArray()
+                ];
+            } catch (BusinessValidationException $e) {
+                $errors[] = [
+                    'row' => $rowNum,
+                    'errors' => ['general' => [$e->getMessage()]],
+                    'original_data' => $row->toArray()
+                ];
+            } catch (\Exception $e) {
+                $errors[] = [
+                    'row' => $rowNum,
+                    'errors' => ['general' => ['Unexpected error - ' . $e->getMessage()]],
+                    'original_data' => $row->toArray()
+                ];
+                Log::error('Credit hours exception import row failed', [
+                    'row' => $rowNum,
+                    'error' => $e->getMessage(),
+                    'data' => $row
+                ]);
+            }
+        }
+
+        $totalProcessed = $created + $updated;
+        $message = empty($errors)
+            ? "Successfully processed {$totalProcessed} exceptions ({$created} created, {$updated} updated)."
+            : "Import completed with {$totalProcessed} successful ({$created} created, {$updated} updated) and " . count($errors) . " failed rows.";
+
+        return [
+            'success' => empty($errors),
+            'message' => $message,
+            'errors' => $errors,
+            'imported_count' => $totalProcessed,
+            'created_count' => $created,
+            'updated_count' => $updated,
+        ];
+    }
+
+    /**
+     * Process a single import row for credit hours exception.
+     */
+    private function processImportRow(array $row, int $rowNum): string
+    {
+        CreditHoursExceptionImportValidator::validateRow($row, $rowNum);
+
+        $student = Student::where('academic_id', $row['academic_id'])->firstOrFail();
+        $term = Term::where('code', $row['term_code'])->firstOrFail();
+
+        $exception = CreditHoursException::updateOrCreate(
+            [
+                'student_id' => $student->id,
+                'term_id' => $term->id,
+            ],
+            [
+                'student_id' => $student->id,
+                'term_id' => $term->id,
+                'granted_by' => auth()->id() ?? null,
+                'additional_hours' => (int)($row['additional_hours'] ?? 0),
+                'reason' => $row['reason'] ?? null,
+                'is_active' => isset($row['is_active']) ? (bool)$row['is_active'] : true,
+            ]
+        );
+
+        return $exception->wasRecentlyCreated ? 'created' : 'updated';
+    }
+
+    /**
+     * Download template for credit hours exceptions import.
+     */
+    public function downloadTemplate()
+    {
+        return \Maatwebsite\Excel\Facades\Excel::download(new CreditHoursExceptionsTemplateExport(), 'credit_hours_exceptions_template.xlsx');
     }
 
     /**

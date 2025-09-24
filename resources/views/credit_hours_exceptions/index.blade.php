@@ -46,6 +46,16 @@
                     data-bs-target="#exceptionModal">
                 <i class="bx bx-plus me-1"></i> Add Exception
             </button>
+            <button class="btn btn-outline-primary mx-2" 
+                    id="importExceptionsBtn" 
+                    type="button" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#importExceptionsModal">
+                <i class="bx bx-upload me-1"></i> Import
+            </button>
+            <a class="btn btn-outline-secondary mx-2" href="{{ route('credit-hours-exceptions.download-template') }}">
+                <i class="bx bx-download me-1"></i> Template
+            </a>
         @endcan
         <button class="btn btn-secondary"
                 type="button"
@@ -153,6 +163,31 @@
             <button type="submit" class="btn btn-primary" id="saveExceptionBtn" form="exceptionForm">Save</button>
         </x-slot>
     </x-ui.modal>
+
+    {{-- Import Modal --}}
+    <x-ui.modal 
+        id="importExceptionsModal"
+        title="Import Credit Hours Exceptions"
+        size="md"
+        :scrollable="false"
+        class="import-exceptions-modal"
+    >
+        <x-slot name="slot">
+            <form id="importExceptionsForm">
+                <div class="mb-3">
+                    <label for="exceptions_file" class="form-label">Upload Excel File (.xlsx or .xls)</label>
+                    <input type="file" class="form-control" id="exceptions_file" name="exceptions_file" accept=".xlsx,.xls" required>
+                </div>
+            </form>
+            <div class="small text-muted">
+                Ensure columns: academic_id, term_code, additional_hours, reason, is_active
+            </div>
+        </x-slot>
+        <x-slot name="footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary" id="importExceptionsSubmitBtn" form="importExceptionsForm">Import</button>
+        </x-slot>
+    </x-ui.modal>
 </div>
 @endsection
 
@@ -209,6 +244,77 @@ const Utils = {
         document.body.style.overflow = '';
       }
     }
+};
+
+// ===========================
+// IMPORT FUNCTIONALITY
+// ===========================
+const ImportManager = {
+  handleImportExceptions() {
+    $('#importExceptionsForm').on('submit', function (e) {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const $submitBtn = $('#importExceptionsSubmitBtn');
+      $submitBtn.prop('disabled', true).text('Importing...');
+
+      $.ajax({
+        url: '{{ route("credit-hours-exceptions.import") }}',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        headers: {
+          'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
+      })
+      .done((response) => {
+        $('#importExceptionsModal').modal('hide');
+        Utils.showSuccess(response.message);
+        $('#credit-hours-exceptions-table').DataTable().ajax.reload(null, false);
+        if (response.data?.errors?.length > 0) {
+          ImportManager.showImportErrors(response.data.errors, response.data.imported_count);
+        }
+        StatsManager.loadExceptionStats();
+      })
+      .fail((xhr) => {
+        const response = xhr.responseJSON;
+        if (response?.errors && Object.keys(response.errors).length > 0) {
+          const errorMessages = [];
+          Object.keys(response.errors).forEach(field => {
+            if (Array.isArray(response.errors[field])) {
+              errorMessages.push(...response.errors[field]);
+            } else {
+              errorMessages.push(response.errors[field]);
+            }
+          });
+          Utils.showError(errorMessages.join('<br>'));
+        } else {
+          const message = response?.message || 'Import failed. Please check your file.';
+          Utils.showError(message);
+        }
+      })
+      .always(() => {
+        $submitBtn.prop('disabled', false).text('Import');
+        $('#importExceptionsForm')[0].reset();
+      });
+    });
+  },
+
+  showImportErrors(errors, importedCount) {
+    let html = `<div class="text-start">Imported ${importedCount} rows with ${errors.length} error rows.<br/><br/>`;
+    html += '<ul style="max-height:260px;overflow:auto;">';
+    errors.forEach((err) => {
+      const details = Array.isArray(err.errors) ? err.errors : (err.errors?.general || []);
+      html += `<li><strong>Row ${err.row}:</strong> ${details.join(' | ')}</li>`;
+    });
+    html += '</ul></div>';
+
+    Swal.fire({
+      title: 'Import Completed',
+      html,
+      icon: 'info'
+    });
+  }
 };
 
 // ===========================
@@ -551,6 +657,7 @@ const CreditHoursExceptionApp = {
         $('#term_id').select2('destroy');
       }
     });
+    ImportManager.handleImportExceptions();
     Utils.hidePageLoader();
 
   }

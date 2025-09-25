@@ -48,7 +48,7 @@ class StudentsExport implements FromCollection, WithMapping, WithHeadings
             $student->gender ?? 'N/A',
             $student->academic_email ?? 'N/A',
             $student->cgpa ?? 'N/A',
-            $student->taken_hours ?? 'N/A',
+            $student->taken_credit_hours ?? 'N/A',
         ];
     }
 

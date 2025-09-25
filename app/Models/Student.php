@@ -28,6 +28,7 @@ class Student extends Model
         'academic_email',
         'level_id',
         'cgpa',
+        'taken_credit_hours',
         'gender',
         'program_id',
     ];

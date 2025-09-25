@@ -427,6 +427,7 @@ class StudentService
         StudentImportValidator::validateRow($row, $rowNum);
 
         $level = $this->findLevelByName($row['level'] ?? '');
+
         $program = $this->findProgramByName($row['program_name'] ?? '');
 
         $gender = $this->extractGenderFromNationalId($row['national_id'] ?? '');
@@ -449,6 +450,7 @@ class StudentService
                 'cgpa' => $row['cgpa'],
                 'program_id' => $program->id,
                 'gender' => $gender,
+                'taken_credit_hours' => $row['taken_credit_hours'] ?? 0,
             ]
         );
         return $student;

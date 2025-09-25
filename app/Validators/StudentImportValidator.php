@@ -41,7 +41,7 @@ class StudentImportValidator
                     }
                 },
             ],
-            'academic_email' => 'required|email',
+            'academic_email' => 'nullable|email',
             'level'          => 'required|exists:levels,name',
             'cgpa'           => ['nullable','numeric','min:0','max:4','regex:/^\d{1}(\.\d{1,3})?$/'],
             'program_name'   => 'required|exists:programs,name',
@@ -49,7 +49,6 @@ class StudentImportValidator
             'name_en.required'        => 'English name is required.',
             'academic_id.required'    => 'Academic ID is required.',
             'national_id.required'    => 'National ID is required.',
-            'academic_email.required' => 'Academic email is required.',
             'academic_email.email'    => 'Academic email must be a valid email address.',
             'level.required'          => 'Level is required.',
             'level.exists'            => 'Level does not exist.',

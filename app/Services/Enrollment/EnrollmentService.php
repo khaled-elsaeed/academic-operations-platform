@@ -283,7 +283,7 @@ class EnrollmentService
 
         // Load the taken hours attribute
         $student->load('enrollments.course');
-        $student->taken_hours = $student->taken_hours;
+        $student->taken_hours = $student->taken_credit_hours;
 
         return $student;
     }

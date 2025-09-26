@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Models\Enrollment;
+use App\Models\EnrollmentSchedule;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -20,13 +20,20 @@ class EnrollmentsExport implements FromCollection, WithMapping, WithHeadings
         $this->levelId = $levelId;
     }
 
-    public function collection()
+     public function collection()
     {
-        $query = Enrollment::with(['student', 'course', 'term', 'student.level'])
-            ->select('enrollments.*')
-            ->join('students', 'enrollments.student_id', '=', 'students.id')
-            ->join('levels', 'students.level_id', '=', 'levels.id')
-            ->join('terms', 'enrollments.term_id', '=', 'terms.id');
+        $query = EnrollmentSchedule::with([
+            'enrollment.student',
+            'enrollment.course',
+            'enrollment.term',
+            'availableCourseSchedule.availableCourse',
+        ])
+        ->select('enrollment_schedules.*')
+        ->join('enrollments', 'enrollment_schedules.enrollment_id', '=', 'enrollments.id')
+        ->join('students', 'enrollments.student_id', '=', 'students.id')
+        ->join('levels', 'students.level_id', '=', 'levels.id')
+        ->join('terms', 'enrollments.term_id', '=', 'terms.id')
+        ->join('available_course_schedules', 'enrollment_schedules.available_course_schedule_id', '=', 'available_course_schedules.id');
 
         if ($this->termId !== null) {
             $query->where('enrollments.term_id', $this->termId);
@@ -45,21 +52,25 @@ class EnrollmentsExport implements FromCollection, WithMapping, WithHeadings
             ->get();
     }
 
-    public function map($enrollment): array
+    public function map($enrollmentSchedule): array
     {
+        $group = $enrollmentSchedule->availableCourseSchedule->group ?? 'N/A';
         return [
-            isset($enrollment->student->name_en) ? $enrollment->student->name_en : 'N/A',
-            isset($enrollment->student->name_ar) ? $enrollment->student->name_ar : 'N/A',
-            isset($enrollment->student->national_id) ? $enrollment->student->national_id : 'N/A',
-            isset($enrollment->student->academic_id) ? $enrollment->student->academic_id : 'N/A',
-            isset($enrollment->student->level) ? 'Level ' . $enrollment->student->level->name : 'N/A',
-            isset($enrollment->course->title) ? $enrollment->course->title : 'N/A',
-            isset($enrollment->course->code) ? $enrollment->course->code : 'N/A',
-            isset($enrollment->grade) ? $enrollment->grade : 'N/A',
-            isset($enrollment->course->credit_hours) ? $enrollment->course->credit_hours : 'N/A',
-            isset($enrollment->term->name) ? $enrollment->term->name : 'N/A',
-            isset($enrollment->created_at) ? $enrollment->created_at->format('Y-m-d H:i:s') : 'N/A',
-
+            $enrollmentSchedule->enrollment->student->name_en ?? 'N/A',
+            $enrollmentSchedule->enrollment->student->name_ar ?? 'N/A',
+            $enrollmentSchedule->enrollment->student->national_id ?? 'N/A',
+            $enrollmentSchedule->enrollment->student->academic_id ?? 'N/A',
+            isset($enrollmentSchedule->enrollment->student->level) ? 'Level ' . $enrollmentSchedule->enrollment->student->level->name : 'N/A',
+            $enrollmentSchedule->enrollment->course->title ?? 'N/A',
+            $enrollmentSchedule->enrollment->course->code ?? 'N/A',
+            $enrollmentSchedule->enrollment->grade ?? 'N/A',
+            $enrollmentSchedule->enrollment->course->credit_hours ?? 'N/A',
+            $enrollmentSchedule->enrollment->term->name ?? 'N/A',
+            $enrollmentSchedule->availableCourseSchedule->activity_type ?? 'N/A',
+            $group,
+            $enrollmentSchedule->availableCourseSchedule->location ?? 'N/A',
+            $enrollmentSchedule->status ?? 'N/A',
+            $enrollmentSchedule->created_at ? $enrollmentSchedule->created_at->format('Y-m-d H:i:s') : 'N/A',
         ];
     }
 
@@ -76,7 +87,8 @@ class EnrollmentsExport implements FromCollection, WithMapping, WithHeadings
             'Grade',
             'Credit Hours',
             'Term',
-            'Created At'
+            'Activity Type',
+            'Group',
         ];
     }
 }

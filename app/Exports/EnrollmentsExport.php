@@ -68,9 +68,7 @@ class EnrollmentsExport implements FromCollection, WithMapping, WithHeadings
             $enrollmentSchedule->enrollment->term->name ?? 'N/A',
             $enrollmentSchedule->availableCourseSchedule->activity_type ?? 'N/A',
             $group,
-            $enrollmentSchedule->availableCourseSchedule->location ?? 'N/A',
-            $enrollmentSchedule->status ?? 'N/A',
-            $enrollmentSchedule->created_at ? $enrollmentSchedule->created_at->format('Y-m-d H:i:s') : 'N/A',
+          
         ];
     }
 

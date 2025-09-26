@@ -116,13 +116,12 @@ class ImportEnrollmentService
 
         $term = $this->findTermByCode($row['term_code'] ?? '');
 
-        if (!empty($row['group'])) {
-            $availableCourseSchedules = $this->findAvailableCourseSchedule($row, $student, $course, $term);
-        }
+        $availableCourseSchedules = $this->findAvailableCourseSchedule($row, $student, $course, $term);
+        
 
         $enrollment = $this->createOrUpdateEnrollment($row, $student, $course, $term);
 
-        if (isset($availableCourseSchedules) && $availableCourseSchedules->isNotEmpty()) {
+        if ($availableCourseSchedules->isNotEmpty()) {
             foreach ($availableCourseSchedules as $availableCourseSchedule) {
                 EnrollmentSchedule::firstOrCreate([
                     'enrollment_id' => $enrollment->id,
@@ -227,11 +226,10 @@ class ImportEnrollmentService
             throw new BusinessValidationException("No available course found for course '{$course->code}' in term '{$term->code}'.");
         }
 
-        // Query schedules for the available course. Only filter by group when a non-empty
-        // group value is present. This avoids querying for group = null or '0'.
         $schedulesQuery = AvailableCourseSchedule::where('available_course_id', $availableCourse->id);
 
         $group = $row['group'] ?? null;
+
         if (!empty($group)) {
             $schedulesQuery->where('group', $group);
         }

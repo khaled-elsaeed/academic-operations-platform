@@ -7,11 +7,3 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('backup:run --only-db')
                 ->everyThreeMinutes()
                 ->withoutOverlapping();
-
-// Clean up old backups daily at 2 AM
-Schedule::command('backup:clean')
-                ->dailyAt('02:00');
-
-// Monitor backup health daily at 3 AM
-Schedule::command('backup:monitor')
-                ->dailyAt('03:00');

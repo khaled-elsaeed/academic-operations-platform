@@ -83,7 +83,7 @@
 
     {{-- ===== MODALS SECTION ===== --}}
     {{-- Eligibility Modal --}}
-    <x-ui.modal id="eligibilityModal" title="Eligibility (Program / Level)" size="md" :scrollable="false" class="eligibility-modal">
+    <x-ui.modal id="eligibilityModal" title="Eligibility (Program / Level / Group)" size="md" :scrollable="false" class="eligibility-modal">
       <x-slot name="slot">
         <div id="eligibilityContent"><!-- Content will be filled by JS --></div>
       </x-slot>
@@ -483,6 +483,8 @@ const EligibilityModalManager = {
   handleShowEligibilityModal() {
     $(document).on('click', '.show-eligibility-modal', function () {
       const availableCourseId = $(this).data('id');
+      // Append course ID to modal title
+      $('#eligibilityModal .modal-title').text(`Eligibility (Program / Level / Group) - Course ID: ${availableCourseId}`);
       EligibilityModalManager.renderEligibilityLoading();
       const modal = new bootstrap.Modal(document.getElementById('eligibilityModal'));
       modal.show();
@@ -523,19 +525,20 @@ const EligibilityModalManager = {
           <div class="d-flex align-items-center">
             <i class="bx bx-check-circle text-success me-2 fs-5"></i>
             <div>
-              <strong>${eligibilities[0].program_name} / ${eligibilities[0].level_name}</strong>
+              <strong>${eligibilities[0].program_name} / ${eligibilities[0].level_name} / ${eligibilities[0].group}</strong>
             </div>
           </div>
         </div>`);
       } else {
-        $content.append('<div class="mb-3"><strong>Eligible Programs & Levels:</strong></div>');
+        $content.append('<div class="mb-3"><strong>Eligible Programs, Levels & Groups:</strong></div>');
         let table = `<div class="table-responsive">
           <table class="table table-bordered table-striped table-sm mb-0">
             <thead class="table-light">
               <tr>
                 <th style="width: 50px;">#</th>
-                <th style="width: 45%;">Program</th>
-                <th style="width: 45%;">Level</th>
+                <th style="width: 30%;">Program</th>
+                <th style="width: 30%;">Level</th>
+                <th style="width: 20%;">Group</th>
               </tr>
             </thead>
             <tbody>`;
@@ -544,6 +547,7 @@ const EligibilityModalManager = {
             <td class="text-center fw-bold">${idx + 1}</td>
             <td>${eligibility.program_name}</td>
             <td>${eligibility.level_name}</td>
+            <td>${eligibility.group}</td>
           </tr>`;
         });
         table += '</tbody></table></div>';

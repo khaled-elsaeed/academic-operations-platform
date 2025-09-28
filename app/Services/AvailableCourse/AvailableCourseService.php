@@ -265,12 +265,13 @@ private function transformSchedule($schedule): array
             ];
         }
 
-        // Get eligibilities with program and level names
+        // Get eligibilities with program, level, and group
         $eligibilities = $availableCourse->eligibilities->map(function ($eligibility) {
             return [
                 'program_name' => $eligibility->program->name ?? 'Unknown Program',
                 'level_name' => $eligibility->level->name ?? 'Unknown Level',
-                'combined' => ($eligibility->program->name ?? 'Unknown Program') . ' / ' . ($eligibility->level->name ?? 'Unknown Level')
+                'group' => $eligibility->group ?? '-',
+                'combined' => ($eligibility->program->name ?? 'Unknown Program') . ' / ' . ($eligibility->level->name ?? 'Unknown Level') . ' / ' . ($eligibility->group ?? '-')
             ];
         })->toArray();
 

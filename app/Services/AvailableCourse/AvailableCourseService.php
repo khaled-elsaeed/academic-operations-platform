@@ -259,11 +259,9 @@ private function transformSchedule($schedule): array
         // Check if it's universal mode
         if ($availableCourse->mode === AvailableCourse::MODE_UNIVERSAL) {
             return [
-                [
-                    'program_name' => 'All Programs',
-                    'level_name' => 'All Levels',
-                    'combined' => 'All Programs / All Levels'
-                ]
+                'universal' => true,
+                'message' => 'All programs and levels are eligible.',
+                'eligibilities' => []
             ];
         }
 
@@ -276,7 +274,11 @@ private function transformSchedule($schedule): array
             ];
         })->toArray();
 
-        return $eligibilities;
+        return [
+            'universal' => false,
+            'message' => null,
+            'eligibilities' => $eligibilities
+        ];
     }
 
     /**

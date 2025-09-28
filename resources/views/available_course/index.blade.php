@@ -508,9 +508,14 @@ const EligibilityModalManager = {
     const $content = $('#eligibilityContent');
     $content.html(`<div class="alert alert-danger">${message}</div>`);
   },
-  renderEligibilityContent(eligibilities) {
+  renderEligibilityContent(data) {
     const $content = $('#eligibilityContent');
     $content.empty();
+    if (data.universal) {
+      $content.append(`<div class="alert alert-primary d-flex align-items-center"><i class="bx bx-globe me-2 fs-5"></i>${data.message}</div>`);
+      return;
+    }
+    const eligibilities = data.eligibilities;
     if (Array.isArray(eligibilities) && eligibilities.length > 0) {
       if (eligibilities.length === 1) {
         $content.append('<div class="mb-2"><strong>Program / Level:</strong></div>');

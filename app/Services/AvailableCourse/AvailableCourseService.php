@@ -314,27 +314,29 @@ private function transformSchedule($schedule): array
                 );
             })
             ->addColumn('eligibility', function ($availableCourse) {
+                $count = 0;
+                $buttonText = 'Eligibility';
                 if ($availableCourse->mode === 'universal') {
-                    return '<span class="badge bg-primary">Universal</span>';
+                    $count = 1;
+                    $buttonText = 'Universal Eligibility';
+                } else {
+                    $pairs = $availableCourse->eligibilities->map(function ($eligibility) {
+                        $programName = $eligibility->program?->name ?? '-';
+                        $levelName = $eligibility->level?->name ?? '-';
+                        return "{$programName} / {$levelName}";
+                    });
+                    $count = $pairs->count();
                 }
-                $pairs = $availableCourse->eligibilities->map(function ($eligibility) {
-                    $programName = $eligibility->program?->name ?? '-';
-                    $levelName = $eligibility->level?->name ?? '-';
-                    return "{$programName} / {$levelName}";
-                });
-                $count = $pairs->count();
                 if ($count === 0) {
                     return '-';
                 }
-                if ($count === 1) {
-                    return e($pairs->first());
-                }
                 return sprintf(
                     '<button type="button" class="btn btn-info btn-sm show-eligibility-modal position-relative group-hover-parent" data-id="%d" title="View Eligibility Requirements" style="position: relative;">
-                        <i class="bx bx-list-ul"></i> Eligibility 
+                        <i class="bx bx-list-ul"></i> %s
                         <span class="badge eligibility-badge-hover" style="transition: background-color 0.2s, color 0.2s;">%d</span>
                     </button>',
                     $availableCourse->id,
+                    $buttonText,
                     $count
                 );
             })

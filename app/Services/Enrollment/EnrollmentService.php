@@ -66,7 +66,6 @@ class EnrollmentService
             'available_course_ids' => $data['available_course_ids'] ?? [],
         ]);
         return DB::transaction(function () use ($data) {
-            // Get student and term information for credit hours validation
             $student = Student::findOrFail($data['student_id']);
             $term = Term::findOrFail($data['term_id']);
             

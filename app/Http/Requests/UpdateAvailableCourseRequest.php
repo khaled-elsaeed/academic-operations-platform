@@ -19,7 +19,7 @@ class UpdateAvailableCourseRequest extends FormRequest
             'course_id'                                   => 'required|exists:courses,id',
             'term_id'                                     => 'required|exists:terms,id',
             'mode'                            => 'required|string|in:individual,all_programs,all_levels,universal',
-            'schedule_details'                            => 'required|array|min:1',
+            'schedule_details'                            => 'nullable|array|min:1',
             'schedule_details.*.schedule_id'              => 'required|exists:schedules,id',
             'schedule_details.*.activity_type'            => 'required|string|in:lecture,tutorial,lab',
             'schedule_details.*.schedule_day_id'          => 'required',
@@ -156,7 +156,7 @@ class UpdateAvailableCourseRequest extends FormRequest
             'program_id.prohibited' => 'Program should not be provided for this mode.',
 
             // Schedule details
-            'schedule_details.required' => 'Please add at least one schedule detail row.',
+            'schedule_details.min' => 'Please add at least one schedule detail row.',
             'schedule_details.array' => 'Schedule details must be an array.',
             'schedule_details.min' => 'Please add at least one schedule detail row.',
             'schedule_details.*.schedule_id.required' => 'Please select a schedule for each row.',

@@ -232,10 +232,8 @@ class UpdateAvailableCourseService
      */
     public function handleScheduleDetails(AvailableCourse $availableCourse, array $data): void
     {
-        // Clear existing schedules and assignments
-        $availableCourse->schedules()->delete();
-
         if (isset($data['schedule_details']) && is_array($data['schedule_details'])) {
+            // Add new schedule details without clearing existing ones
             foreach ($data['schedule_details'] as $detail) {
                 $groupNumbers = [];
                 if (!empty($detail['group_numbers']) && is_array($detail['group_numbers'])) {
@@ -292,12 +290,29 @@ class UpdateAvailableCourseService
      * @return void
      */
     public function handleEligibility(AvailableCourse $availableCourse, array $data): void
-    {   
-        // Clear existing eligibilities
-        $availableCourse->eligibilities()->delete();
-
+    {
         $eligibilityMode = $data['mode'] ?? 'individual';
+        $shouldUpdateEligibility = false;
+
         switch ($eligibilityMode) {
+            case 'universal':
+                $shouldUpdateEligibility = true; // Always clear for universal
+                break;
+            case 'all_programs':
+                $shouldUpdateEligibility = isset($data['level_id']);
+                break;
+            case 'all_levels':
+                $shouldUpdateEligibility = isset($data['program_id']);
+                break;
+            case 'individual':
+            default:
+                $shouldUpdateEligibility = isset($data['eligibility']) && is_array($data['eligibility']);
+                break;
+        }
+
+        if ($shouldUpdateEligibility) {
+            // Add new eligibility without clearing existing ones
+            switch ($eligibilityMode) {
             case 'universal':
                 break;
             case 'all_programs':
@@ -324,26 +339,45 @@ class UpdateAvailableCourseService
                 break;
             case 'individual':
             default:
-                // Expand group_ids into individual pairs (same as create service)
-                $expanded = [];
+                // Sync eligibility: delete not found, add new
+                $existingKeys = [];
+                foreach ($availableCourse->eligibilities as $e) {
+                    $key = $e->program_id . '-' . $e->level_id . '-' . $e->group;
+                    $existingKeys[$key] = $e->id;
+                }
+                $newKeys = [];
                 foreach ($data['eligibility'] as $pair) {
                     $programId = $pair['program_id'] ?? null;
                     $levelId = $pair['level_id'] ?? null;
                     $groupIds = is_array($pair['group_ids']) ? $pair['group_ids'] : (isset($pair['group']) ? [$pair['group']] : []);
                     foreach ($groupIds as $g) {
                         if ($programId && $levelId && $g) {
-                            $expanded[] = [
-                                'program_id' => $programId,
-                                'level_id' => $levelId,
-                                'group' => (int) $g,
-                            ];
+                            $key = $programId . '-' . $levelId . '-' . $g;
+                            $newKeys[$key] = true;
                         }
                     }
                 }
-                if (!empty($expanded)) {
+                // Delete not in new
+                $toDelete = array_diff_key($existingKeys, $newKeys);
+                if (!empty($toDelete)) {
+                    $availableCourse->eligibilities()->whereIn('id', array_values($toDelete))->delete();
+                }
+                // Add not in existing
+                $toAdd = array_diff_key($newKeys, $existingKeys);
+                if (!empty($toAdd)) {
+                    $expanded = [];
+                    foreach (array_keys($toAdd) as $key) {
+                        list($programId, $levelId, $g) = explode('-', $key);
+                        $expanded[] = [
+                            'program_id' => (int)$programId,
+                            'level_id' => (int)$levelId,
+                            'group' => (int)$g,
+                        ];
+                    }
                     $availableCourse->setProgramLevelPairs($expanded);
                 }
                 break;
+            }
         }
     }
 }

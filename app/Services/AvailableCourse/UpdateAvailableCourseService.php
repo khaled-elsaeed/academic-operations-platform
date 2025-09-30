@@ -435,7 +435,7 @@ class UpdateAvailableCourseService
                             'group' => (int)$g,
                         ];
                     }
-                    $availableCourse->setProgramLevelPairs($expanded);
+                    $availableCourse->addProgramLevelPairs($expanded);
                 }
                 break;
         }

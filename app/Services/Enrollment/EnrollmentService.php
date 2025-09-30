@@ -120,6 +120,57 @@ class EnrollmentService
         });
     }
 
+
+     /**
+     * Create enrollments for the without_schedule (grade-only) flow.
+     * Expects 'enrollment_data' => [ ['course_id' => int, 'term_id' => int, 'grade' => string|null], ... ]
+     *
+     * @param array $data
+     * @return array
+     * @throws BusinessValidationException
+     */
+    public function createEnrollmentsWithoutSchedule(array $data): array
+    {
+        return DB::transaction(function () use ($data) {
+            $student = Student::findOrFail($data['student_id']);
+            $created = [];
+
+            foreach ($data['enrollment_data'] as $row) {
+                // Normalize keys
+                $courseId = $row['course_id'] ?? null;
+                $termId = $row['term_id'] ?? null;
+                $grade = $row['grade'] ?? null;
+
+                if (!$courseId || !$termId) {
+                    throw new BusinessValidationException('Invalid enrollment row: missing course or term.');
+                }
+
+                // Prevent duplicate
+                $exists = Enrollment::where('student_id', $student->id)
+                    ->where('course_id', $courseId)
+                    ->where('term_id', $termId)
+                    ->exists();
+
+                if ($exists) {
+                    $courseName = Course::find($courseId)?->name ?? 'this course';
+                    throw new BusinessValidationException("Student already enrolled in {$courseName} for the selected term.");
+                }
+
+                // Create the enrollment record with grade (grade-only flow)
+                $enrollment = Enrollment::create([
+                    'student_id' => $student->id,
+                    'course_id' => $courseId,
+                    'term_id' => $termId,
+                    'grade' => $grade,
+                ]);
+
+                $created[] = $enrollment;
+            }
+
+            return $created;
+        });
+    }
+
     public function deleteEnrollment(Enrollment $enrollment): void
     {
         $enrollment->delete();
@@ -250,6 +301,7 @@ class EnrollmentService
             ->orderByDesc('created_at')
             ->get();
     }
+
 
     /**
      * Find a student by national or academic ID.

@@ -16,6 +16,8 @@ Route::middleware(['auth'])
         Route::get('datatable', 'datatable')->name('datatable')->middleware('can:enrollment.view');
         Route::get('stats', 'stats')->name('stats')->middleware('can:enrollment.view');
         Route::get('add', 'add')->name('add')->middleware('can:enrollment.create');
+        // Legacy/old enrollment page (grade-only flow)
+        Route::get('add-old', 'addOld')->name('add.old')->middleware('can:enrollment.create');
         Route::get('template', 'downloadTemplate')->name('template')->middleware('can:enrollment.view');
 
         // ===== Student Operations =====
@@ -28,8 +30,8 @@ Route::middleware(['auth'])
         Route::post('import', 'import')->name('import')->middleware('can:enrollment.import');
         Route::get('export', 'export')->name('export')->middleware('can:enrollment.export');
     // Export multiple enrollment documents page & action
-    Route::get('export-documents', 'exportDocumentsPage')->name('exportDocuments.page')->middleware('can:enrollment.export');
-    Route::post('export-documents', 'exportDocuments')->name('exportDocuments')->middleware('can:enrollment.export');
+        Route::get('export-documents', 'exportDocumentsPage')->name('exportDocuments.page')->middleware('can:enrollment.export');
+        Route::post('export-documents', 'exportDocuments')->name('exportDocuments')->middleware('can:enrollment.export');
         Route::post('remaining-credit-hours', 'getRemainingCreditHours')->name('remainingCreditHours')->middleware('can:enrollment.view');
 
         // ===== CRUD Operations =====
@@ -37,7 +39,9 @@ Route::middleware(['auth'])
         Route::get('/', 'index')->name('index')->middleware('can:enrollment.view');
         
         // Create
-        Route::post('/', 'store')->name('store')->middleware('can:enrollment.create');
+    Route::post('/', 'store')->name('store')->middleware('can:enrollment.create');
+    // Create (grade-only / without schedule) - separate endpoint
+    Route::post('store-without-schedule', 'storeWithoutSchedule')->name('storeWithoutSchedule')->middleware('can:enrollment.create');
         
         // Delete
         Route::delete('{enrollment}', 'destroy')->name('destroy')->middleware('can:enrollment.delete');

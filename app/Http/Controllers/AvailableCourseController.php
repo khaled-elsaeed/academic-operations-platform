@@ -288,6 +288,11 @@ class AvailableCourseController extends Controller
     {
         try {
             $group = request()->input('group');
+            // If exception flag is provided and truthy, ignore group filtering by passing null
+            $exception = request()->boolean('exceptionForDifferentLevels', false);
+            if ($exception) {
+                $group = null;
+            }
             $schedules = $this->availableCourseService->getSchedules($id, $group);
             return successResponse('Schedules fetched successfully.', $schedules);
         } catch (BusinessValidationException $e) {

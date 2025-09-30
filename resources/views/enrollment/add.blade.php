@@ -1008,7 +1008,9 @@ const ActivitySelectionModule = {
     Utils.showLoading('#activitiesList', 'Loading course schedules...');
 
     const url = window.routes.courseSchedules.replace(':id', courseId);
-    const dataPayload = Array.isArray(groups) ? { group: groups } : { group: groups };
+  const dataPayload = Array.isArray(groups) ? { group: groups } : { group: groups };
+  // Pass the exception flag so the server can ignore group filtering when enabled
+  dataPayload.exceptionForDifferentLevels = $('#exceptionForDifferentLevels').is(':checked') ? 1 : 0;
 
     $.ajax({
       url: url,

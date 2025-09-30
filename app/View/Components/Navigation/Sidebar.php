@@ -204,7 +204,7 @@ class Sidebar extends Component
                                 'icon' => 'bx bx-history',
                                 'route' => route('enrollments.add.old'),
                                 'active' => request()->routeIs('enrollments.add.old'),
-                                'permission' => 'enrollment.create',
+                                'permission' => 'enrollment.create-old',
                             ],
                             [
                                 'title' => 'Export Documents',

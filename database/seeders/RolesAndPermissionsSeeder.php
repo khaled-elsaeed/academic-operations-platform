@@ -49,6 +49,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Enrollment Permissions
             'enrollment.view',
             'enrollment.create',
+            'enrollment.create-old',
             'enrollment.edit',
             'enrollment.delete',
             'enrollment.import', 

@@ -45,4 +45,23 @@ Route::middleware(['auth'])
         // ===== Schedules & Eligibilities AJAX Routes =====
         Route::get('{availableCourse}/schedules', 'schedules')->name('schedules')->middleware('can:available_course.view');
         Route::get('{availableCourse}/eligibilities', 'eligibilities')->name('eligibilities')->middleware('can:available_course.view');
+
+        // ===== Edit Page Specific Routes =====
+        Route::put('{availableCourse}/basic', 'updateBasic')->name('update.basic')->middleware('can:available_course.edit');
+
+        // Eligibility Management Routes
+        Route::prefix('{availableCourse}/eligibility')->name('eligibility.')->group(function () {
+            Route::get('datatable', 'eligibilityDatatable')->name('datatable')->middleware('can:available_course.view');
+            Route::post('/', 'storeEligibility')->name('store')->middleware('can:available_course.edit');
+            Route::delete('{eligibility}', 'deleteEligibility')->name('delete')->middleware('can:available_course.edit');
+        });
+
+        // Schedule Management Routes
+        Route::prefix('{availableCourse}/schedules')->name('schedules.')->group(function () {
+            Route::get('datatable', 'schedulesDatatable')->name('datatable')->middleware('can:available_course.view');
+            Route::get('{scheduleId}', 'showSchedule')->name('show')->middleware('can:available_course.view');
+            Route::post('/', 'storeSchedule')->name('store')->middleware('can:available_course.edit');
+            Route::put('{scheduleId}', 'updateSchedule')->name('update')->middleware('can:available_course.edit');
+            Route::delete('{scheduleId}', 'deleteSchedule')->name('delete')->middleware('can:available_course.edit');
+        });
     });

@@ -260,17 +260,25 @@ class AvailableCourse extends Model
     /**
      * Add program-level pairs to this available course.
      *
-     * @param array $pairs Array of ['program_id' => int, 'level_id' => int]
+     * @param array $pairs Array of ['program_id' => int, 'level_id' => int, 'group' => int]
      * @return void
      */
     public function addProgramLevelPairs(array $pairs): void
     {
         foreach ($pairs as $pair) {
-            $this->eligibilities()->firstOrCreate([
-                'program_id' => $pair['program_id'],
-                'level_id' => $pair['level_id'],
-                'group' => $pair['group'] ?? 1,
-            ]);
+            // Create eligibility record with appropriate error handling
+            try {
+                $this->eligibilities()->create([
+                    'program_id' => $pair['program_id'],
+                    'level_id' => $pair['level_id'],
+                    'group' => $pair['group'] ?? 1,
+                ]);
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Ignore duplicate entry errors (unique constraint violations)
+                if ($e->errorInfo[1] !== 1062) { // MySQL duplicate entry error code
+                    throw $e;
+                }
+            }
         }
     }
 

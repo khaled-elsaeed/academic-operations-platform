@@ -88,7 +88,8 @@ class AvailableCourseController extends Controller
      */
     public function edit($id): View
     {
-        $availableCourse = AvailableCourse::findOrFail($id);
+        $availableCourse = AvailableCourse::with(['course', 'term', 'eligibilities.program', 'eligibilities.level', 'schedules.scheduleAssignments.scheduleSlot'])
+            ->findOrFail($id);
         return view('available_course.edit', compact('availableCourse'));
     }
 
@@ -334,6 +335,200 @@ class AvailableCourseController extends Controller
             return successResponse('Stats fetched successfully.', $stats);
         } catch (Exception $e) {
             logError('AvailableCourseController@stats', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+
+    /**
+     * Get eligibility datatable for edit page.
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function eligibilityDatatable($id): JsonResponse
+    {
+        try {
+            return $this->availableCourseService->getEligibilityDatatable($id);
+        } catch (Exception $e) {
+            logError('AvailableCourseController@eligibilityDatatable', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
+     * Store new eligibility for available course.
+     *
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function storeEligibility(Request $request, $id): JsonResponse
+    {
+        $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'level_id' => 'required|exists:levels,id',
+            'group_numbers' => 'required|array|min:1',
+            'group_numbers.*' => 'integer|min:1|max:30',
+        ]);
+
+        try {
+            $eligibility = $this->availableCourseService->storeEligibility($id, $request->all());
+            return successResponse('Eligibility added successfully.', $eligibility);
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('AvailableCourseController@storeEligibility', $e, ['id' => $id, 'request' => $request->all()]);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
+     * Delete eligibility for available course.
+     *
+     * @param int $availableCourseId
+     * @param int $eligibilityId
+     * @return JsonResponse
+     */
+    public function deleteEligibility($availableCourseId, $eligibilityId): JsonResponse
+    {
+        try {
+            $this->availableCourseService->deleteEligibility($eligibilityId);
+            return successResponse('Eligibility deleted successfully.');
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('AvailableCourseController@deleteEligibility', $e, ['availableCourseId' => $availableCourseId, 'eligibilityId' => $eligibilityId]);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
+     * Get schedules datatable for edit page.
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function schedulesDatatable($id): JsonResponse
+    {
+        try {
+            return $this->availableCourseService->getSchedulesDatatable($id);
+        } catch (Exception $e) {
+            logError('AvailableCourseController@schedulesDatatable', $e);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
+     * Show schedule for editing.
+     *
+     * @param int $availableCourseId
+     * @param int $scheduleId
+     * @return JsonResponse
+     */
+    public function showSchedule($availableCourseId, $scheduleId): JsonResponse
+    {
+        try {
+            $schedule = $this->availableCourseService->getSchedule($scheduleId);
+            return successResponse('Schedule retrieved successfully.', $schedule);
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('AvailableCourseController@showSchedule', $e, ['availableCourseId' => $availableCourseId, 'scheduleId' => $scheduleId]);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
+     * Store new schedule for available course.
+     *
+     * @param Request $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function storeSchedule(Request $request, $id): JsonResponse
+    {
+        $request->validate([
+            'schedule_template_id' => 'nullable|integer|exists:schedules,id',
+            'activity_type' => 'required|in:lecture,tutorial,lab',
+            'group_numbers' => 'required|array|min:1',
+            'group_numbers.*' => 'integer|min:1|max:30',
+            'location' => 'nullable|string|max:255',
+            'min_capacity' => 'nullable|integer|min:0',
+            'max_capacity' => 'nullable|integer|min:0',
+            'schedule_slot_ids' => 'nullable|array',
+            'schedule_slot_ids.*' => 'integer|exists:schedule_slots,id',
+            'title' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+            'resources' => 'nullable|array',
+            'status' => 'nullable|in:scheduled,confirmed,cancelled,completed',
+            'notes' => 'nullable|string',
+        ]);
+
+        try {
+            $schedule = $this->availableCourseService->storeSchedule($id, $request->all());
+            return successResponse('Schedule added successfully.', $schedule);
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('AvailableCourseController@storeSchedule', $e, ['id' => $id, 'request' => $request->all()]);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
+     * Update schedule for available course.
+     *
+     * @param Request $request
+     * @param int $availableCourseId
+     * @param int $scheduleId
+     * @return JsonResponse
+     */
+    public function updateSchedule(Request $request, $availableCourseId, $scheduleId): JsonResponse
+    {
+        $request->validate([
+            'schedule_template_id' => 'nullable|integer|exists:schedules,id',
+            'activity_type' => 'required|in:lecture,tutorial,lab',
+            'group_number' => 'required|integer|min:1|max:30', // Single group number for updates
+            'location' => 'nullable|string|max:255',
+            'min_capacity' => 'nullable|integer|min:0',
+            'max_capacity' => 'nullable|integer|min:0',
+            'schedule_slot_ids' => 'nullable|array',
+            'schedule_slot_ids.*' => 'integer|exists:schedule_slots,id',
+            'title' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+            'resources' => 'nullable|array',
+            'status' => 'nullable|in:scheduled,confirmed,cancelled,completed',
+            'notes' => 'nullable|string',
+        ]);
+
+        try {
+            $schedule = $this->availableCourseService->updateSchedule($scheduleId, $request->all());
+            return successResponse('Schedule updated successfully.', $schedule);
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('AvailableCourseController@updateSchedule', $e, ['availableCourseId' => $availableCourseId, 'scheduleId' => $scheduleId, 'request' => $request->all()]);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
+     * Delete schedule for available course.
+     *
+     * @param int $availableCourseId
+     * @param int $scheduleId
+     * @return JsonResponse
+     */
+    public function deleteSchedule($availableCourseId, $scheduleId): JsonResponse
+    {
+        try {
+            $this->availableCourseService->deleteSchedule($scheduleId);
+            return successResponse('Schedule deleted successfully.');
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('AvailableCourseController@deleteSchedule', $e, ['availableCourseId' => $availableCourseId, 'scheduleId' => $scheduleId]);
             return errorResponse('Internal server error.', [], 500);
         }
     }

@@ -18,33 +18,28 @@ class UpdateAvailableCourseRequest extends FormRequest
         $rules = [
             'course_id'                                   => 'required|exists:courses,id',
             'term_id'                                     => 'required|exists:terms,id',
-            'mode'                            => 'required|string|in:individual,all_programs,all_levels,universal',
-            'schedule_details'                            => 'nullable|array|min:1',
+            'mode'                                        => 'required|string|in:individual,all_programs,all_levels,universal',
+            'schedule_details'                            => 'required|array|min:1',
             'schedule_details.*.schedule_id'              => 'required|exists:schedules,id',
             'schedule_details.*.activity_type'            => 'required|string|in:lecture,tutorial,lab',
             'schedule_details.*.schedule_day_id'          => 'required',
-            'schedule_details.*.schedule_slot_ids'   => 'required|array|min:1',
-            'schedule_details.*.schedule_slot_ids.*' => 'required|exists:schedule_slots,id',
-            // groups per schedule row as multi-select
-            'schedule_details.*.group_numbers'             => 'required|array|min:1',
-            'schedule_details.*.group_numbers.*'           => 'required|integer|min:1',
+            'schedule_details.*.schedule_slot_ids'        => 'required|array|min:1',
+            'schedule_details.*.schedule_slot_ids.*'      => 'required|exists:schedule_slots,id',
+            'schedule_details.*.group_number'             => 'required|integer|min:1|max:30',
             'schedule_details.*.min_capacity'             => 'required|integer|min:1',
-            'schedule_details.*.max_capacity'             => 'required|integer|gte:schedule_details.*.min_capacity',
+            'schedule_details.*.max_capacity'             => 'required|integer|min:1',
             'schedule_details.*.schedule_assignment_id'   => 'nullable|integer|exists:schedule_assignments,id',
+            'schedule_details.*.available_course_schedule_id' => 'nullable|integer',
             'schedule_details.*.location'                 => 'nullable|string|max:255',
         ];
 
         switch ($eligibilityMode) {
             case 'individual':
-                // eligibility rows: program_id, level_id and either group (legacy single) or group_ids (array)
                 $rules['eligibility'] = 'required|array|min:1';
                 $rules['eligibility.*.program_id'] = 'required|exists:programs,id';
                 $rules['eligibility.*.level_id'] = 'required|exists:levels,id';
-                // support new array of groups
-                $rules['eligibility.*.group_ids'] = 'nullable|array';
-                $rules['eligibility.*.group_ids.*'] = 'integer|min:1|max:30';
-                // support legacy single group value
-                $rules['eligibility.*.group'] = 'nullable|integer|min:1|max:30';
+                $rules['eligibility.*.group_ids'] = 'required|array|min:1';
+                $rules['eligibility.*.group_ids.*'] = 'required|integer|min:1|max:30';
                 $rules['level_id'] = 'prohibited';
                 $rules['program_id'] = 'prohibited';
                 break;
@@ -74,53 +69,60 @@ class UpdateAvailableCourseRequest extends FormRequest
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            // Validate consecutive slots for each schedule detail
-            $scheduleDetails = $this->input('schedule_details', []);
-            
-            foreach ($scheduleDetails as $index => $detail) {
-                if (!isset($detail['schedule_slot_ids']) || !is_array($detail['schedule_slot_ids'])) {
-                    continue;
-                }
-                
-                $slotIds = $detail['schedule_slot_ids'];
-                
-                if (count($slotIds) > 1) {
-                    // Get slot orders from database
-                    $slots = \App\Models\Schedule\ScheduleSlot::whereIn('id', $slotIds)
-                        ->orderBy('slot_order')
-                        ->pluck('slot_order')
-                        ->toArray();
-                    
-                    // Check if slots are consecutive
-                    for ($i = 1; $i < count($slots); $i++) {
-                        if ($slots[$i] !== $slots[$i-1] + 1) {
-                            $validator->errors()->add(
-                                "schedule_details.{$index}.schedule_slot_ids",
-                                "Selected slots must be consecutive in schedule detail " . ($index + 1) . "."
-                            );
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // Additional validation: for individual mode, each eligibility row must include at least one group
-            $eligibilityMode = $this->input('mode', 'individual');
-            if ($eligibilityMode === 'individual') {
-                $eligibilities = $this->input('eligibility', []);
-                foreach ($eligibilities as $i => $row) {
-                    $hasGroupIds = isset($row['group_ids']) && is_array($row['group_ids']) && count($row['group_ids']) > 0;
-                    $hasGroup = isset($row['group']) && $row['group'] !== null && $row['group'] !== '';
-
-                    if (! $hasGroupIds && ! $hasGroup) {
-                        $validator->errors()->add(
-                            "eligibility.{$i}.group_ids",
-                            "Please select at least one group (group_ids) or provide a group number for eligibility row " . ($i + 1) . "."
-                        );
-                    }
-                }
-            }
+            $this->validateConsecutiveSlots($validator);
+            $this->validateCapacity($validator);
         });
+    }
+
+    protected function validateConsecutiveSlots($validator)
+    {
+        $scheduleDetails = $this->input('schedule_details', []);
+        
+        foreach ($scheduleDetails as $index => $detail) {
+            if (!isset($detail['schedule_slot_ids']) || !is_array($detail['schedule_slot_ids'])) {
+                continue;
+            }
+            
+            $slotIds = $detail['schedule_slot_ids'];
+            
+            if (count($slotIds) > 1) {
+                // Get slot orders from database
+                $slots = \App\Models\Schedule\ScheduleSlot::whereIn('id', $slotIds)
+                    ->orderBy('slot_order')
+                    ->pluck('slot_order')
+                    ->toArray();
+                
+                // Check if slots are consecutive
+                for ($i = 1; $i < count($slots); $i++) {
+                    if ($slots[$i] !== $slots[$i-1] + 1) {
+                        $validator->errors()->add(
+                            "schedule_details.{$index}.schedule_slot_ids",
+                            "Selected slots must be consecutive in schedule detail " . ($index + 1) . "."
+                        );
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    protected function validateCapacity($validator)
+    {
+        $scheduleDetails = $this->input('schedule_details', []);
+        
+        foreach ($scheduleDetails as $index => $detail) {
+            if (isset($detail['min_capacity']) && isset($detail['max_capacity'])) {
+                $min = (int) $detail['min_capacity'];
+                $max = (int) $detail['max_capacity'];
+
+                if ($max < $min) {
+                    $validator->errors()->add(
+                        "schedule_details.{$index}.max_capacity",
+                        "Maximum capacity must be greater than or equal to minimum capacity for schedule detail " . ($index + 1) . "."
+                    );
+                }
+            }
+        }
     }
 
     public function messages()
@@ -142,7 +144,12 @@ class UpdateAvailableCourseRequest extends FormRequest
             'eligibility.*.program_id.exists' => 'The selected program does not exist.',
             'eligibility.*.level_id.required' => 'Please select a level for each eligibility row.',
             'eligibility.*.level_id.exists' => 'The selected level does not exist.',
-            'eligibility.*.group.required' => 'Please enter a group number for each eligibility row.',
+            'eligibility.*.group_ids.required' => 'Please select at least one group for each eligibility row.',
+            'eligibility.*.group_ids.array' => 'Group selection must be an array.',
+            'eligibility.*.group_ids.*.required' => 'Please select at least one group for each eligibility row.',
+            'eligibility.*.group_ids.*.integer' => 'Each group must be a valid number.',
+            'eligibility.*.group_ids.*.min' => 'Group numbers must be at least 1.',
+            'eligibility.*.group_ids.*.max' => 'Group numbers cannot be greater than 30.',
 
             // Eligibility (other modes)
             'level_id.required' => 'Please select a level for "All Programs" mode.',
@@ -156,27 +163,35 @@ class UpdateAvailableCourseRequest extends FormRequest
             'program_id.prohibited' => 'Program should not be provided for this mode.',
 
             // Schedule details
-            'schedule_details.min' => 'Please add at least one schedule detail row.',
+            'schedule_details.required' => 'Please add at least one schedule detail.',
             'schedule_details.array' => 'Schedule details must be an array.',
-            'schedule_details.min' => 'Please add at least one schedule detail row.',
+            'schedule_details.min' => 'Please add at least one schedule detail.',
             'schedule_details.*.schedule_id.required' => 'Please select a schedule for each row.',
             'schedule_details.*.schedule_id.exists' => 'The selected schedule does not exist.',
             'schedule_details.*.activity_type.required' => 'Please select an activity type (lecture, tutorial, or lab) for each schedule row.',
             'schedule_details.*.activity_type.in' => 'The selected activity type must be one of: lecture, tutorial, or lab.',
             'schedule_details.*.schedule_day_id.required' => 'Please select a day for each schedule row.',
-            'schedule_details.*.schedule_slot_ids.required' => 'Please select a slot for each schedule row.',
-            'schedule_details.*.schedule_slot_ids.*.exists' => 'The selected slot does not exist.',
-            'schedule_details.*.group_numbers.required' => 'Please select at least one group for each schedule row.',
-            'schedule_details.*.group_numbers.array' => 'Group selection must be an array.',
-            'schedule_details.*.group_numbers.*.integer' => 'Each selected group must be a valid number.',
+            'schedule_details.*.schedule_slot_ids.required' => 'Please select at least one slot for each schedule row.',
+            'schedule_details.*.schedule_slot_ids.array' => 'Slot selection must be an array.',
+            'schedule_details.*.schedule_slot_ids.min' => 'Please select at least one slot for each schedule row.',
+            'schedule_details.*.schedule_slot_ids.*.required' => 'Each selected slot must be valid.',
+            'schedule_details.*.schedule_slot_ids.*.exists' => 'One or more selected slots do not exist.',
+            'schedule_details.*.group_number.required' => 'Please specify a group number for each schedule row.',
+            'schedule_details.*.group_number.integer' => 'Group number must be a valid integer.',
+            'schedule_details.*.group_number.min' => 'Group number must be at least 1.',
+            'schedule_details.*.group_number.max' => 'Group number cannot be greater than 30.',
             'schedule_details.*.min_capacity.required' => 'Please enter a minimum capacity for each schedule row.',
             'schedule_details.*.min_capacity.integer' => 'Minimum capacity must be a valid number.',
             'schedule_details.*.min_capacity.min' => 'Minimum capacity must be at least 1.',
             'schedule_details.*.max_capacity.required' => 'Please enter a maximum capacity for each schedule row.',
             'schedule_details.*.max_capacity.integer' => 'Maximum capacity must be a valid number.',
-            'schedule_details.*.max_capacity.gte' => 'Maximum capacity must be greater than or equal to minimum capacity.',
+            'schedule_details.*.max_capacity.min' => 'Maximum capacity must be at least 1.',
             'schedule_details.*.schedule_assignment_id.exists' => 'The selected schedule assignment does not exist.',
             'schedule_details.*.schedule_assignment_id.integer' => 'Schedule assignment ID must be a valid number.',
+            'schedule_details.*.available_course_schedule_id.integer' => 'Available course schedule ID must be a valid number.',
+            'schedule_details.*.location.required' => 'Please enter a location for each schedule row.',
+            'schedule_details.*.location.string' => 'Location must be a valid string.',
+            'schedule_details.*.location.max' => 'Location must not exceed 255 characters.',
         ];
     }
 }

@@ -4,179 +4,289 @@
 
 @section('page-content')
 <div class="container-xxl flex-grow-1 container-p-y">
-  <!-- ===================== Page Header ===================== -->
+  {{-- Page Header --}}
   <x-ui.page-header 
     title="Edit Available Course"
-    description="Update the available course for a term, program, and level"
+    description="Manage eligibility and schedules for the selected course"
     icon="bx bx-edit"
   />
 
-  <!-- ===================== Edit Available Course Form ===================== -->
-  <div class="card">
-    <div class="card-header d-flex align-items-center">
-      <i class="bx bx-edit me-2"></i>
-      <h5 class="mb-0">Available Course Details</h5>
+  {{-- Basic Course Information --}}
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0"><i class="bx bx-info-circle me-2"></i>Course Information</h5>
     </div>
     <div class="card-body">
-      <form id="availableCourseForm" method="POST" action="{{ route('available_courses.update', $availableCourse->id) }}">
+      <form id="basicInfoForm">
         @csrf
         @method('PUT')
-        <div id="formErrors" class="alert alert-danger d-none"></div>
-        
-        <!-- Basic Course Information -->
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label for="course_id" class="form-label">Course</label>
-            <select class="form-control select2" id="course_id" name="course_id">
-              <!-- Options will be populated dynamically -->
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label for="course_id" class="form-label">Course <span class="text-danger">*</span></label>
+            <select class="form-select select2" id="course_id" name="course_id">
+              <option value="">Select Course</option>
             </select>
           </div>
-          <div class="col-md-6 mb-3">
-            <label for="term_id" class="form-label">Term</label>
-            <select class="form-control select2" id="term_id" name="term_id">
-              <!-- Options will be populated dynamically -->
+          <div class="col-md-4">
+            <label for="term_id" class="form-label">Term <span class="text-danger">*</span></label>
+            <select class="form-select select2" id="term_id" name="term_id">
+              <option value="">Select Term</option>
             </select>
           </div>
         </div>
+      </form>
+    </div>
+  </div>
 
-        <!-- Step 1: Eligibility Mode Selection -->
-        <div class="row">
-          <div class="col-12 mb-3">
-            <div class="card shadow-sm mb-4">
-              <div class="card-header bg-white border-bottom-0 pb-2">
-                <h6 class="mb-0 fw-bold">Step 1: Select Eligibility Mode
-                  <i class="bx bx-info-circle text-primary ms-1" data-bs-toggle="tooltip" title="Choose how you want to assign this course: to specific pairs, all programs, all levels, or universally."></i>
-                </h6>
-              </div>
-              <div class="card-body pt-2 pb-3">
-                <div class="d-flex flex-wrap gap-3 align-items-center">
-                  <div class="form-check">
-                    <input class="form-check-input" type="radio" name="mode" id="mode_individual" value="individual">
-                    <label class="form-check-label" for="mode_individual">
-                      Individual <i class="bx bx-question-mark small text-muted" data-bs-toggle="tooltip" title="Add specific program & level pairs."></i>
-                    </label>
-                  </div>
-                  <div class="form-check">
-                    <input class="form-check-input" type="radio" name="mode" id="mode_all_programs" value="all_programs">
-                    <label class="form-check-label" for="mode_all_programs">
-                      All Programs <i class="bx bx-question-mark small text-muted" data-bs-toggle="tooltip" title="Make available to all programs for a specific level."></i>
-                    </label>
-                  </div>
-                  <div class="form-check">
-                    <input class="form-check-input" type="radio" name="mode" id="mode_all_levels" value="all_levels">
-                    <label class="form-check-label" for="mode_all_levels">
-                      All Levels <i class="bx bx-question-mark small text-muted" data-bs-toggle="tooltip" title="Make available to all levels for a specific program."></i>
-                    </label>
-                  </div>
-                  <div class="form-check">
-                    <input class="form-check-input" type="radio" name="mode" id="mode_universal" value="universal">
-                    <label class="form-check-label" for="mode_universal">
-                      Universal <i class="bx bx-question-mark small text-muted" data-bs-toggle="tooltip" title="Make available to all programs and all levels."></i>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
+  {{-- Eligibility Management --}}
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bx bx-shield-quarter me-2"></i>Eligibility Management</h5>
+      <button type="button" class="btn btn-sm btn-success" id="addEligibilityBtn">
+        <i class="bx bx-plus me-1"></i>Add Eligibility
+      </button>
+    </div>
+    <div class="card-body">
+      <x-ui.datatable 
+        :tableId="'eligibilityTable'"
+        :headers="['Program', 'Level', 'Groups', 'Actions']"
+        :columns="[
+          ['data' => 'program_name', 'name' => 'program_name'],
+          ['data' => 'level_name', 'name' => 'level_name'],
+          ['data' => 'groups', 'name' => 'groups', 'orderable' => false],
+          ['data' => 'actions', 'name' => 'actions', 'orderable' => false, 'searchable' => false]
+        ]"
+        :ajaxUrl="route('available_courses.eligibility.datatable', $availableCourse->id)"
+        :filterFields="[]"
+      />
+    </div>
+  </div>
 
-            <!-- Step 2: Eligibility Sections -->
-            <div id="eligibility-individual-section" class="fade-section">
-              <div class="card shadow-sm mb-3">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                  <span class="fw-bold"><i class="bx bx-shield-quarter me-2"></i>Step 2: Add Eligibility Pairs</span>
-                  <button type="button" class="btn btn-sm btn-success" id="addEligibilityRowBtn"><i class="bx bx-plus"></i> Add Row</button>
-                </div>
-                <div class="card-body p-2">
-                  <div class="table-responsive">
-                    <table class="table table-bordered mb-0 align-middle" id="eligibilityTable">
-                      <thead class="table-light">
-                        <tr>
-                          <th style="width:40px;">#</th>
-                          <th>Program</th>
-                            <th>Level</th>
-                            <th style="width:80px;">Group</th>
-                          <th style="width:40px;"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <!-- Eligibility rows will be added here -->
-                      </tbody>
-                    </table>
-                  </div>
-                  <div class="form-text mt-2">Add at least one eligibility (program/level pair).</div>
-                </div>
-              </div>
-            </div>
+  {{-- Schedule Details Management --}}
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bx bx-time me-2"></i>Schedule Details</h5>
+      <button type="button" class="btn btn-sm btn-success" id="addScheduleBtn">
+        <i class="bx bx-plus me-1"></i>Add Schedule
+      </button>
+    </div>
+    <div class="card-body">
+      <x-ui.datatable 
+        :tableId="'scheduleTable'"
+        :headers="['Activity Type', 'Location', 'Groups', 'Day', 'Slots', 'Capacity', 'Actions']"
+        :columns="[
+          ['data' => 'activity_type', 'name' => 'activity_type'],
+          ['data' => 'location', 'name' => 'location'],
+          ['data' => 'groups', 'name' => 'groups', 'orderable' => false],
+          ['data' => 'day', 'name' => 'day'],
+          ['data' => 'slots', 'name' => 'slots', 'orderable' => false],
+          ['data' => 'capacity', 'name' => 'capacity', 'orderable' => false],
+          ['data' => 'actions', 'name' => 'actions', 'orderable' => false, 'searchable' => false]
+        ]"
+        :ajaxUrl="route('available_courses.schedules.datatable', $availableCourse->id)"
+        :filterFields="[]"
+      />
+    </div>
+  </div>
+</div>
 
-            <div id="eligibility-all-programs-section" class="d-none fade-section">
-              <div class="card shadow-sm mb-3">
-                <div class="card-header bg-light"><span class="fw-bold">Step 2: Choose a specific level</span></div>
-                <div class="card-body">
-                  <label for="allProgramsLevelSelect" class="form-label">Level</label>
-                  <select class="form-select select2" id="allProgramsLevelSelect">
-                    <!-- Options will be populated dynamically -->
-                  </select>
-                  <div class="invalid-feedback" id="allProgramsLevelFeedback"></div>
-                </div>
-              </div>
-            </div>
+{{-- ========== MODALS ========== --}}
 
-            <div id="eligibility-all-levels-section" class="d-none fade-section">
-              <div class="card shadow-sm mb-3">
-                <div class="card-header bg-light"><span class="fw-bold">Step 2: Choose a specific program</span></div>
-                <div class="card-body">
-                  <label for="allLevelsProgramSelect" class="form-label">Program</label>
-                  <select class="form-select select2" id="allLevelsProgramSelect">
-                    <!-- Options will be populated dynamically -->
-                  </select>
-                  <div class="invalid-feedback" id="allLevelsProgramFeedback"></div>
-                </div>
-              </div>
-            </div>
-
-            <div id="eligibility-universal-section" class="d-none fade-section">
-              <div class="card shadow-sm mb-3 border-primary">
-                <div class="card-body text-center">
-                  <i class="bx bx-globe bx-lg text-primary mb-2"></i>
-                  <div class="alert alert-info mb-0"><b>This course will be available for all programs and all levels.</b></div>
-                </div>
-              </div>
-            </div>
-
-            <div id="eligibility-summary-section" class="d-none fade-section">
-              <div class="card shadow-sm mb-3 border-success">
-                <div class="card-body">
-                  <div id="eligibility-summary-content"></div>
-                </div>
-              </div>
-            </div>
+{{-- Eligibility Modal --}}
+<div class="modal fade" id="eligibilityModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="eligibilityModalTitle">Add Eligibility</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="eligibilityForm">
+        <div class="modal-body">
+          <input type="hidden" id="eligibility_id" name="eligibility_id">
+          
+          <div class="mb-3">
+            <label for="program_id" class="form-label">Program <span class="text-danger">*</span></label>
+            <select class="form-select select2-modal" id="program_id" name="program_id" required>
+              <option value="">Select Program</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="level_id" class="form-label">Level <span class="text-danger">*</span></label>
+            <select class="form-select select2-modal" id="level_id" name="level_id" required>
+              <option value="">Select Level</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="group_numbers" class="form-label">Group <span class="text-danger">*</span></label>
+            <select class="form-select select2-modal" id="group_numbers" name="group_numbers" required>
+              <option value="">Select Group</option>
+            </select>
           </div>
         </div>
-
-        <!-- Step 3: Schedule Details - Card-Based Layout -->
-        <div class="row">
-          <div class="col-12 mb-3">
-            <div class="card shadow-sm mb-4">
-              <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <span class="fw-bold"><i class="bx bx-time me-2"></i>Step 3: Add Schedule Details</span>
-                <button type="button" class="btn btn-sm btn-success" id="addScheduleDetailRowBtn"><i class="bx bx-plus"></i> Add Schedule</button>
-              </div>
-              <div class="card-body pt-2 pb-3">
-                <div id="schedule-details-container">
-                  <!-- Schedule detail cards will be added here -->
-                </div>
-                <div class="form-text mt-2">Add one or more schedule details. Each schedule detail represents a specific time slot for the course.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Form Actions -->
-        <div class="mt-3">
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary">
-            <i class="bx bx-save me-1"></i>
-            Update Available Course
+            <i class="bx bx-save me-1"></i>Save
           </button>
-          <a href="{{ route('available_courses.index') }}" class="btn btn-outline-secondary ms-2">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{{-- Add Schedule Modal --}}
+<div class="modal fade" id="addScheduleModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Schedule</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="addScheduleForm">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="add_schedule_template_id" class="form-label">Schedule Template <span class="text-danger">*</span></label>
+              <select class="form-select select2-modal" id="add_schedule_template_id" name="schedule_template_id" required>
+                <option value="">Select Schedule</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label for="add_activity_type" class="form-label">Activity Type <span class="text-danger">*</span></label>
+              <select class="form-select select2-modal" id="add_activity_type" name="activity_type" required>
+                <option value="">Select Type</option>
+                <option value="lecture">Lecture</option>
+                <option value="tutorial">Tutorial</option>
+                <option value="lab">Lab</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label for="add_schedule_group_numbers" class="form-label">Group <span class="text-danger">*</span></label>
+              <select class="form-select select2-modal" id="add_schedule_group_numbers" name="group_numbers" required>
+                <option value="">Select Group</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label for="add_location" class="form-label">Location</label>
+              <input type="text" class="form-control" id="add_location" name="location" placeholder="Enter location">
+            </div>
+            
+            <div class="col-md-6">
+              <label for="add_schedule_day_id" class="form-label">Day <span class="text-danger">*</span></label>
+              <select class="form-select select2-modal" id="add_schedule_day_id" name="schedule_day_id" required disabled>
+                <option value="">Select Day</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label for="add_schedule_slot_ids" class="form-label">Time Slots <span class="text-danger">*</span></label>
+              <select class="form-select select2-modal" id="add_schedule_slot_ids" name="schedule_slot_ids[]" multiple required disabled>
+                <option value="">Select Slots</option>
+              </select>
+              <div class="form-text">Select consecutive slots only</div>
+            </div>
+            
+            <div class="col-md-6">
+              <label for="add_min_capacity" class="form-label">Min Capacity <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" id="add_min_capacity" name="min_capacity" min="1" required>
+            </div>
+            
+            <div class="col-md-6">
+              <label for="add_max_capacity" class="form-label">Max Capacity <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" id="add_max_capacity" name="max_capacity" min="1" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bx bx-save me-1"></i>Add Schedule
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{{-- Edit Schedule Modal --}}
+<div class="modal fade" id="editScheduleModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Schedule</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="editScheduleForm">
+        <div class="modal-body">
+          <input type="hidden" id="edit_schedule_id" name="schedule_id">
+          <input type="hidden" id="edit_available_course_schedule_id" name="available_course_schedule_id">
+          
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="edit_schedule_template_id" class="form-label">Schedule Template <span class="text-danger">*</span></label>
+              <select class="form-select select2-modal" id="edit_schedule_template_id" name="schedule_template_id" required>
+                <option value="">Select Schedule</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label for="edit_activity_type" class="form-label">Activity Type <span class="text-danger">*</span></label>
+              <select class="form-select select2-modal" id="edit_activity_type" name="activity_type" required>
+                <option value="">Select Type</option>
+                <option value="lecture">Lecture</option>
+                <option value="tutorial">Tutorial</option>
+                <option value="lab">Lab</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label for="edit_schedule_group_number" class="form-label">Group <span class="text-danger">*</span></label>
+              <select class="form-select select2-modal" id="edit_schedule_group_number" name="group_number" required>
+                <option value="">Select Group</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label for="edit_location" class="form-label">Location</label>
+              <input type="text" class="form-control" id="edit_location" name="location" placeholder="Enter location">
+            </div>
+            
+            <div class="col-md-6">
+              <label for="edit_schedule_day_id" class="form-label">Day <span class="text-danger">*</span></label>
+              <select class="form-select select2-modal" id="edit_schedule_day_id" name="schedule_day_id" required disabled>
+                <option value="">Select Day</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label for="edit_schedule_slot_ids" class="form-label">Time Slots <span class="text-danger">*</span></label>
+              <select class="form-select select2-modal" id="edit_schedule_slot_ids" name="schedule_slot_ids[]" multiple required disabled>
+                <option value="">Select Slots</option>
+              </select>
+              <div class="form-text">Select consecutive slots only</div>
+            </div>
+            
+            <div class="col-md-6">
+              <label for="edit_min_capacity" class="form-label">Min Capacity <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" id="edit_min_capacity" name="min_capacity" min="1" required>
+            </div>
+            
+            <div class="col-md-6">
+              <label for="edit_max_capacity" class="form-label">Max Capacity <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" id="edit_max_capacity" name="max_capacity" min="1" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bx bx-save me-1"></i>Update Schedule
+          </button>
         </div>
       </form>
     </div>
@@ -185,1292 +295,566 @@
 
 @endsection
 
+{{-- ========== STYLES ========== --}}
 @push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/libs/datatables/dataTables.bootstrap5.min.css') }}?v={{ config('app.version') }}">
+<link rel="stylesheet" href="{{ asset('vendor/libs/datatables/responsive.bootstrap5.min.css') }}?v={{ config('app.version') }}">
 <style>
-.schedule-detail-card {
-  transition: all 0.3s ease;
-  border: 1px solid #e3e6f0 !important;
-}
-
-.schedule-detail-card:hover {
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-  border-color: #5a6acf !important;
-}
-
-.fade-section {
-  transition: opacity 0.3s ease;
-}
-
-.fade-section.show {
-  opacity: 1;
-}
-
-.schedule-number {
-  background: #5a6acf;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.remove-schedule-detail-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  border: none;
-  padding: 4px 8px;
-}
-
-.input-group-text {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .schedule-detail-card .row > div {
-    margin-bottom: 1rem;
+  table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control::before,
+  table.dataTable.dtr-inline.collapsed > tbody > tr > th.dtr-control::before {
+    top: 50%;
+    left: 5px;
+    height: 1em;
+    width: 1em;
+    margin-top: -9px;
+    display: inline-block;
+    color: white;
+    border: .15em solid white;
+    border-radius: 1em;
+    box-shadow: 0 0 .2em #444;
+    box-sizing: content-box;
+    text-align: center;
+    text-indent: 0;
+    line-height: 1em;
+    content: "+";
+    background-color: #931a23;
   }
-  
-  .d-flex.gap-3 {
-    flex-direction: column;
-    gap: 1rem !important;
+
+  table.dataTable.dtr-inline.collapsed > tbody > tr.parent > td.dtr-control:before,
+  table.dataTable.dtr-inline.collapsed > tbody > tr.parent > th.dtr-control:before {
+    content: "-";
+    background-color: #8592a3;
   }
-}
 
-/* Multiple select styling */
-.schedule-slot-select[multiple] {
-  min-height: 120px !important;
-  max-height: 200px;
-  overflow-y: auto;
-}
+  .badge-group {
+    display: inline-block;
+    margin: 2px;
+  }
 
-.schedule-slot-select[multiple] option {
-  padding: 8px 12px;
-  margin: 2px 0;
-  border-radius: 4px;
-}
-
-.schedule-slot-select[multiple] option:checked {
-  background: #5a6acf !important;
-  color: white !important;
-}
-
-.slot-feedback {
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-  color: #dc3545;
-}
-
-.selected-slots-summary {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 4px;
-  padding: 6px 10px;
-}
-
-.selected-slots-summary .slot-summary-text {
-  font-weight: 500;
-  color: #5a6acf;
-}
+  .capacity-badge {
+    font-size: 0.85rem;
+  }
 </style>
 @endpush
 
+{{-- ========== SCRIPTS ========== --}}
 @push('scripts')
 <script src="{{ asset('js/utils.js') }}?v={{ config('app.version') }}"></script>
-
 <script>
-// ===========================
-// CONSTANTS & CONFIGURATION
-// ===========================
-const ROUTES = {
-  courses: { all: "{{ route('courses.all') }}" },
-  terms: { all: "{{ route('terms.all.with_inactive') }}" },
-  programs: { all: "{{ route('programs.all') }}" },
-  levels: { all: "{{ route('levels.all') }}" },
-  schedules: { all: "{{ route('schedules.all') }}" },
-  scheduleDaysSlots: { get: "{{ route('schedules.days-slots', ':id') }}" },
-  availableCourses: { 
-    update: "{{ route('available_courses.update', $availableCourse->id) }}", 
-    show: "{{ route('available_courses.show', $availableCourse->id) }}",
-    index: "{{ route('available_courses.index') }}" 
-  }
-};
+(function() {
+  'use strict';
 
-const ModeS = {
-  INDIVIDUAL: 'individual',
-  ALL_PROGRAMS: 'all_programs',
-  ALL_LEVELS: 'all_levels',
-  UNIVERSAL: 'universal'
-};
-
-// ===========================
-// API SERVICE
-// ===========================
-const ApiService = {
-  async fetchCourses() {
-    return $.getJSON(ROUTES.courses.all);
-  },
-
-  async fetchTerms() {
-    return $.getJSON(ROUTES.terms.all);
-  },
-
-  async fetchPrograms() {
-    return $.getJSON(ROUTES.programs.all);
-  },
-
-  async fetchLevels() {
-    return $.getJSON(ROUTES.levels.all);
-  },
-
-  async fetchSchedules() {
-    return $.getJSON(ROUTES.schedules.all);
-  },
-
-  async fetchAvailableCourse() {
-    return $.getJSON(ROUTES.availableCourses.show);
-  },
-
-  async fetchScheduleDaysSlots(scheduleId) {
-    const url = ROUTES.scheduleDaysSlots.get.replace(':id', scheduleId);
-    return $.getJSON(url);
-  },
-
-  async updateAvailableCourse(data) {
-    return $.ajax({
-      url: ROUTES.availableCourses.update,
-      method: 'POST',
-      data: JSON.stringify(data),
-      contentType: 'application/json',
-      headers: { 
-        'X-CSRF-TOKEN': $('#availableCourseForm input[name="_token"]').val() 
+  // ========== CONFIGURATION ==========
+  const ROUTES = {
+    courses: { all: "{{ route('courses.all') }}" },
+    terms: { all: "{{ route('terms.all.with_inactive') }}" },
+    programs: { all: "{{ route('programs.all') }}" },
+    levels: { all: "{{ route('levels.all') }}" },
+    schedules: { all: "{{ route('schedules.all') }}" },
+    scheduleDaysSlots: { get: "{{ route('schedules.days-slots', ':id') }}" },
+    availableCourse: {
+      show: "{{ route('available_courses.show', $availableCourse->id) }}",
+      updateBasic: "{{ route('available_courses.update.basic', $availableCourse->id) }}",
+      eligibility: {
+        store: "{{ route('available_courses.eligibility.store', $availableCourse->id) }}",
+        delete: "{{ route('available_courses.eligibility.delete', [$availableCourse->id, ':id']) }}"
+      },
+      schedule: {
+        show: "{{ route('available_courses.schedules.show', [$availableCourse->id, ':id']) }}",
+        store: "{{ route('available_courses.schedules.store', $availableCourse->id) }}",
+        update: "{{ route('available_courses.schedules.update', [$availableCourse->id, ':id']) }}",
+        delete: "{{ route('available_courses.schedules.delete', [$availableCourse->id, ':id']) }}"
       }
-    });
+    }
+  };
+
+  let eligibilityTable, scheduleTable;
+  let scheduleDaysData = {};
+
+  // ========== TABLE MANAGEMENT ==========
+  function initializeTableReferences() {
+    setTimeout(function() {
+      try {
+        if ($.fn.DataTable.isDataTable('#eligibilityTable')) {
+          eligibilityTable = $('#eligibilityTable').DataTable();
+        }
+        if ($.fn.DataTable.isDataTable('#scheduleTable')) {
+          scheduleTable = $('#scheduleTable').DataTable();
+        }
+        
+        if (!eligibilityTable || !scheduleTable) {
+          setTimeout(function() {
+            if (!eligibilityTable && $.fn.DataTable.isDataTable('#eligibilityTable')) {
+              eligibilityTable = $('#eligibilityTable').DataTable();
+            }
+            if (!scheduleTable && $.fn.DataTable.isDataTable('#scheduleTable')) {
+              scheduleTable = $('#scheduleTable').DataTable();
+            }
+          }, 500);
+        }
+      } catch (error) {
+        console.error('Error capturing table references:', error);
+      }
+    }, 300);
   }
-};
 
-// ===========================
-// DROPDOWN MANAGER
-// ===========================
-const DropdownManager = {
-  programOptions: [],
-  levelOptions: [],
-  scheduleOptions: [],
+  function reloadTable(table, tableId) {
+    if (table && table.ajax) {
+      table.ajax.reload();
+    } else {
+      setTimeout(function() {
+        if ($.fn.DataTable.isDataTable(tableId)) {
+          $(tableId).DataTable().ajax.reload();
+        }
+      }, 100);
+    }
+  }
 
-  async initialize() {
+  // ========== DATA LOADING ==========
+  async function loadDropdownData() {
     try {
       const [courses, terms, programs, levels, schedules, availableCourse] = await Promise.all([
-        ApiService.fetchCourses(),
-        ApiService.fetchTerms(),
-        ApiService.fetchPrograms(),
-        ApiService.fetchLevels(),
-        ApiService.fetchSchedules(),
-        ApiService.fetchAvailableCourse()
+        $.getJSON(ROUTES.courses.all),
+        $.getJSON(ROUTES.terms.all),
+        $.getJSON(ROUTES.programs.all),
+        $.getJSON(ROUTES.levels.all),
+        $.getJSON(ROUTES.schedules.all),
+        $.getJSON(ROUTES.availableCourse.show)
       ]);
 
-      // Store options for dynamic use
-      this.programOptions = programs.data;
-      this.levelOptions = levels.data;
-      this.scheduleOptions = schedules.data;
+      Utils.populateSelect($('#course_id'), courses.data, { textField: 'name' }, true);
+      Utils.populateSelect($('#term_id'), terms.data, { textField: 'name' }, true);
+      
+      $('#course_id').val(availableCourse.data.course_id);
+      $('#term_id').val(availableCourse.data.term_id);
 
-      // Populate main dropdowns
-      Utils.populateSelect($('#course_id'), courses.data, { 
-        textField: 'name', placeholder: 'Select Course' 
-      }, true);
-      Utils.populateSelect($('#term_id'), terms.data, { 
-        textField: 'name', placeholder: 'Select Term' 
-      }, true);
+      setTimeout(() => {
+        $('#course_id, #term_id').prop('disabled', true).trigger('change.select2');
+      }, 300);
 
-      // Initialize Select2
-      Utils.initSelect2($('#course_id'), { placeholder: 'Select Course' });
-      Utils.initSelect2($('#term_id'), { placeholder: 'Select Term' });
+      Utils.populateSelect($('#program_id'), programs.data, { textField: 'name' }, true);
+      Utils.populateSelect($('#level_id'), levels.data, { textField: 'name' }, true);
+      Utils.populateSelect($('#add_schedule_template_id, #edit_schedule_template_id'), schedules.data, { textField: 'title' }, true);
 
-      // Populate eligibility mode dropdowns
-      Utils.populateSelect($('#allProgramsLevelSelect'), levels.data, {
-        textField: 'name', placeholder: 'Select Level'
-      }, true);
-      Utils.populateSelect($('#allLevelsProgramSelect'), programs.data, {
-        textField: 'name', placeholder: 'Select Program'
-      }, true);
+      for (let i = 1; i <= 30; i++) {
+        $('#group_numbers, #add_schedule_group_numbers, #edit_schedule_group_number').append(`<option value="${i}">Group ${i}</option>`);
+      }
 
-      // Load existing data
-      this.loadExistingData(availableCourse.data);
-
-      return true;
+      Utils.initSelect2($('#course_id, #term_id, #mode'));
+      
     } catch (error) {
-      Utils.showError('Failed to load required data. Please refresh the page.');
-      console.log(error);
-      return false;
-    }
-  },
-
-  loadExistingData(availableCourse) {
-    // Set basic course information
-    $('#course_id').val(availableCourse.course_id).trigger('change');
-    $('#term_id').val(availableCourse.term_id).trigger('change');
-
-    // Set eligibility mode - handle null case and default to 'individual'
-    const eligibilityMode = availableCourse.mode || 'individual';
-    $(`input[name="mode"][value="${eligibilityMode}"]`).prop('checked', true);
-
-    // Load eligibility data based on mode
-    this.loadEligibilityData(availableCourse, eligibilityMode);
-
-    // Load schedule details
-    this.loadScheduleDetails(availableCourse.schedules || []);
-  },
-
-  loadEligibilityData(availableCourse, mode) {
-    switch(mode) {
-      case ModeS.ALL_PROGRAMS:
-        if (availableCourse.eligibilities && availableCourse.eligibilities.length > 0) {
-          $('#allProgramsLevelSelect').val(availableCourse.eligibilities[0].level_id).trigger('change');
-        }
-        break;
-      case ModeS.ALL_LEVELS:
-        if (availableCourse.eligibilities && availableCourse.eligibilities.length > 0) {
-          $('#allLevelsProgramSelect').val(availableCourse.eligibilities[0].program_id).trigger('change');
-        }
-        break;
-      case ModeS.INDIVIDUAL:
-        // Load individual eligibility pairs
-        if (availableCourse.eligibilities && availableCourse.eligibilities.length > 0) {
-          const map = {};
-
-          availableCourse.eligibilities.forEach(eligibility => {
-            const programId = eligibility.program_id;
-            const levelId = eligibility.level_id;
-            const key = `${programId}::${levelId}`;
-
-            // normalize groups: support group_ids (array) or legacy group (single)
-            let groups = [];
-            if (eligibility.group_ids && Array.isArray(eligibility.group_ids)) {
-              groups = eligibility.group_ids.map(String);
-            } else if (eligibility.group !== undefined && eligibility.group !== null) {
-              groups = Array.isArray(eligibility.group) ? eligibility.group.map(String) : [String(eligibility.group)];
-            }
-
-            if (!map[key]) {
-              map[key] = { program_id: programId, level_id: levelId, groups: new Set() };
-            }
-
-            groups.forEach(g => map[key].groups.add(String(g)));
-          });
-
-          // Create a row per unique program+level pair with aggregated groups
-          Object.values(map).forEach(item => {
-            const groupsArray = Array.from(item.groups);
-            EligibilityTableManager.addRow(item.program_id, item.level_id, groupsArray);
-          });
-        } else {
-          EligibilityTableManager.addRow(); // Add empty row
-        }
-        break;
-      case ModeS.UNIVERSAL:
-        // Nothing specific to load for universal
-        break;
-    }
-  },
-
-  loadScheduleDetails(schedules) {
-    if (schedules && schedules.length > 0) {
-      schedules.forEach(schedule => {
-        ScheduleDetailsCardManager.addCard(schedule);
-      });
-    } else {
-      ScheduleDetailsCardManager.addCard(); // Add empty row
-    }
-  },
-
-  initEligibilitySelect2($container = $(document)) {
-    $container.find('.program-select').each(function() {
-      Utils.initSelect2($(this), { placeholder: 'Select Program' });
-    });
-    
-    $container.find('.level-select').each(function() {
-      Utils.initSelect2($(this), { placeholder: 'Select Level' });
-    });
-  },
-
-  initScheduleDetailSelect2($container = $(document)) {
-    $container.find('.schedule-select').each(function() {
-      Utils.initSelect2($(this), { placeholder: 'Select Schedule' });
-    });
-    
-    $container.find('.activity-type-select').each(function() {
-      Utils.initSelect2($(this), { placeholder: 'Select Activity Type' });
-    });
-    
-    $container.find('.schedule-day-select').each(function() {
-      Utils.initSelect2($(this), { placeholder: 'Select Day' });
-    });
-    
-    $container.find('.schedule-slot-select').each(function() {
-      Utils.initSelect2($(this), { placeholder: 'Select Slot' });
-    });
-    
-    $container.find('.group-select').each(function() {
-      Utils.initSelect2($(this), { placeholder: 'Select Group', closeOnSelect: false });
-    });
-  }
-};
-
-// ===========================
-// ELIGIBILITY TABLE MANAGER
-// ===========================
-const EligibilityTableManager = {
-  renderRow(index, selectedProgram = '', selectedLevel = '', selectedGroup = '') {
-    // Create empty selects to be populated later
-    let programSelect = `<select class='form-select program-select' name='eligibility[${index}][program_id]'></select>`;
-    let levelSelect = `<select class='form-select level-select' name='eligibility[${index}][level_id]'></select>`;
-    // Group is a multi-select (group_ids)
-    let groupInput = `<select multiple class='form-select group-select' name='eligibility[${index}][group_ids][]' style='width:120px;'></select>`;
-
-    return `
-      <tr>
-        <td class='align-middle text-center row-number'></td>
-        <td>${programSelect}</td>
-        <td>${levelSelect}</td>
-        <td>${groupInput}</td>
-        <td class='align-middle text-center'>
-          <button type='button' class='btn btn-sm btn-danger remove-eligibility-row'>
-            <i class='bx bx-trash'></i>
-          </button>
-        </td>
-      </tr>
-    `;
-  },
-
-  updateRowNumbers() {
-    $('#eligibilityTable tbody tr').each(function(index) {
-      $(this).find('.row-number').text(index + 1);
-      $(this).find('select').each(function() {
-        const name = $(this).attr('name');
-        if (name) {
-          const newName = name.replace(/eligibility\[\d+\]/, `eligibility[${index}]`);
-          $(this).attr('name', newName);
-        }
-      });
-    });
-  },
-
-  addRow(selectedProgram = '', selectedLevel = '', selectedGroup = '') {
-    const currentRows = $('#eligibilityTable tbody tr').length;
-    const newRow = this.renderRow(currentRows, selectedProgram, selectedLevel, selectedGroup);
-
-    $('#eligibilityTable tbody').append(newRow);
-    this.updateRowNumbers();
-
-    // Populate the selects using Utils.populateSelect
-    const $newRow = $('#eligibilityTable tbody tr:last');
-    // Initialize Select2 first so populateSelect can trigger select2-specific events
-
-    Utils.populateSelect(
-      $newRow.find('.program-select'),
-      DropdownManager.programOptions,
-      {
-        valueField: 'id',
-        textField: 'name',
-        placeholder: 'Select Program',
-        selected: selectedProgram,
-        includePlaceholder: true
-      },
-      true // isSelect2
-    );
-    Utils.populateSelect(
-      $newRow.find('.level-select'),
-      DropdownManager.levelOptions,
-      {
-        valueField: 'id',
-        textField: 'name',
-        placeholder: 'Select Level',
-        selected: selectedLevel,
-        includePlaceholder: true
-      },
-      true // isSelect2
-    );
-    // Populate group select options (1..30 groups to cover all possible groups)
-    const $groupSelect = $newRow.find('.group-select');
-    for (let g = 1; g <= 30; g++) {
-      const isSelected = Array.isArray(selectedGroup) ? selectedGroup.includes(String(g)) : String(selectedGroup) === String(g);
-      $groupSelect.append(`<option value="${g}" ${isSelected ? 'selected' : ''}>Group ${g}</option>`);
-    }
-
-    // Initialize Select2 for the new row (including group multi-select)
-    DropdownManager.initEligibilitySelect2($newRow);
-    $groupSelect.each(function() {
-      Utils.initSelect2($(this), { placeholder: 'Select Group', closeOnSelect: false });
-    });
-  },
-
-  removeRow($button) {
-    $button.closest('tr').remove();
-    this.updateRowNumbers();
-  },
-
-  clearRows() {
-    $('#eligibilityTable tbody').empty();
-  }
-};
-
-// ===========================
-// SCHEDULE DETAILS CARD MANAGER
-// ===========================
-const ScheduleDetailsCardManager = {
-  scheduleDays: {},
-  cardCounter: 0,
-
-  // ========== CARD RENDERING ==========
-
-  renderCard(index, schedule = {}) {
-    // Form controls
-    const scheduleSelect = `<select class='form-select schedule-select' name='schedule_details[${index}][schedule_id]'></select>`;
-    const activityTypeSelect = `
-      <select class='form-select activity-type-select' name='schedule_details[${index}][activity_type]'>
-        <option value=''>Select Type</option>
-        <option value='lecture'>Lecture</option>
-        <option value='tutorial'>Tutorial</option>
-        <option value='lab'>Lab</option>
-      </select>
-    `;
-    const daySelect = `<select class='form-select schedule-day-select' name='schedule_details[${index}][schedule_day_id]' disabled></select>`;
-    const slotSelect = `<select class='form-select schedule-slot-select' name='schedule_details[${index}][schedule_slot_ids]' multiple disabled style='min-height: 120px;'></select>`;
-    const slotHelpText = `<div class="form-text small">Hold Ctrl/Cmd to select multiple consecutive slots</div>`;
-    const slotSummary = `
-      <div class="selected-slots-summary mt-2 d-none">
-        <small class="text-muted">Selected: <span class="slot-summary-text"></span></small>
-      </div>
-    `;
-    const groupSelect = `
-      <select class='form-select group-select' name='schedule_details[${index}][group_numbers][]' multiple>
-      <option value='1'>Group 1</option>
-      <option value='2'>Group 2</option>
-      <option value='3'>Group 3</option>
-      <option value='4'>Group 4</option>
-      <option value='5'>Group 5</option>
-      <option value='6'>Group 6</option>
-      <option value='7'>Group 7</option>
-      <option value='8'>Group 8</option>
-      <option value='9'>Group 9</option>
-      <option value='10'>Group 10</option>
-      <option value='11'>Group 11</option>
-      <option value='12'>Group 12</option>
-      <option value='13'>Group 13</option>
-      <option value='14'>Group 14</option>
-      <option value='15'>Group 15</option>
-      <option value='16'>Group 16</option>
-      <option value='17'>Group 17</option>
-      <option value='18'>Group 18</option>
-      <option value='19'>Group 19</option>
-      <option value='20'>Group 20</option>
-      <option value='21'>Group 21</option>
-      <option value='22'>Group 22</option>
-      <option value='23'>Group 23</option>
-      <option value='24'>Group 24</option>
-      <option value='25'>Group 25</option>
-      <option value='26'>Group 26</option>
-      <option value='27'>Group 27</option>
-      <option value='28'>Group 28</option>
-      <option value='29'>Group 29</option>
-      <option value='30'>Group 30</option>
-      </select>
-    `;
-    const minCapacityInput = `<input type='number' class='form-control min-capacity-input' name='schedule_details[${index}][min_capacity]' placeholder='Min' min='1'>`;
-    const maxCapacityInput = `<input type='number' class='form-control max-capacity-input' name='schedule_details[${index}][max_capacity]' placeholder='Max' min='1'>`;
-
-    // Add hidden field for schedule_assignment_id
-    let scheduleAssignmentIdInput = '';
-    // If schedule.slots exists and has at least one slot, use its schedule_assignment_id
-    if (schedule.slots && Array.isArray(schedule.slots) && schedule.slots.length > 0 && schedule.slots[0].schedule_assignment_id) {
-      scheduleAssignmentIdInput = `<input type="hidden" class="schedule-assignment-id-input" name="schedule_details[${index}][schedule_assignment_id]" value="${schedule.slots[0].schedule_assignment_id}">`;
-    } else {
-      scheduleAssignmentIdInput = `<input type="hidden" class="schedule-assignment-id-input" name="schedule_details[${index}][schedule_assignment_id]" value="">`;
-    }
-
-    // Card HTML
-    return `
-      <div class="schedule-detail-card border rounded mb-3 p-3 bg-light position-relative">
-        ${scheduleAssignmentIdInput}
-        <div class="d-flex justify-content-between align-items-start mb-3">
-          <h6 class="mb-0 text-primary">
-            <i class="bx bx-calendar me-1"></i>
-            Schedule Detail <span class="schedule-number">${index + 1}</span>
-          </h6>
-          <button type="button" class="btn btn-sm btn-outline-danger remove-schedule-detail-btn">
-            <i class="bx bx-trash"></i>
-          </button>
-        </div>
-        <div class="row g-3">
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">Schedule</label>
-            ${scheduleSelect}
-          </div>
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">Activity Type</label>
-            ${activityTypeSelect}
-          </div>
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">Group Number</label>
-            ${groupSelect}
-          </div>
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">Location</label>
-            <input type="text" class="form-control location-input" name="schedule_details[${index}][location]" placeholder="Enter Location" value="${schedule.location || ''}">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">Day</label>
-            ${daySelect}
-          </div>
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">Slots</label>
-            ${slotSelect}
-            ${slotHelpText}
-            ${slotSummary}
-          </div>
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">Capacity</label>
-            <div class="input-group">
-              <span class="input-group-text">Min</span>
-              ${minCapacityInput}
-              <span class="input-group-text">Max</span>
-              ${maxCapacityInput}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  },
-
-  // ========== CARD MANAGEMENT ==========
-
-  addCard(schedule = {}) {
-    const cardIndex = this.cardCounter++;
-    const cardHtml = this.renderCard(cardIndex, schedule);
-    const $container = $('#schedule-details-container');
-    $container.append(cardHtml);
-    const $newCard = $container.children().last();
-
-    // Populate schedule select
-    Utils.populateSelect(
-      $newCard.find('.schedule-select'),
-      DropdownManager.scheduleOptions,
-      {
-        textField: 'title',
-        placeholder: 'Select Schedule',
-        selected: schedule.slots?.[0]?.schedule_id,
-        includePlaceholder: true
-      },
-      true
-    );
-
-    // Set other selected values
-    if (schedule.activity_type) {
-      $newCard.find('.activity-type-select').val(schedule.activity_type).trigger('change');
-    }
-    // Prefer `group_numbers` (new schema), fallback to `group` (legacy)
-    if (schedule.group_numbers) {
-      $newCard.find('.group-select').val(Array.isArray(schedule.group_numbers) ? schedule.group_numbers : [schedule.group_numbers]).trigger('change');
-    } else if (schedule.group) {
-      $newCard.find('.group-select').val(Array.isArray(schedule.group) ? schedule.group : [schedule.group]).trigger('change');
-    }
-    if (schedule.min_capacity) {
-      $newCard.find('.min-capacity-input').val(schedule.min_capacity);
-    }
-    if (schedule.max_capacity) {
-      $newCard.find('.max-capacity-input').val(schedule.max_capacity);
-    }
-
-    // If schedule_assignment_id is present, set it in the hidden field
-    if (schedule.slots && Array.isArray(schedule.slots) && schedule.slots.length > 0 && schedule.slots[0].schedule_assignment_id) {
-      $newCard.find('.schedule-assignment-id-input').val(schedule.slots[0].schedule_assignment_id);
-    }
-
-    this.updateCardNumbers();
-
-    // Initialize Select2 for the new card
-    DropdownManager.initScheduleDetailSelect2($newCard);
-
-  // Trigger change on schedule select so dependent selects (day/slots) can update if needed
-  $newCard.find('.schedule-select').trigger('change');
-
-    // If there's existing schedule data, load days/slots
-    if (schedule.slots?.[0]?.schedule_id) {
-      const $daySelect = $newCard.find('.schedule-day-select');
-      const $slotSelect = $newCard.find('.schedule-slot-select');
-      
-      // Collect all slot IDs from multiple slots
-      const slotIds = schedule.slots.map(slot => slot.slot_id);
-      
-      this.loadScheduleDaysSlots(
-        schedule.slots[0].schedule_id,
-        $daySelect,
-        $slotSelect,
-        schedule.slots[0].day_of_week,
-        slotIds
-      );
-    }
-
-    return $newCard;
-  },
-
-  removeCard($button) {
-    $button.closest('.schedule-detail-card').remove();
-    this.updateCardNumbers();
-  },
-
-  clearCards() {
-    $('#schedule-details-container').empty();
-    this.cardCounter = 0;
-  },
-
-  updateCardNumbers() {
-    $('#schedule-details-container .schedule-detail-card').each(function(index) {
-      $(this).find('.schedule-number').text(index + 1);
-      // Update all form names to use current index
-      $(this).find('select, input').each(function() {
-        const name = $(this).attr('name');
-        if (name) {
-          const newName = name.replace(/schedule_details\[\d+\]/, `schedule_details[${index}]`);
-          $(this).attr('name', newName);
-        }
-      });
-    });
-  },
-
-  // ========== SEPARATE DAY AND SLOT POPULATION FUNCTIONS ==========
-
-  /**
-   * Populate days dropdown for a specific schedule
-   * @param {string} scheduleId - The schedule ID
-   * @param {jQuery} $daySelect - The day select element
-   * @param {string|null} selectedDay - Previously selected day (optional)
-   */
-  async populateScheduleDays(scheduleId, $daySelect, selectedDay = null) {
-    try {
-      // Reset and disable day select
-      $daySelect.empty().prop('disabled', true);
-
-      if (!scheduleId) {
-        return;
-      }
-
-      // Fetch schedule days and slots data
-      const response = await ApiService.fetchScheduleDaysSlots(scheduleId);
-
-      if (response && Array.isArray(response.data) && response.data.length > 0) {
-        // Map days to { id: day_of_week, name: Capitalized day_of_week }
-        const dayOptions = response.data.map((dayObj) => ({
-          id: dayObj.day_of_week,
-          name: dayObj.day_of_week.charAt(0).toUpperCase() + dayObj.day_of_week.slice(1)
-        }));
-
-        // Populate the day select dropdown
-        Utils.populateSelect(
-          $daySelect,
-          dayOptions,
-          {
-            valueField: 'id',
-            textField: 'name',
-            placeholder: 'Select Day',
-            selected: selectedDay,
-            includePlaceholder: true
-          },
-          true
-        );
-
-        // Enable the day select and store the data for later use
-        $daySelect.prop('disabled', false);
-        this.scheduleDays[scheduleId] = response.data;
-
-        return response.data;
-      }
-    } catch (error) {
-      console.error('Failed to load schedule days:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Populate slots dropdown for a specific day
-   * @param {string} scheduleId - The schedule ID
-   * @param {string} selectedDay - The selected day
-   * @param {jQuery} $slotSelect - The slot select element
-   * @param {string|null} selectedSlotId - Previously selected slot ID (optional)
-   */
-  populateScheduleSlots(scheduleId, selectedDay, $slotSelect, selectedSlotId = null) {
-    try {
-      // Reset and disable slot select
-      $slotSelect.empty().prop('disabled', true);
-
-      if (!scheduleId || selectedDay === "" || selectedDay === null) {
-        return;
-      }
-
-      // Get the stored days data for this schedule
-      const daysData = this.scheduleDays[scheduleId];
-      
-      if (!daysData) {
-        console.warn('No days data found for schedule:', scheduleId);
-        return;
-      }
-
-      // Find the day data
-      const dayData = daysData.find(day => day.day_of_week === selectedDay);
-      
-      if (dayData && dayData.slots && dayData.slots.length > 0) {
-        // Map slots to dropdown options with data-order attribute
-        const slotOptions = dayData.slots.map(slot => {
-          
-          const startTime = slot.start_time;
-          const endTime = slot.end_time;
-
-          return {
-            id: slot.id,
-            name: `Slot ${slot.slot_order}: ${slot.label || `${startTime} - ${endTime}`}`,
-            order: slot.slot_order
-          };
-        });
-
-        // Populate the slot select dropdown manually to add data-order attribute
-        $slotSelect.empty();
-        $slotSelect.append(`<option value="">Select Slots</option>`);
-        
-        slotOptions.forEach(slot => {
-          let selected = '';
-          if (selectedSlotId) {
-            if (Array.isArray(selectedSlotId)) {
-              selected = selectedSlotId.includes(slot.id) ? 'selected' : '';
-            } else {
-              selected = selectedSlotId == slot.id ? 'selected' : '';
-            }
-          }
-          $slotSelect.append(`<option value="${slot.id}" data-order="${slot.order}" ${selected}>${slot.name}</option>`);
-        });
-
-        // Initialize Select2 for multiple selection
-        Utils.initSelect2($slotSelect, { 
-          placeholder: 'Select Slots',
-          closeOnSelect: false 
-        });
-
-        // Add consecutive slot validation
-        $slotSelect.off('change.consecutiveValidation').on('change.consecutiveValidation', function() {
-          ScheduleDetailsCardManager.validateConsecutiveSlots($(this));
-        });
-
-        // Enable the slot select
-        $slotSelect.prop('disabled', false);
-      } else {
-        console.warn('No slots found for day:', selectedDay);
-      }
-    } catch (error) {
-      console.error('Failed to load schedule slots:', error);
-      throw error;
-    }
-  },
-
-  // ========== MAIN SCHEDULE DATA LOADING FUNCTIONS ==========
-
-  /**
-   * Load both days and slots for a schedule (main function)
-   * @param {string} scheduleId - The schedule ID
-   * @param {jQuery} $daySelect - The day select element
-   * @param {jQuery} $slotSelect - The slot select element
-   * @param {string|null} selectedDay - Previously selected day (optional)
-   * @param {string|null} selectedSlotId - Previously selected slot ID (optional)
-   */
-  async loadScheduleDaysSlots(scheduleId, $daySelect, $slotSelect, selectedDay = null, selectedSlotId = null) {
-    try {
-      // Populate days first
-      await this.populateScheduleDays(scheduleId, $daySelect, selectedDay);
-      
-      // If a day was pre-selected, populate its slots
-      if (selectedDay !== null) {
-        this.populateScheduleSlots(scheduleId, selectedDay, $slotSelect, selectedSlotId);
-      }
-    } catch (error) {
-      console.error('Failed to load schedule days and slots:', error);
-    }
-  },
-
-  /**
-   * Load slots for a specific day (wrapper for backward compatibility)
-   * @param {string} scheduleId - The schedule ID
-   * @param {string} dayValue - The day value (day_of_week string)
-   * @param {jQuery} $slotSelect - The slot select element
-   * @param {string|null} selectedSlotId - Previously selected slot ID (optional)
-   */
-  loadScheduleSlots(scheduleId, dayValue, $slotSelect, selectedSlotId = null) {
-    this.populateScheduleSlots(scheduleId, dayValue, $slotSelect, selectedSlotId);
-  },
-
-  validateConsecutiveSlots($slotSelect) {
-    const selectedValues = $slotSelect.val() || [];
-    const $card = $slotSelect.closest('.schedule-detail-card');
-    const $feedback = $card.find('.slot-feedback');
-    const $summary = $card.find('.selected-slots-summary');
-    const $summaryText = $card.find('.slot-summary-text');
-    
-    if (selectedValues.length === 0) {
-      $feedback.removeClass('d-block').addClass('d-none');
-      $summary.addClass('d-none');
-      $slotSelect.removeClass('is-invalid');
-      return true;
-    }
-
-    // Get slot orders and labels for validation and display
-    const selectedSlots = selectedValues.map(val => {
-      const option = $slotSelect.find(`option[value="${val}"]`);
-      return {
-        id: val,
-        order: parseInt(option.attr('data-order')),
-        label: option.text()
-      };
-    }).sort((a, b) => a.order - b.order);
-
-    // Update summary
-    if (selectedSlots.length > 0) {
-      const summaryText = selectedSlots.length === 1 
-        ? selectedSlots[0].label
-        : `${selectedSlots[0].label} - ${selectedSlots[selectedSlots.length - 1].label} (${selectedSlots.length} slots)`;
-      $summaryText.text(summaryText);
-      $summary.removeClass('d-none');
-    }
-
-    if (selectedSlots.length <= 1) {
-      $feedback.removeClass('d-block').addClass('d-none');
-      $slotSelect.removeClass('is-invalid');
-      return true;
-    }
-
-    // Check if slots are consecutive
-    let isConsecutive = true;
-    for (let i = 1; i < selectedSlots.length; i++) {
-      if (selectedSlots[i].order !== selectedSlots[i-1].order + 1) {
-        isConsecutive = false;
-        break;
-      }
-    }
-
-    if (!isConsecutive) {
-      if ($feedback.length === 0) {
-        $slotSelect.after('<div class="invalid-feedback slot-feedback d-block">Selected slots must be consecutive.</div>');
-      } else {
-        $feedback.text('Selected slots must be consecutive.').addClass('d-block');
-      }
-      $slotSelect.addClass('is-invalid');
-      return false;
-    } else {
-      $feedback.removeClass('d-block').addClass('d-none');
-      $slotSelect.removeClass('is-invalid');
-      return true;
+      Utils.showError('Failed to load data');
+      console.error(error);
     }
   }
-};
 
-// ===========================
-// ELIGIBILITY MODE MANAGER
-// ===========================
-const EligibilityModeManager = {
-  initialize() {
-    // Initialize tooltips
-    $('[data-bs-toggle="tooltip"]').tooltip();
-
-    // Set up mode change handler
-    $('input[name="mode"]').on('change', (e) => {
-      this.showSection(e.target.value);
-    });
-
-    // Initialize Select2 for mode-specific dropdowns
-    Utils.initSelect2($('#allProgramsLevelSelect'), { placeholder: 'Select Level' });
-    Utils.initSelect2($('#allLevelsProgramSelect'), { placeholder: 'Select Program' });
-
-    // Show initial section based on checked radio
-    const initialMode = $('input[name="mode"]:checked').val() || ModeS.INDIVIDUAL;
-    this.showSection(initialMode);
-  },
-
-  showSection(mode) {
-    // Hide all sections
-    $('#eligibility-individual-section, #eligibility-all-programs-section, #eligibility-all-levels-section, #eligibility-universal-section, #eligibility-summary-section')
-      .addClass('d-none').removeClass('show');
-    
-    // Clear validation states
-    $('#allProgramsLevelSelect').removeClass('is-invalid');
-    $('#allProgramsLevelFeedback').text('');
-    $('#allLevelsProgramSelect').removeClass('is-invalid');
-    $('#allLevelsProgramFeedback').text('');
-    
-    // Show appropriate section
-    switch(mode) {
-      case ModeS.INDIVIDUAL:
-        $('#eligibility-individual-section').removeClass('d-none').addClass('show');
-        break;
-      case ModeS.ALL_PROGRAMS:
-        $('#eligibility-all-programs-section').removeClass('d-none').addClass('show');
-        break;
-      case ModeS.ALL_LEVELS:
-        $('#eligibility-all-levels-section').removeClass('d-none').addClass('show');
-        break;
-      case ModeS.UNIVERSAL:
-        $('#eligibility-universal-section').removeClass('d-none').addClass('show');
-        break;
-    }
-  },
-
-  validateMode(mode, data) {
-    let isValid = true;
-
-    switch (mode) {
-      case ModeS.ALL_PROGRAMS: {
-        const levelId = $('#allProgramsLevelSelect').val();
-        if (!levelId) {
-          Utils.validateField($('#allProgramsLevelSelect'), 'Please select a level.', false);
-          isValid = false;
-        } else {
-          Utils.validateField($('#allProgramsLevelSelect'), '', true);
-          data.mode = 'all_programs';
-          data.level_id = levelId;
-          data.eligibility = [];
-        }
-        break;
-      }
-
-      case ModeS.ALL_LEVELS: {
-        const programId = $('#allLevelsProgramSelect').val();
-        if (!programId) {
-          Utils.validateField($('#allLevelsProgramSelect'), 'Please select a program.', false);
-          isValid = false;
-        } else {
-          Utils.validateField($('#allLevelsProgramSelect'), '', true);
-          data.mode = 'all_levels';
-          data.eligibility = [];
-          data.program_id = programId;
-        }
-        break;
-      }
-
-      case ModeS.UNIVERSAL: {
-        data.mode = 'universal';
-        data.eligibility = [];
-        break;
-      }
-
-      case ModeS.INDIVIDUAL:
-      default: {
-        if (!Array.isArray(data.eligibility) || data.eligibility.length === 0) {
-          Utils.showError('Please add at least one eligibility pair.');
-          isValid = false;
-        } else {
-          data.eligibility = data.eligibility.map(item => ({
-            ...item,
-          }));
-          data.mode = 'individual';
-        }
-        break;
-      }
-    }
-
-    return isValid;
-  },
-
-  showSummary(mode) {
-    let summary = '';
-    
-    switch(mode) {
-      case ModeS.ALL_PROGRAMS:
-        const levelText = $('#allProgramsLevelSelect option:selected').text();
-        summary = `<b>All Programs</b> for <b>Level:</b> ${levelText}`;
-        break;
-      case ModeS.ALL_LEVELS:
-        const programText = $('#allLevelsProgramSelect option:selected').text();
-        summary = `<b>All Levels</b> for <b>Program:</b> ${programText}`;
-        break;
-      case ModeS.UNIVERSAL:
-        summary = `<b>All Programs</b> and <b>All Levels</b> (Universal)`;
-        break;
-      default:
-        summary = 'Custom eligibility pairs as configured.';
-    }
-    
-    $('#eligibility-summary-content').html(`<div class='mb-2'><i class='bx bx-check-circle text-success me-2'></i>${summary}</div>`);
-    $('#eligibility-summary-section').removeClass('d-none').show();
-  }
-};
-
-// ===========================
-// FORM MANAGER
-// ===========================
-const FormManager = {
-  initialize() {
-    this.bindEvents();
-  },
-
-  bindEvents() {
-    // Eligibility table events
-    $('#addEligibilityRowBtn').on('click', () => {
-      EligibilityTableManager.addRow();
-    });
-
-    $('#eligibilityTable').on('click', '.remove-eligibility-row', function() {
-      EligibilityTableManager.removeRow($(this));
-    });
-
-    // Schedule details table events
-    $('#addScheduleDetailRowBtn').on('click', () => {
-      ScheduleDetailsCardManager.addCard();
-    });
-
-    $('#scheduleDetailsTable').on('click', '.remove-schedule-detail-row', function() {
-      ScheduleDetailsCardManager.removeRow($(this));
-    });
-
-    // Schedule change events
-    $(document).on('change', '.schedule-select', function() {
-      // Find the closest card (not tr)
-      const $card = $(this).closest('.schedule-detail-card');
-      const scheduleId = $(this).val();
-      const $daySelect = $card.find('.schedule-day-select');
-      const $slotSelect = $card.find('.schedule-slot-select');
-      ScheduleDetailsCardManager.loadScheduleDaysSlots(scheduleId, $daySelect, $slotSelect);
-    });
-
-    $(document).on('change', '.schedule-day-select', function() {
-      const $card = $(this).closest('.schedule-detail-card');
-      const scheduleId = $card.find('.schedule-select').val();
-      const day = $(this).val();
-      const $slotSelect = $card.find('.schedule-slot-select');
-      ScheduleDetailsCardManager.loadScheduleSlots(scheduleId, day, $slotSelect);
-    });
-
-    // Form submission
-    $('#availableCourseForm').on('submit', (e) => {
-      this.handleFormSubmit(e);
-    });
-  },
-
-  getFormData() {
-    const data = {
-      _token: $('#availableCourseForm input[name="_token"]').val(),
-      _method: 'PUT',
-      course_id: $('#course_id').val(),
-      term_id: $('#term_id').val(),
-      mode: $('input[name="mode"]:checked').val(),
-      eligibility: [],
-      schedule_details: [],
-    };
-
-    // Collect eligibility data (only for individual mode)
-    if (data.mode === ModeS.INDIVIDUAL) {
-      $('#eligibilityTable tbody tr').each(function() {
-        const program_id = $(this).find('.program-select').val();
-        const level_id = $(this).find('.level-select').val();
-        // group-select is a multi-select returning an array of group ids
-        const group_ids = $(this).find('.group-select').val() || [];
-
-        if (program_id && level_id) {
-          data.eligibility.push({ program_id, level_id, group_ids });
-        }
-      });
-    }
-
-    // Collect schedule details from the card-based layout, including schedule_assignment_id
-    $('#schedule-details-container .schedule-detail-card').each(function() {
-      const schedule_id = $(this).find('.schedule-select').val();
-      const activity_type = $(this).find('.activity-type-select').val();
-      const schedule_day_id = $(this).find('.schedule-day-select').val();
-      const schedule_slot_ids = $(this).find('.schedule-slot-select').val() || [];
-  // collect group numbers as array (multi-select)
-  const group_number = $(this).find('.group-select').val() || [];
-      const min_capacity = $(this).find('.min-capacity-input').val();
-      const max_capacity = $(this).find('.max-capacity-input').val();
-      const location = $(this).find('.location-input').val();
-      const schedule_assignment_id = $(this).find('.schedule-assignment-id-input').val();
-
-      if (schedule_id && schedule_day_id !== "" && schedule_slot_ids.length > 0 && group_number.length > 0) {
-        data.schedule_details.push({
-          schedule_id,
-          activity_type,
-          schedule_day_id,
-          schedule_slot_ids,
-          group_numbers: group_number,
-          min_capacity,
-          max_capacity,
-          location,
-          schedule_assignment_id
-        });
-      }
-    });
-
-    return data;
-  },
-
-  validateFormData(data) {
-    let isValid = true;
-
-    // Validate basic fields
-    if (!data.course_id) {
-      Utils.showError('Please select a course.');
-      return false;
-    }
-
-    if (!data.term_id) {
-      Utils.showError('Please select a term.');
-      return false;
-    }
-
-    // Validate eligibility mode
-    if (!EligibilityModeManager.validateMode(data.mode, data)) {
-      isValid = false;
-    }
-
-    // Validate schedule details
-    if (!data.schedule_details || data.schedule_details.length === 0) {
-      Utils.showError('Please add at least one schedule detail.');
-      return false;
-    }
-
-    // Validate each schedule detail
-    for (let i = 0; i < data.schedule_details.length; i++) {
-      const detail = data.schedule_details[i];
-      const scheduleNum = i + 1;
-
-      if (!detail.schedule_id) {
-        Utils.showError(`Please select a schedule in Schedule Detail ${scheduleNum}.`);
-        return false;
-      }
-      if (!detail.activity_type) {
-        Utils.showError(`Please select an activity type in Schedule Detail ${scheduleNum}.`);
-        return false;
-      }
-      if (detail.schedule_day_id === "" || detail.schedule_day_id === undefined) {
-        Utils.showError(`Please select a day in Schedule Detail ${scheduleNum}.`);
-        return false;
-      }
-      if (!detail.schedule_slot_ids || !Array.isArray(detail.schedule_slot_ids) || detail.schedule_slot_ids.length === 0) {
-        Utils.showError(`Please select at least one slot in Schedule Detail ${scheduleNum}.`);
-        return false;
-      }
-
-      // Validate that slots are consecutive if multiple are selected
-      if (detail.schedule_slot_ids.length > 1) {
-        const $card = $(`#schedule-details-container .schedule-detail-card:eq(${i})`);
-        const $slotSelect = $card.find('.schedule-slot-select');
-        if (!ScheduleDetailsCardManager.validateConsecutiveSlots($slotSelect)) {
-          Utils.showError(`Selected slots must be consecutive in Schedule Detail ${scheduleNum}.`);
-          return false;
-        }
-      }
-      if (!detail.group_numbers || !Array.isArray(detail.group_numbers) || detail.group_numbers.length === 0) {
-        Utils.showError(`Please select at least one group in Schedule Detail ${scheduleNum}.`);
-        return false;
-      }
-      
-      // Validate capacity
-      const minCap = parseInt(detail.min_capacity);
-      const maxCap = parseInt(detail.max_capacity);
-      
-      if (!detail.min_capacity || isNaN(minCap) || minCap < 1) {
-        Utils.showError(`Please enter a valid minimum capacity (at least 1) in Schedule Detail ${scheduleNum}.`);
-        return false;
-      }
-      if (!detail.max_capacity || isNaN(maxCap) || maxCap < 1) {
-        Utils.showError(`Please enter a valid maximum capacity (at least 1) in Schedule Detail ${scheduleNum}.`);
-        return false;
-      }
-      if (maxCap < minCap) {
-        Utils.showError(`Maximum capacity must be greater than or equal to minimum capacity in Schedule Detail ${scheduleNum}.`);
-        return false;
-      }
-    }
-
-    return isValid;
-  },
-
-  async handleFormSubmit(e) {
-    e.preventDefault();
-    
-    const $submitBtn = $('button[type="submit"]');
-    const loadingConfig = {
-      loadingText: 'Updating...',
-      loadingIcon: 'bx bx-loader-alt bx-spin me-1',
-      normalText: 'Update Available Course',
-      normalIcon: 'bx bx-save me-1'
-    };
-    
-    Utils.setLoadingState($submitBtn, true, loadingConfig);
-    
-    // Hide form errors
-    $('#formErrors').addClass('d-none').empty();
-    
-    try {
-      const data = this.getFormData();
-      
-      if (!this.validateFormData(data)) {
-        Utils.setLoadingState($submitBtn, false, loadingConfig);
-        return;
-      }
-      
-      // Show eligibility summary
-      EligibilityModeManager.showSummary(data.mode);
-      
-      // Submit form
-      const response = await ApiService.updateAvailableCourse(data);
-      
-      // Show success message and redirect
-      Utils.showSuccess(response.message);
+  // ========== ELIGIBILITY MANAGEMENT ==========
+  function initializeEligibility() {
+    $('#addEligibilityBtn').on('click', function() {
+      $('#eligibilityForm')[0].reset();
+      $('#eligibility_id').val('');
+      $('#eligibilityModalTitle').text('Add Eligibility');
+      $('#eligibilityModal').modal('show');
       
       setTimeout(() => {
-        window.location.href = ROUTES.availableCourses.index;
-      }, 1800);
+        Utils.initSelect2($('.select2-modal'), { dropdownParent: $('#eligibilityModal') });
+      }, 100);
+    });
+
+    $('#eligibilityForm').on('submit', async function(e) {
+      e.preventDefault();
       
-    } catch (error) {
-      this.handleSubmissionError(error);
-    } finally {
-      Utils.setLoadingState($submitBtn, false, loadingConfig);
-    }
-  },
+      const data = {
+        program_id: $('#program_id').val(),
+        level_id: $('#level_id').val(),
+        group_numbers: [$('#group_numbers').val()]
+      };
 
-  handleSubmissionError(xhr) {
-    Utils.handleAjaxError(xhr, 'An error occurred while updating. Please try again.');
+      try {
+        const response = await $.ajax({
+          url: ROUTES.availableCourse.eligibility.store,
+          method: 'POST',
+          data: data,
+          headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+        });
+
+        Utils.showSuccess(response.message);
+        $('#eligibilityModal').modal('hide');
+        reloadTable(eligibilityTable, '#eligibilityTable');
+      } catch (error) {
+        Utils.handleAjaxError(error);
+      }
+    });
+
+    $(document).on('click', '.deleteEligibilityBtn', function() {
+      const id = $(this).data('id');
+      
+      Swal.fire({
+        title: 'Are you sure?',
+        text: "This eligibility will be deleted!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            await $.ajax({
+              url: ROUTES.availableCourse.eligibility.delete.replace(':id', id),
+              method: 'DELETE',
+              headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+            });
+            
+            Utils.showSuccess('Eligibility deleted successfully');
+            reloadTable(eligibilityTable, '#eligibilityTable');
+          } catch (error) {
+            Utils.handleAjaxError(error);
+          }
+        }
+      });
+    });
   }
-};
 
-// ===========================
-// MAIN APPLICATION
-// ===========================
-const AvailableCourseApp = {
-  async initialize() {
-    try {
-      // Initialize dropdowns and load data (including existing course data)
-      const dataLoaded = await DropdownManager.initialize();
-      if (!dataLoaded) {
+  // ========== SCHEDULE MANAGEMENT - ADD ==========
+  function initializeAddSchedule() {
+    $('#addScheduleBtn').on('click', function() {
+      $('#addScheduleForm')[0].reset();
+      $('#add_schedule_day_id, #add_schedule_slot_ids').prop('disabled', true);
+      $('#addScheduleModal').modal('show');
+      
+      setTimeout(() => {
+        Utils.initSelect2($('.select2-modal'), { dropdownParent: $('#addScheduleModal') });
+        Utils.initSelect2($('#add_schedule_slot_ids'), { 
+          closeOnSelect: false, 
+          dropdownParent: $('#addScheduleModal') 
+        });
+      }, 100);
+    });
+
+    $(document).on('change', '#add_schedule_template_id', async function() {
+      const scheduleId = $(this).val();
+      
+      if (!scheduleId) {
+        $('#add_schedule_day_id').prop('disabled', true).empty().append('<option value="">Select Day</option>');
+        $('#add_schedule_slot_ids').prop('disabled', true).empty().append('<option value="">Select Slots</option>');
         return;
       }
 
-      // Initialize eligibility mode handling
-      EligibilityModeManager.initialize();
+      try {
+        const response = await $.getJSON(ROUTES.scheduleDaysSlots.get.replace(':id', scheduleId));
+        scheduleDaysData[scheduleId] = response.data;
+        
+        const dayOptions = response.data.map(d => ({
+          id: d.day_of_week,
+          name: d.day_of_week.charAt(0).toUpperCase() + d.day_of_week.slice(1)
+        }));
 
-      // Initialize form management
-      FormManager.initialize();
+        $('#add_schedule_day_id').empty().prop('disabled', false);
+        Utils.populateSelect($('#add_schedule_day_id'), dayOptions, { textField: 'name' }, true);
+        
+        $('#add_schedule_slot_ids').prop('disabled', true).empty().append('<option value="">Select Slots</option>');
+      } catch (error) {
+        Utils.showError('Failed to load schedule days');
+      }
+    });
 
-      Utils.hidePageLoader();
+    $(document).on('change', '#add_schedule_day_id', function() {
+      const scheduleId = $('#add_schedule_template_id').val();
+      const day = $(this).val();
+      
+      if (!day || !scheduleDaysData[scheduleId]) {
+        $('#add_schedule_slot_ids').prop('disabled', true).empty().append('<option value="">Select Slots</option>');
+        return;
+      }
 
-      console.log('Available Course Edit App initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize Available Course Edit App:', error);
-      Utils.showError('Application initialization failed. Please refresh the page.');
-    }
+      const dayData = scheduleDaysData[scheduleId].find(d => d.day_of_week === day);
+      
+      if (dayData && dayData.slots) {
+        const slotOptions = dayData.slots.map(s => ({
+          id: s.id,
+          name: `Slot ${s.slot_order}: ${s.label || s.start_time + ' - ' + s.end_time}`,
+          order: s.slot_order
+        }));
+
+        $('#add_schedule_slot_ids').empty().prop('disabled', false);
+        $('#add_schedule_slot_ids').append('<option value="">Select Slots</option>');
+        slotOptions.forEach(slot => {
+          $('#add_schedule_slot_ids').append(`<option value="${slot.id}" data-order="${slot.order}">${slot.name}</option>`);
+        });
+      } else {
+        $('#add_schedule_slot_ids').prop('disabled', true).empty().append('<option value="">No slots available</option>');
+      }
+    });
+
+    $('#addScheduleForm').on('submit', async function(e) {
+      e.preventDefault();
+      
+      const data = {
+        schedule_template_id: $('#add_schedule_template_id').val(),
+        activity_type: $('#add_activity_type').val(),
+        group_numbers: [$('#add_schedule_group_numbers').val()],
+        location: $('#add_location').val(),
+        schedule_day_id: $('#add_schedule_day_id').val(),
+        schedule_slot_ids: $('#add_schedule_slot_ids').val(),
+        min_capacity: $('#add_min_capacity').val(),
+        max_capacity: $('#add_max_capacity').val()
+      };
+
+      const slotIds = $('#add_schedule_slot_ids').val();
+      if (slotIds && slotIds.length > 0) {
+        const slots = $('#add_schedule_slot_ids option:selected').map(function() {
+          return parseInt($(this).attr('data-order'));
+        }).get().sort((a, b) => a - b);
+
+        for (let i = 1; i < slots.length; i++) {
+          if (slots[i] !== slots[i-1] + 1) {
+            Utils.showError('Selected slots must be consecutive');
+            return;
+          }
+        }
+      }
+
+      try {
+        const response = await $.ajax({
+          url: ROUTES.availableCourse.schedule.store,
+          method: 'POST',
+          data: data,
+          headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+        });
+
+        Utils.showSuccess(response.message);
+        $('#addScheduleModal').modal('hide');
+        reloadTable(scheduleTable, '#scheduleTable');
+      } catch (error) {
+        Utils.handleAjaxError(error);
+      }
+    });
   }
-};
 
-// ===========================
-// DOCUMENT READY
-// ===========================
-$(document).ready(() => {
-  AvailableCourseApp.initialize();
-});
+  // ========== SCHEDULE MANAGEMENT - EDIT ==========
+  function initializeEditSchedule() {
+    $(document).on('click', '.editScheduleBtn', async function() {
+      const id = $(this).data('id');
+      
+      try {
+        const response = await $.getJSON(ROUTES.availableCourse.schedule.show.replace(':id', id));
+        const data = response.data;
+        
+        $('#edit_schedule_id').val(id);
+        $('#edit_available_course_schedule_id').val(data.id);
+        $('#edit_activity_type').val(data.activity_type);
+        $('#edit_schedule_group_number').val(data.group_number || data.group);
+        $('#edit_location').val(data.location);
+        $('#edit_min_capacity').val(data.min_capacity);
+        $('#edit_max_capacity').val(data.max_capacity);
+        
+        $('#editScheduleModal').modal('show');
+        
+        setTimeout(async () => {
+          if (data.schedule_template_id) {
+            $('#edit_schedule_template_id').val(data.schedule_template_id).trigger('change');
+            
+            setTimeout(async () => {
+              if (data.day_of_week) {
+                $('#edit_schedule_day_id').val(data.day_of_week).trigger('change');
+                
+                setTimeout(() => {
+                  if (data.slot_ids && data.slot_ids.length > 0) {
+                    $('#edit_schedule_slot_ids').val(data.slot_ids).trigger('change');
+                  }
+                  
+                  setTimeout(() => {
+                    Utils.initSelect2($('.select2-modal'), { dropdownParent: $('#editScheduleModal') });
+                    Utils.initSelect2($('#edit_schedule_slot_ids'), { 
+                      closeOnSelect: false, 
+                      dropdownParent: $('#editScheduleModal') 
+                    });
+                    $('#edit_activity_type').trigger('change');
+                    $('#edit_schedule_group_number').trigger('change');
+                  }, 100);
+                }, 800);
+              }
+            }, 800);
+          } else {
+            if (data.slot_ids && data.slot_ids.length > 0) {
+              setTimeout(() => {
+                $('#edit_schedule_slot_ids').val(data.slot_ids).trigger('change');
+                
+                setTimeout(() => {
+                  Utils.initSelect2($('.select2-modal'), { dropdownParent: $('#editScheduleModal') });
+                  Utils.initSelect2($('#edit_schedule_slot_ids'), { 
+                    closeOnSelect: false, 
+                    dropdownParent: $('#editScheduleModal') 
+                  });
+                  $('#edit_activity_type').trigger('change');
+                  $('#edit_schedule_group_number').trigger('change');
+                }, 100);
+              }, 300);
+            } else {
+              setTimeout(() => {
+                Utils.initSelect2($('.select2-modal'), { dropdownParent: $('#editScheduleModal') });
+                Utils.initSelect2($('#edit_schedule_slot_ids'), { 
+                  closeOnSelect: false, 
+                  dropdownParent: $('#editScheduleModal') 
+                });
+                $('#edit_activity_type').trigger('change');
+                $('#edit_schedule_group_number').trigger('change');
+              }, 300);
+            }
+          }
+        }, 200);
+      } catch (error) {
+        console.error('Error loading schedule data:', error);
+        Utils.showError('Failed to load schedule data: ' + (error.responseJSON?.message || error.message));
+      }
+    });
+
+    $(document).on('change', '#edit_schedule_template_id', async function() {
+      const scheduleId = $(this).val();
+      
+      if (!scheduleId) {
+        $('#edit_schedule_day_id').prop('disabled', true).empty().append('<option value="">Select Day</option>');
+        $('#edit_schedule_slot_ids').prop('disabled', true).empty().append('<option value="">Select Slots</option>');
+        return;
+      }
+
+      try {
+        const response = await $.getJSON(ROUTES.scheduleDaysSlots.get.replace(':id', scheduleId));
+        scheduleDaysData[scheduleId] = response.data;
+        
+        const dayOptions = response.data.map(d => ({
+          id: d.day_of_week,
+          name: d.day_of_week.charAt(0).toUpperCase() + d.day_of_week.slice(1)
+        }));
+
+        $('#edit_schedule_day_id').empty().prop('disabled', false);
+        Utils.populateSelect($('#edit_schedule_day_id'), dayOptions, { textField: 'name' }, true);
+        
+        $('#edit_schedule_slot_ids').prop('disabled', true).empty().append('<option value="">Select Slots</option>');
+      } catch (error) {
+        Utils.showError('Failed to load schedule days');
+      }
+    });
+
+    $(document).on('change', '#edit_schedule_day_id', function() {
+      const scheduleId = $('#edit_schedule_template_id').val();
+      const day = $(this).val();
+      
+      if (!day || !scheduleDaysData[scheduleId]) {
+        $('#edit_schedule_slot_ids').prop('disabled', true).empty().append('<option value="">Select Slots</option>');
+        return;
+      }
+
+      const dayData = scheduleDaysData[scheduleId].find(d => d.day_of_week === day);
+      
+      if (dayData && dayData.slots) {
+        const slotOptions = dayData.slots.map(s => ({
+          id: s.id,
+          name: `Slot ${s.slot_order}: ${s.label || s.start_time + ' - ' + s.end_time}`,
+          order: s.slot_order
+        }));
+
+        $('#edit_schedule_slot_ids').empty().prop('disabled', false);
+        $('#edit_schedule_slot_ids').append('<option value="">Select Slots</option>');
+        slotOptions.forEach(slot => {
+          $('#edit_schedule_slot_ids').append(`<option value="${slot.id}" data-order="${slot.order}">${slot.name}</option>`);
+        });
+      } else {
+        $('#edit_schedule_slot_ids').prop('disabled', true).empty().append('<option value="">No slots available</option>');
+      }
+    });
+
+    $('#editScheduleForm').on('submit', async function(e) {
+      e.preventDefault();
+      
+      const id = $('#edit_schedule_id').val();
+      const data = {
+        schedule_template_id: $('#edit_schedule_template_id').val(),
+        activity_type: $('#edit_activity_type').val(),
+        group_number: $('#edit_schedule_group_number').val(),
+        location: $('#edit_location').val(),
+        schedule_day_id: $('#edit_schedule_day_id').val(),
+        schedule_slot_ids: $('#edit_schedule_slot_ids').val(),
+        min_capacity: $('#edit_min_capacity').val(),
+        max_capacity: $('#edit_max_capacity').val()
+      };
+
+      const slotIds = $('#edit_schedule_slot_ids').val();
+      if (slotIds && slotIds.length > 0) {
+        const slots = $('#edit_schedule_slot_ids option:selected').map(function() {
+          return parseInt($(this).attr('data-order'));
+        }).get().sort((a, b) => a - b);
+
+        for (let i = 1; i < slots.length; i++) {
+          if (slots[i] !== slots[i-1] + 1) {
+            Utils.showError('Selected slots must be consecutive');
+            return;
+          }
+        }
+      }
+
+      try {
+        const response = await $.ajax({
+          url: ROUTES.availableCourse.schedule.update.replace(':id', id),
+          method: 'PUT',
+          data: data,
+          headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+        });
+
+        Utils.showSuccess(response.message);
+        $('#editScheduleModal').modal('hide');
+        reloadTable(scheduleTable, '#scheduleTable');
+      } catch (error) {
+        Utils.handleAjaxError(error);
+      }
+    });
+  }
+
+  // ========== SCHEDULE MANAGEMENT - DELETE ==========
+  function initializeDeleteSchedule() {
+    $(document).on('click', '.deleteScheduleBtn', function() {
+      const id = $(this).data('id');
+      
+      Swal.fire({
+        title: 'Are you sure?',
+        text: "This schedule will be deleted!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            await $.ajax({
+              url: ROUTES.availableCourse.schedule.delete.replace(':id', id),
+              method: 'DELETE',
+              headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+            });
+            
+            Utils.showSuccess('Schedule deleted successfully');
+            reloadTable(scheduleTable, '#scheduleTable');
+          } catch (error) {
+            Utils.handleAjaxError(error);
+          }
+        }
+      });
+    });
+  }
+
+  // ========== INITIALIZATION ==========
+  $(document).ready(async function() {
+    initializeTableReferences();
+    initializeEligibility();
+    initializeAddSchedule();
+    initializeEditSchedule();
+    initializeDeleteSchedule();
+    
+    await loadDropdownData();
+    Utils.hidePageLoader();
+  });
+
+})();
 </script>
 @endpush

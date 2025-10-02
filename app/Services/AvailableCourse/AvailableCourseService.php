@@ -22,14 +22,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\DataTables;
 use App\Services\AvailableCourse\CreateAvailableCourseService;
-use App\Services\AvailableCourse\UpdateAvailableCourseService;
 use App\Services\AvailableCourse\ImportAvailableCourseService;
 
 class AvailableCourseService
 {
     public function __construct(
         private CreateAvailableCourseService $createService,
-        private UpdateAvailableCourseService $updateService,
         private ImportAvailableCourseService $importService
     ) {}
 
@@ -64,7 +62,7 @@ class AvailableCourseService
     public function updateAvailableCourse($availableCourseOrId, array $data)
     {
         $availableCourse = AvailableCourse::findOrFail($availableCourseOrId);
-        return $this->updateService->updateAvailableCourseSingle($availableCourse, $data);
+        return $this->updateService->update($availableCourse, $data);
     }
 
     /**
@@ -691,5 +689,397 @@ private function transformSchedule($schedule): array
                 <i class="bx bx-trash"></i>
             </button>
         ';
+    }
+
+
+    /**
+     * Get eligibility datatable for edit page.
+     *
+     * @param int $availableCourseId
+     * @return JsonResponse
+     */
+    public function getEligibilityDatatable(int $availableCourseId): JsonResponse
+    {
+        $query = CourseEligibility::with(['program', 'level'])
+            ->where('available_course_id', $availableCourseId);
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->addColumn('program_name', function ($eligibility) {
+                return $eligibility->program->name ?? '-';
+            })
+            ->addColumn('level_name', function ($eligibility) {
+                return $eligibility->level->name ?? '-';
+            })
+            ->addColumn('groups', function ($eligibility) {
+                return $eligibility->group ?? '-';
+            })
+            ->addColumn('actions', function ($eligibility) {
+                return '
+                    <button class="btn btn-sm btn-danger deleteEligibilityBtn"
+                            data-id="' . e($eligibility->id) . '"
+                            title="Delete">
+                        <i class="bx bx-trash"></i>
+                    </button>
+                ';
+            })
+            ->rawColumns(['actions'])
+            ->make(true);
+    }
+
+    /**
+     * Store new eligibility for available course.
+     *
+     * @param int $availableCourseId
+     * @param array $data
+     * @return array
+     * @throws BusinessValidationException
+     */
+    public function storeEligibility(int $availableCourseId, array $data): array
+    {
+        $availableCourse = AvailableCourse::findOrFail($availableCourseId);
+        $results = [];
+
+        foreach ($data['group_numbers'] as $group) {
+            // Check for existing eligibility
+            $exists = CourseEligibility::where('available_course_id', $availableCourseId)
+                ->where('program_id', $data['program_id'])
+                ->where('level_id', $data['level_id'])
+                ->where('group', $group)
+                ->exists();
+
+            if (!$exists) {
+                $eligibility = CourseEligibility::create([
+                    'available_course_id' => $availableCourseId,
+                    'program_id' => $data['program_id'],
+                    'level_id' => $data['level_id'],
+                    'group' => $group,
+                ]);
+                $results[] = $eligibility->load('program', 'level');
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Delete eligibility for available course.
+     *
+     * @param int $eligibilityId
+     * @return void
+     * @throws BusinessValidationException
+     */
+    public function deleteEligibility(int $eligibilityId): void
+    {
+        $eligibility = CourseEligibility::findOrFail($eligibilityId);
+        $eligibility->delete();
+    }
+
+    /**
+     * Get schedules datatable for edit page.
+     *
+     * @param int $availableCourseId
+     * @return JsonResponse
+     */
+    public function getSchedulesDatatable(int $availableCourseId): JsonResponse
+    {
+        $query = AvailableCourseSchedule::with(['scheduleAssignments.scheduleSlot'])
+            ->where('available_course_id', $availableCourseId);
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->addColumn('activity_type', function ($schedule) {
+                return ucfirst($schedule->activity_type);
+            })
+            ->addColumn('location', function ($schedule) {
+                return $schedule->location ?? '-';
+            })
+            ->addColumn('groups', function ($schedule) {
+                return $schedule->group ?? '-';
+            })
+            ->addColumn('day', function ($schedule) {
+                $firstSlot = $schedule->scheduleAssignments->first()?->scheduleSlot;
+                return $firstSlot ? ucfirst($firstSlot->day_of_week) : '-';
+            })
+            ->addColumn('slots', function ($schedule) {
+                $slots = $schedule->scheduleAssignments->map(function ($assignment) {
+                    return $assignment->scheduleSlot;
+                })->filter()->sortBy('start_time');
+
+                if ($slots->isEmpty()) {
+                    return '-';
+                }
+
+                $firstSlot = $slots->first();
+                $lastSlot = $slots->last();
+                
+                return formatTime($firstSlot->start_time) . ' - ' . formatTime($lastSlot->end_time);
+            })
+            ->addColumn('capacity', function ($schedule) {
+                $enrolled = \App\Models\EnrollmentSchedule::where('available_course_schedule_id', $schedule->id)->count();
+                $capacity = '';
+                
+                if ($schedule->min_capacity) {
+                    $capacity .= 'Min: ' . $schedule->min_capacity;
+                }
+                if ($schedule->max_capacity) {
+                    if ($capacity) $capacity .= ' / ';
+                    $capacity .= 'Max: ' . $schedule->max_capacity;
+                }
+                if ($capacity) {
+                    $capacity .= ' / Enrolled: ' . $enrolled;
+                } else {
+                    $capacity = 'Enrolled: ' . $enrolled;
+                }
+                
+                return $capacity;
+            })
+            ->addColumn('actions', function ($schedule) {
+                return '
+                    <button class="btn btn-sm btn-primary editScheduleBtn me-1"
+                            data-id="' . e($schedule->id) . '"
+                            data-activity-type="' . e($schedule->activity_type) . '"
+                            data-group="' . e($schedule->group) . '"
+                            data-location="' . e($schedule->location) . '"
+                            data-min-capacity="' . e($schedule->min_capacity) . '"
+                            data-max-capacity="' . e($schedule->max_capacity) . '"
+                            title="Edit">
+                        <i class="bx bx-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger deleteScheduleBtn"
+                            data-id="' . e($schedule->id) . '"
+                            title="Delete">
+                        <i class="bx bx-trash"></i>
+                    </button>
+                ';
+            })
+            ->rawColumns(['actions'])
+            ->make(true);
+    }
+
+    /**
+     * Get single schedule for editing.
+     *
+     * @param int $scheduleId
+     * @return array
+     * @throws BusinessValidationException
+     */
+    public function getSchedule(int $scheduleId): array
+    {
+        $schedule = AvailableCourseSchedule::with(['scheduleAssignments.scheduleSlot'])->find($scheduleId);
+        
+        if (!$schedule) {
+            throw new BusinessValidationException('Schedule not found.');
+        }
+
+        // Get slots information
+        $slots = $schedule->scheduleAssignments->map(function ($assignment) {
+            return $assignment->scheduleSlot;
+        })->filter()->sortBy('start_time');
+
+        $slotIds = $slots->pluck('id')->toArray();
+        $firstSlot = $slots->first();
+
+        return [
+            'id' => $schedule->id,
+            'schedule_template_id' => $firstSlot?->schedule?->id,
+            'day'=> $firstSlot?->day_of_week,
+            'activity_type' => $schedule->activity_type,
+            'group' => $schedule->group,
+            'group_number' => [$schedule->group],
+            'location' => $schedule->location,
+            'min_capacity' => $schedule->min_capacity,
+            'max_capacity' => $schedule->max_capacity,
+            'day_of_week' => $firstSlot?->day_of_week,
+            'slot_ids' => $slotIds,
+        ];
+    }
+
+    /**
+     * Store new schedule for available course.
+     *
+     * @param int $availableCourseId
+     * @param array $data
+     * @return array
+     * @throws BusinessValidationException
+     */
+    public function storeSchedule(int $availableCourseId, array $data): array
+    {
+        $availableCourse = AvailableCourse::findOrFail($availableCourseId);
+
+        if (isset($data['min_capacity'], $data['max_capacity']) && $data['min_capacity'] !== null && $data['max_capacity'] !== null) {
+            if ((int)$data['min_capacity'] > (int)$data['max_capacity']) {
+                throw new BusinessValidationException('Min capacity cannot be greater than max capacity.');
+            }
+        }
+
+        $slotIds = $data['schedule_slot_ids'] ?? [];
+        $results = [];
+        $skippedCount = 0;
+
+        DB::transaction(function () use (&$results, &$skippedCount, $data, $availableCourseId, $slotIds) {
+            foreach ($data['group_numbers'] as $group) {
+                $location = $data['location'] ?? null;
+                
+                $existsQuery = AvailableCourseSchedule::where('available_course_id', $availableCourseId)
+                    ->where('activity_type', $data['activity_type'])
+                    ->where('group', $group);
+                
+                // Handle null location properly
+                if ($location === null) {
+                    $existsQuery->whereNull('location');
+                } else {
+                    $existsQuery->where('location', $location);
+                }
+                
+                $exists = $existsQuery->exists();
+
+                if ($exists) {
+                    $skippedCount++;
+                    continue;
+                }
+
+                $schedule = AvailableCourseSchedule::create([
+                    'available_course_id' => $availableCourseId,
+                    'activity_type' => $data['activity_type'],
+                    'group' => $group,
+                    'location' => $location,
+                    'min_capacity' => $data['min_capacity'] ?? null,
+                    'max_capacity' => $data['max_capacity'] ?? null,
+                ]);
+
+                // Assign slots if provided
+                if (!empty($slotIds)) {
+                    foreach ($slotIds as $slotId) {
+                        ScheduleAssignment::create([
+                            'available_course_schedule_id' => $schedule->id,
+                            'schedule_slot_id' => $slotId,
+                            'type' => 'available_course',
+                            'title' => $data['title'] ?? ($schedule->activity_type . ' - Group ' . $group),
+                            'description' => $data['description'] ?? null,
+                            'enrolled' => 0,
+                            'resources' => $data['resources'] ?? null,
+                            'status' => $data['status'] ?? 'scheduled',
+                            'notes' => $data['notes'] ?? null,
+                        ]);
+                    }
+                }
+
+                $results[] = $schedule->load('scheduleAssignments.scheduleSlot');
+            }
+        });
+
+        // If no schedules were created because they all already exist
+        if (empty($results) && $skippedCount > 0) {
+            throw new BusinessValidationException('All schedules for the selected groups already exist.');
+        }
+
+        // If no schedules were created for other reasons
+        if (empty($results)) {
+            throw new BusinessValidationException('No schedules were created. Please check your input data.');
+        }
+
+        return $results;
+    }
+
+    /**
+     * Update schedule for available course.
+     *
+     * @param int $scheduleId
+     * @param array $data
+     * @return array
+     * @throws BusinessValidationException
+     */
+    public function updateSchedule(int $scheduleId, array $data): array
+    {
+        $schedule = AvailableCourseSchedule::findOrFail($scheduleId);
+
+        if (isset($data['min_capacity'], $data['max_capacity']) && $data['min_capacity'] !== null && $data['max_capacity'] !== null) {
+            if ((int)$data['min_capacity'] > (int)$data['max_capacity']) {
+                throw new BusinessValidationException('Min capacity cannot be greater than max capacity.');
+            }
+        }
+
+        $slotIds = $data['schedule_slot_ids'] ?? [];
+        
+        $schedule->update([
+            'group' => $data['group_numbers'] ?? $data['group_number'] ?? $schedule->group,
+            'activity_type' => $data['activity_type'] ?? $schedule->activity_type,
+            'location' => $data['location'] ?? $schedule->location,
+            'min_capacity' => $data['min_capacity'] ?? $schedule->min_capacity,
+            'max_capacity' => $data['max_capacity'] ?? $schedule->max_capacity,
+        ]);
+
+        // Handle schedule assignments update
+        if (!empty($slotIds)) {
+            // Get existing assignments
+            $existingAssignments = ScheduleAssignment::where('available_course_schedule_id', $scheduleId)
+                ->pluck('schedule_slot_id')
+                ->toArray();
+
+            // Remove assignments that are no longer needed
+            $assignmentsToRemove = array_diff($existingAssignments, $slotIds);
+            if (!empty($assignmentsToRemove)) {
+                ScheduleAssignment::where('available_course_schedule_id', $scheduleId)
+                    ->whereIn('schedule_slot_id', $assignmentsToRemove)
+                    ->delete();
+            }
+
+            // Add new assignments
+            $assignmentsToAdd = array_diff($slotIds, $existingAssignments);
+            foreach ($assignmentsToAdd as $slotId) {
+                ScheduleAssignment::create([
+                    'available_course_schedule_id' => $scheduleId,
+                    'schedule_slot_id' => $slotId,
+                    'type' => 'available_course',
+                    'title' => $data['title'] ?? ($schedule->activity_type . ' - Group ' . $schedule->group),
+                    'description' => $data['description'] ?? null,
+                    'enrolled' => 0,
+                    'resources' => $data['resources'] ?? null,
+                    'status' => $data['status'] ?? 'scheduled',
+                    'notes' => $data['notes'] ?? null,
+                ]);
+            }
+
+            // Update existing assignments with new data if provided
+            if (isset($data['title']) || isset($data['description']) || isset($data['resources']) || isset($data['status']) || isset($data['notes'])) {
+                $updateData = [];
+                if (isset($data['title'])) $updateData['title'] = $data['title'];
+                if (isset($data['description'])) $updateData['description'] = $data['description'];
+                if (isset($data['resources'])) $updateData['resources'] = $data['resources'];
+                if (isset($data['status'])) $updateData['status'] = $data['status'];
+                if (isset($data['notes'])) $updateData['notes'] = $data['notes'];
+                
+                if (!empty($updateData)) {
+                    ScheduleAssignment::where('available_course_schedule_id', $scheduleId)
+                        ->whereIn('schedule_slot_id', array_intersect($existingAssignments, $slotIds))
+                        ->update($updateData);
+                }
+            }
+        }
+
+        return [$schedule->fresh()->load('scheduleAssignments.scheduleSlot')];
+    }
+
+    /**
+     * Delete schedule for available course.
+     *
+     * @param int $scheduleId
+     * @return void
+     * @throws BusinessValidationException
+     */
+    public function deleteSchedule(int $scheduleId): void
+    {
+        $schedule = AvailableCourseSchedule::findOrFail($scheduleId);
+        
+        // Check if there are enrollments
+        $enrollmentCount = \App\Models\EnrollmentSchedule::where('available_course_schedule_id', $scheduleId)->count();
+        if ($enrollmentCount > 0) {
+            throw new BusinessValidationException('Cannot delete schedule with existing enrollments.');
+        }
+
+        // Delete schedule assignments and then the schedule
+        $schedule->scheduleAssignments()->delete();
+        $schedule->delete();
     }
 }

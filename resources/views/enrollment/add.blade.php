@@ -710,7 +710,8 @@ const CourseModule = {
       method: 'GET',
       data: { student_id: studentId, term_id: termId, exceptionForDifferentLevels: $('#exceptionForDifferentLevels').is(':checked') ? 1 : 0 },
       success: (res) => {
-        const courses = res.courses || [];
+        console.log('Available courses response:', res); // Debug log
+        const courses = res.data || res.courses || [];
         EnrollmentState.originalCoursesData = courses;
         $('#coursesCount').text(courses.length);
         
@@ -981,8 +982,27 @@ const PrerequisiteModule = {
 // ========================================
 const ActivitySelectionModule = {
   show(courseId) {
-    const course = EnrollmentState.originalCoursesData.find(c => c.available_course_id == courseId || c.id == courseId);
-    if (!course) return;
+    console.log('ActivitySelectionModule.show called with courseId:', courseId);
+    console.log('Available courses data:', EnrollmentState.originalCoursesData);
+    
+    // Try to find course by both possible field names
+    let course = EnrollmentState.originalCoursesData.find(c => c.available_course_id == courseId);
+    if (!course) {
+      course = EnrollmentState.originalCoursesData.find(c => c.id == courseId);
+    }
+    
+    if (!course) {
+      console.error('Course not found for ID:', courseId);
+      console.log('Available courses:', EnrollmentState.originalCoursesData);
+      Swal.fire({
+        icon: 'error',
+        title: 'Course Not Found',
+        text: 'Unable to find course data. Please refresh the page and try again.'
+      });
+      return;
+    }
+
+    console.log('Found course:', course);
 
     $('#activitySelectionModalLabel').html(`
       <i class="bx bx-chalkboard me-2"></i>
@@ -993,8 +1013,8 @@ const ActivitySelectionModule = {
       <div class="alert alert-info">
         <h6 class="mb-1 text-dark">${course.name}</h6>
         <p class="mb-0 small text-dark">
-          <i class="bx bx-book me-1"></i>Course Code: <strong>${course.code || 'N/A'}</strong> | 
-          <i class="bx bx-timer me-1"></i>Credit Hours: <strong>${course.credit_hours}</strong>
+          <i class="bx bx-book me-1"></i>Course Code: <strong>${course.code || course.course_code || 'N/A'}</strong> | 
+          <i class="bx bx-timer me-1"></i>Credit Hours: <strong>${course.credit_hours || 'N/A'}</strong>
         </p>
       </div>
     `);
@@ -1336,7 +1356,7 @@ const ActivitySelectionModule = {
     const courseData = {
       course_id: courseId,
       selected_activities: selectedActivityData,
-      course: EnrollmentState.originalCoursesData.find(c => c.available_course_id == courseId)
+      course: EnrollmentState.originalCoursesData.find(c => c.available_course_id == courseId || c.id == courseId)
     };
     
     // FIXED: Check for conflicts, including with old enrollments
@@ -1881,7 +1901,8 @@ const EnrollmentSubmissionModule = {
     $('.course-checkbox:checked').each(function() {
       const courseId = $(this).val();
       if (!EnrollmentState.selectedCourseGroups.has(courseId)) {
-        const courseName = EnrollmentState.originalCoursesData.find(c => c.available_course_id == courseId)?.name || 'Unknown Course';
+        const course = EnrollmentState.originalCoursesData.find(c => c.available_course_id == courseId || c.id == courseId);
+        const courseName = course?.name || 'Unknown Course';
         missingGroups.push(courseName);
       }
     });

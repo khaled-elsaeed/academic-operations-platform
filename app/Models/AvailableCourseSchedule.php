@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Schedule\ScheduleAssignment;
+use App\Models\Program;
+use App\Models\Level;
 
 class AvailableCourseSchedule extends Model
 {
@@ -24,6 +26,8 @@ class AvailableCourseSchedule extends Model
         'group',
         'activity_type',
         'location',
+        'level_id',
+        'program_id',
         'min_capacity',
         'max_capacity',
         'capacity',
@@ -49,6 +53,22 @@ class AvailableCourseSchedule extends Model
     public function availableCourse(): BelongsTo
     {
         return $this->belongsTo(AvailableCourse::class);
+    }
+
+    /**
+     * The program this schedule belongs to (nullable).
+     */
+    public function program(): BelongsTo
+    {
+        return $this->belongsTo(Program::class);
+    }
+
+    /**
+     * The level this schedule belongs to (nullable).
+     */
+    public function level(): BelongsTo
+    {
+        return $this->belongsTo(Level::class);
     }
 
     /**

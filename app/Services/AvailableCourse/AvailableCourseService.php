@@ -931,6 +931,21 @@ private function transformSchedule($schedule): array
                 } else {
                     $existsQuery->where('location', $location);
                 }
+                // consider program and level in existence check if provided
+                if (isset($data['program_id'])) {
+                    if ($data['program_id'] === null) {
+                        $existsQuery->whereNull('program_id');
+                    } else {
+                        $existsQuery->where('program_id', $data['program_id']);
+                    }
+                }
+                if (isset($data['level_id'])) {
+                    if ($data['level_id'] === null) {
+                        $existsQuery->whereNull('level_id');
+                    } else {
+                        $existsQuery->where('level_id', $data['level_id']);
+                    }
+                }
                 
                 $exists = $existsQuery->exists();
 
@@ -944,6 +959,8 @@ private function transformSchedule($schedule): array
                     'activity_type' => $data['activity_type'],
                     'group' => $group,
                     'location' => $location,
+                    'program_id' => $data['program_id'] ?? null,
+                    'level_id' => $data['level_id'] ?? null,
                     'min_capacity' => $data['min_capacity'] ?? null,
                     'max_capacity' => $data['max_capacity'] ?? null,
                 ]);
@@ -1006,6 +1023,8 @@ private function transformSchedule($schedule): array
             'group' => $data['group_numbers'] ?? $data['group_number'] ?? $schedule->group,
             'activity_type' => $data['activity_type'] ?? $schedule->activity_type,
             'location' => $data['location'] ?? $schedule->location,
+            'program_id' => $data['program_id'] ?? $schedule->program_id ?? null,
+            'level_id' => $data['level_id'] ?? $schedule->level_id ?? null,
             'min_capacity' => $data['min_capacity'] ?? $schedule->min_capacity,
             'max_capacity' => $data['max_capacity'] ?? $schedule->max_capacity,
         ]);

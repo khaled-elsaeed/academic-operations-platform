@@ -175,6 +175,20 @@
               <label for="add_location" class="form-label">Location</label>
               <input type="text" class="form-control" id="add_location" name="location" placeholder="Enter location">
             </div>
+
+            <div class="col-md-6">
+              <label for="add_program_id" class="form-label">Program</label>
+              <select class="form-select select2-modal" id="add_program_id" name="program_id">
+                <option value="">(optional) Select Program</option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label for="add_level_id" class="form-label">Level</label>
+              <select class="form-select select2-modal" id="add_level_id" name="level_id">
+                <option value="">(optional) Select Level</option>
+              </select>
+            </div>
             
             <div class="col-md-6">
               <label for="add_schedule_day_id" class="form-label">Day <span class="text-danger">*</span></label>
@@ -254,6 +268,20 @@
             <div class="col-md-6">
               <label for="edit_location" class="form-label">Location</label>
               <input type="text" class="form-control" id="edit_location" name="location" placeholder="Enter location">
+            </div>
+
+            <div class="col-md-6">
+              <label for="edit_program_id" class="form-label">Program</label>
+              <select class="form-select select2-modal" id="edit_program_id" name="program_id">
+                <option value="">(optional) Select Program</option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label for="edit_level_id" class="form-label">Level</label>
+              <select class="form-select select2-modal" id="edit_level_id" name="level_id">
+                <option value="">(optional) Select Level</option>
+              </select>
             </div>
             
             <div class="col-md-6">
@@ -521,6 +549,21 @@
     $('#addScheduleBtn').on('click', function() {
       $('#addScheduleForm')[0].reset();
       $('#add_schedule_day_id, #add_schedule_slot_ids').prop('disabled', true);
+      // populate program and level selects
+      try {
+        $.getJSON(ROUTES.programs.all).done(function(res) {
+          const $prog = $('#add_program_id');
+          $prog.empty().append('<option value="">(optional) Select Program</option>');
+          res.data.forEach(p => $prog.append(`<option value="${p.id}">${p.name}</option>`));
+        });
+        $.getJSON(ROUTES.levels.all).done(function(res) {
+          const $lvl = $('#add_level_id');
+          $lvl.empty().append('<option value="">(optional) Select Level</option>');
+          res.data.forEach(l => $lvl.append(`<option value="${l.id}">${l.name}</option>`));
+        });
+      } catch (e) {
+        // ignore
+      }
       $('#addScheduleModal').modal('show');
       
       setTimeout(() => {
@@ -595,6 +638,8 @@
         activity_type: $('#add_activity_type').val(),
         group_numbers: [$('#add_schedule_group_numbers').val()],
         location: $('#add_location').val(),
+        program_id: $('#add_program_id').val() || null,
+        level_id: $('#add_level_id').val() || null,
         schedule_day_id: $('#add_schedule_day_id').val(),
         schedule_slot_ids: $('#add_schedule_slot_ids').val(),
         min_capacity: $('#add_min_capacity').val(),
@@ -646,6 +691,21 @@
         $('#edit_activity_type').val(data.activity_type);
         $('#edit_schedule_group_number').val(data.group_number || data.group);
         $('#edit_location').val(data.location);
+        // populate program/level selects
+        try {
+          const [progRes, lvlRes] = await Promise.all([$.getJSON(ROUTES.programs.all), $.getJSON(ROUTES.levels.all)]);
+          const $prog = $('#edit_program_id');
+          $prog.empty().append('<option value="">(optional) Select Program</option>');
+          progRes.data.forEach(p => $prog.append(`<option value="${p.id}">${p.name}</option>`));
+          const $lvl = $('#edit_level_id');
+          $lvl.empty().append('<option value="">(optional) Select Level</option>');
+          lvlRes.data.forEach(l => $lvl.append(`<option value="${l.id}">${l.name}</option>`));
+          // set selected
+          if (data.program_id) $prog.val(data.program_id);
+          if (data.level_id) $lvl.val(data.level_id);
+        } catch (e) {
+          // ignore
+        }
         $('#edit_min_capacity').val(data.min_capacity);
         $('#edit_max_capacity').val(data.max_capacity);
         
@@ -672,6 +732,9 @@
                     });
                     $('#edit_activity_type').trigger('change');
                     $('#edit_schedule_group_number').trigger('change');
+                    // set program/level selects if present
+                    if (data.program_id) $('#edit_program_id').val(data.program_id).trigger('change');
+                    if (data.level_id) $('#edit_level_id').val(data.level_id).trigger('change');
                   }, 100);
                 }, 800);
               }
@@ -774,6 +837,8 @@
         activity_type: $('#edit_activity_type').val(),
         group_number: $('#edit_schedule_group_number').val(),
         location: $('#edit_location').val(),
+        program_id: $('#edit_program_id').val() || null,
+        level_id: $('#edit_level_id').val() || null,
         schedule_day_id: $('#edit_schedule_day_id').val(),
         schedule_slot_ids: $('#edit_schedule_slot_ids').val(),
         min_capacity: $('#edit_min_capacity').val(),

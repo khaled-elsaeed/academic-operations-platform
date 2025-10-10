@@ -237,6 +237,22 @@
         <input type="text" class="form-control location-input" placeholder="Enter Location">
       </div>
       
+      <!-- Program -->
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Program</label>
+        <select class="form-select program-select">
+          <option value="">(optional) Select Program</option>
+        </select>
+      </div>
+
+      <!-- Level -->
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Level</label>
+        <select class="form-select level-select">
+          <option value="">(optional) Select Level</option>
+        </select>
+      </div>
+      
       <!-- Day Selection -->
       <div class="col-md-4">
         <label class="form-label fw-semibold">Day</label>
@@ -514,6 +530,13 @@ const DropdownManager = {
     $container.find('.group-select').each(function() {
       Utils.initSelect2($(this), { placeholder: 'Select Groups', closeOnSelect: false });
     });
+    // Init program/level selects for each card
+    $container.find('.program-select').each(function() {
+      Utils.initSelect2($(this), { placeholder: '(optional) Select Program', allowClear: true });
+    });
+    $container.find('.level-select').each(function() {
+      Utils.initSelect2($(this), { placeholder: '(optional) Select Level', allowClear: true });
+    });
   }
 };
 
@@ -638,6 +661,8 @@ const ScheduleDetailsCardManager = {
     // Groups is now a multi-select; store as group_numbers[]
     $card.find('.group-select').attr('name', `schedule_details[${index}][group_numbers][]`).attr('data-index', index);
     $card.find('.location-input').attr('name', `schedule_details[${index}][location]`).attr('data-index', index);
+    $card.find('.program-select').attr('name', `schedule_details[${index}][program_id]`).attr('data-index', index);
+    $card.find('.level-select').attr('name', `schedule_details[${index}][level_id]`).attr('data-index', index);
     $card.find('.min-capacity-input').attr('name', `schedule_details[${index}][min_capacity]`).attr('data-index', index);
     $card.find('.max-capacity-input').attr('name', `schedule_details[${index}][max_capacity]`).attr('data-index', index);
   },
@@ -649,6 +674,22 @@ const ScheduleDetailsCardManager = {
     DropdownManager.scheduleOptions.forEach(opt => {
       const selectedAttr = opt.id == selected.schedule_id ? 'selected' : '';
       $scheduleSelect.append(`<option value="${opt.id}" ${selectedAttr}>${opt.title}</option>`);
+    });
+
+    // Populate program select
+    const $programSelect = $card.find('.program-select');
+    $programSelect.empty().append('<option value="">(optional) Select Program</option>');
+    DropdownManager.programOptions.forEach(opt => {
+      const sel = opt.id == selected.program_id ? 'selected' : '';
+      $programSelect.append(`<option value="${opt.id}" ${sel}>${opt.name}</option>`);
+    });
+
+    // Populate level select
+    const $levelSelect = $card.find('.level-select');
+    $levelSelect.empty().append('<option value="">(optional) Select Level</option>');
+    DropdownManager.levelOptions.forEach(opt => {
+      const sel = opt.id == selected.level_id ? 'selected' : '';
+      $levelSelect.append(`<option value="${opt.id}" ${sel}>${opt.name}</option>`);
     });
 
     // Set other selected values
@@ -670,6 +711,13 @@ const ScheduleDetailsCardManager = {
     }
     if (selected.schedule_slot_ids && Array.isArray(selected.schedule_slot_ids)) {
       $card.find('.schedule-slot-select').val(selected.schedule_slot_ids);
+    }
+    // populate program and level selects if provided
+    if (selected.program_id) {
+      $card.find('.program-select').val(selected.program_id);
+    }
+    if (selected.level_id) {
+      $card.find('.level-select').val(selected.level_id);
     }
   },
 
@@ -1047,6 +1095,8 @@ const FormManager = {
       const min_capacity = $(this).find('.min-capacity-input').val();
       const max_capacity = $(this).find('.max-capacity-input').val();
       const location = $(this).find('.location-input').val();
+  const program_id = $(this).find('.program-select').val() || null;
+  const level_id = $(this).find('.level-select').val() || null;
       
       if (schedule_id && schedule_day_id !== "" && schedule_slot_ids.length > 0 && group_numbers.length > 0) {
         data.schedule_details.push({
@@ -1058,6 +1108,7 @@ const FormManager = {
           min_capacity,
           max_capacity,
           location
+          ,program_id, level_id
         });
       }
     });

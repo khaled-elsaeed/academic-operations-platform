@@ -428,6 +428,8 @@ class ImportAvailableCourseService
         ];
 
         $scheduleValues = [
+            'program_id' => $mappedData['program_id'] ?? null,
+            'level_id' => $mappedData['level_id'] ?? null,
             'min_capacity' => $minCapacity,
             'max_capacity' => $maxCapacity,
         ];

@@ -454,6 +454,8 @@ class AvailableCourseController extends Controller
             'group_numbers' => 'required|array|min:1',
             'group_numbers.*' => 'integer|min:1|max:30',
             'location' => 'nullable|string|max:255',
+            'program_id' => 'nullable|exists:programs,id',
+            'level_id' => 'nullable|exists:levels,id',
             'min_capacity' => 'nullable|integer|min:0',
             'max_capacity' => 'nullable|integer|min:0',
             'schedule_slot_ids' => 'nullable|array',
@@ -491,6 +493,8 @@ class AvailableCourseController extends Controller
             'activity_type' => 'required|in:lecture,tutorial,lab',
             'group_number' => 'required|integer|min:1|max:30', // Single group number for updates
             'location' => 'nullable|string|max:255',
+            'program_id' => 'nullable|exists:programs,id',
+            'level_id' => 'nullable|exists:levels,id',
             'min_capacity' => 'nullable|integer|min:0',
             'max_capacity' => 'nullable|integer|min:0',
             'schedule_slot_ids' => 'nullable|array',

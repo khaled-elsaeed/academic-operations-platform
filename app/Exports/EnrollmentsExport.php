@@ -55,6 +55,17 @@ class EnrollmentsExport implements FromCollection, WithMapping, WithHeadings
     public function map($enrollmentSchedule): array
     {
         $group = $enrollmentSchedule->availableCourseSchedule->group ?? 'N/A';
+        $assignments = $enrollmentSchedule->availableCourseSchedule->scheduleAssignments;
+        $slots = $assignments->pluck('scheduleSlot')->filter();
+        if ($slots->isNotEmpty()) {
+            $firstSlot = $slots->sortBy('start_time')->first();
+            $lastSlot = $slots->sortByDesc('end_time')->first();
+            $startTime = $firstSlot && $firstSlot->start_time ? formatDate($firstSlot->start_time, 'h:i A') : 'N/A';
+            $endTime = $lastSlot && $lastSlot->end_time ? formatDate($lastSlot->end_time, 'h:i A') : 'N/A';
+        } else {
+            $startTime = 'N/A';
+            $endTime = 'N/A';
+        }
         return [
             $enrollmentSchedule->enrollment->student->name_en ?? 'N/A',
             $enrollmentSchedule->enrollment->student->name_ar ?? 'N/A',
@@ -68,7 +79,8 @@ class EnrollmentsExport implements FromCollection, WithMapping, WithHeadings
             $enrollmentSchedule->enrollment->term->name ?? 'N/A',
             $enrollmentSchedule->availableCourseSchedule->activity_type ?? 'N/A',
             $group,
-          
+            $startTime,
+            $endTime,
         ];
     }
 
@@ -87,6 +99,8 @@ class EnrollmentsExport implements FromCollection, WithMapping, WithHeadings
             'Term',
             'Activity Type',
             'Group',
+            'Start Time',
+            'End Time',
         ];
     }
 }

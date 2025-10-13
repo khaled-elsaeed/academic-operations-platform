@@ -66,22 +66,26 @@ class EnrollmentsExport implements FromCollection, WithMapping, WithHeadings
             $startTime = 'N/A';
             $endTime = 'N/A';
         }
-        return [
-            $enrollmentSchedule->enrollment->student->name_en ?? 'N/A',
-            $enrollmentSchedule->enrollment->student->name_ar ?? 'N/A',
-            $enrollmentSchedule->enrollment->student->national_id ?? 'N/A',
-            $enrollmentSchedule->enrollment->student->academic_id ?? 'N/A',
-            isset($enrollmentSchedule->enrollment->student->level) ? 'Level ' . $enrollmentSchedule->enrollment->student->level->name : 'N/A',
-            $enrollmentSchedule->enrollment->course->title ?? 'N/A',
-            $enrollmentSchedule->enrollment->course->code ?? 'N/A',
-            $enrollmentSchedule->enrollment->grade ?? 'N/A',
-            $enrollmentSchedule->enrollment->course->credit_hours ?? 'N/A',
-            $enrollmentSchedule->enrollment->term->name ?? 'N/A',
-            $enrollmentSchedule->availableCourseSchedule->activity_type ?? 'N/A',
-            $group,
-            $startTime,
-            $endTime,
-        ];
+            $location = $enrollmentSchedule->availableCourseSchedule->location ?? 'N/A';
+            $studentProgram = $enrollmentSchedule->enrollment->student->program->name ?? 'N/A';
+            return [
+                $enrollmentSchedule->enrollment->student->name_en ?? 'N/A',
+                $enrollmentSchedule->enrollment->student->name_ar ?? 'N/A',
+                $enrollmentSchedule->enrollment->student->national_id ?? 'N/A',
+                $enrollmentSchedule->enrollment->student->academic_id ?? 'N/A',
+                isset($enrollmentSchedule->enrollment->student->level) ? 'Level ' . $enrollmentSchedule->enrollment->student->level->name : 'N/A',
+                $studentProgram,
+                $enrollmentSchedule->enrollment->course->title ?? 'N/A',
+                $enrollmentSchedule->enrollment->course->code ?? 'N/A',
+                $enrollmentSchedule->enrollment->grade ?? 'N/A',
+                $enrollmentSchedule->enrollment->course->credit_hours ?? 'N/A',
+                $enrollmentSchedule->enrollment->term->name ?? 'N/A',
+                $enrollmentSchedule->availableCourseSchedule->activity_type ?? 'N/A',
+                $group,
+                $location,
+                $startTime,
+                $endTime,
+            ];
     }
 
     public function headings(): array
@@ -92,6 +96,7 @@ class EnrollmentsExport implements FromCollection, WithMapping, WithHeadings
             'National ID',
             'Academic ID',
             'Level',
+            'Program',
             'Course Title',
             'Course Code',
             'Grade',
@@ -99,6 +104,7 @@ class EnrollmentsExport implements FromCollection, WithMapping, WithHeadings
             'Term',
             'Activity Type',
             'Group',
+            'Location',
             'Start Time',
             'End Time',
         ];

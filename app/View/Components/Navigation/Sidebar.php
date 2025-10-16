@@ -279,6 +279,13 @@ class Sidebar extends Component
                 'route' => route('account-settings.index'),
                 'active' => request()->routeIs('account-settings.*'),
             ],
+
+            [
+                'title' => 'settings',
+                'icon' => 'bx bx-cog',
+                'route' => route('settings.index'),
+                'active' => request()->routeIs('settings.*'),
+            ]
         ];
     }
 

@@ -17,6 +17,7 @@ use App\Rules\EnrollmentCreditHoursLimit;
 use App\Validators\EnrollmentImportValidator;
 use App\Services\CreditHoursExceptionService;
 use App\Services\Enrollment\Operations\ImportEnrollmentService;
+use App\Services\SettingService;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -31,15 +32,18 @@ use Maatwebsite\Excel\Facades\Excel;
 class EnrollmentService
 {
     protected CreditHoursExceptionService $creditHoursExceptionService;
+    protected SettingService $settingService;
 
-    public function __construct(CreditHoursExceptionService $creditHoursExceptionService)
+    public function __construct(CreditHoursExceptionService $creditHoursExceptionService, SettingService $settingService)
     {
         $this->creditHoursExceptionService = $creditHoursExceptionService;
+        $this->settingService = $settingService;
     }
 
     public function createEnrollment(array $data): Enrollment
     {
-        // Prevent duplicate enrollment for the same student, course, and term
+        $this->actionAvailable('create');
+
         $exists = Enrollment::where('student_id', $data['student_id'])
             ->where('course_id', $data['course_id'])
             ->where('term_id', $data['term_id'])
@@ -60,11 +64,8 @@ class EnrollmentService
      */
     public function createEnrollments(array $data): array
     {
-        \Log::debug('createEnrollments called', [
-            'student_id' => $data['student_id'],
-            'term_id' => $data['term_id'],
-            'available_course_ids' => $data['available_course_ids'] ?? [],
-        ]);
+        $this->actionAvailable('create');
+
         return DB::transaction(function () use ($data) {
             $student = Student::findOrFail($data['student_id']);
             $term = Term::findOrFail($data['term_id']);
@@ -131,6 +132,8 @@ class EnrollmentService
      */
     public function createEnrollmentsWithoutSchedule(array $data): array
     {
+        $this->actionAvailable('create');
+
         return DB::transaction(function () use ($data) {
             $student = Student::findOrFail($data['student_id']);
             $created = [];
@@ -173,6 +176,7 @@ class EnrollmentService
 
     public function deleteEnrollment(Enrollment $enrollment): void
     {
+        $this->actionAvailable('delete');
         $enrollment->delete();
     }
 
@@ -347,6 +351,8 @@ class EnrollmentService
      */
     public function importEnrollments(UploadedFile $file): array
     {
+        $this->actionAvailable('create');
+
         $import = new ImportEnrollmentService();
 
         return $import->importEnrollmentsFromFile($file);
@@ -675,73 +681,106 @@ class EnrollmentService
         return $exception ? $exception->getEffectiveAdditionalHours() : 0;
     }
 
-public function getSchedules(int $studentId, int $termId): array
-{    
-    $enrollmentSchedules = EnrollmentSchedule::with([
-        'enrollment.course',           
-        'availableCourseSchedule.availableCourse', 
-        'availableCourseSchedule.scheduleAssignments.scheduleSlot' 
-    ])
-    ->whereHas('enrollment', function ($query) use ($studentId, $termId) {
-        $query->where('student_id', $studentId)
-              ->where('term_id', $termId);
-    })
-    ->get();
+    public function getSchedules(int $studentId, int $termId): array
+    {    
+        $enrollmentSchedules = EnrollmentSchedule::with([
+            'enrollment.course',           
+            'availableCourseSchedule.availableCourse', 
+            'availableCourseSchedule.scheduleAssignments.scheduleSlot' 
+        ])
+        ->whereHas('enrollment', function ($query) use ($studentId, $termId) {
+            $query->where('student_id', $studentId)
+                ->where('term_id', $termId);
+        })
+        ->get();
+        
+        $schedules = [];
     
-    $schedules = [];
-   
-    foreach ($enrollmentSchedules as $enrollmentSchedule) {
-        $availableCourseSchedule = $enrollmentSchedule->availableCourseSchedule;
-        $availableCourse = $availableCourseSchedule->availableCourse;
-        $course = $enrollmentSchedule->enrollment->course;
-       
-        // Get all schedule slots for this available course schedule
-        $scheduleSlots = $availableCourseSchedule->scheduleAssignments
-            ->pluck('scheduleSlot')
-            ->sortBy(['day_of_week', 'start_time']);
-            
-        if ($scheduleSlots->isEmpty()) {
-            \Log::warning("No schedule slots found for available course schedule: {$availableCourseSchedule->id}");
-            continue;
-        }
+        foreach ($enrollmentSchedules as $enrollmentSchedule) {
+            $availableCourseSchedule = $enrollmentSchedule->availableCourseSchedule;
+            $availableCourse = $availableCourseSchedule->availableCourse;
+            $course = $enrollmentSchedule->enrollment->course;
         
-        // Calculate enrolled count for this schedule
-        $enrolledCount = EnrollmentSchedule::where('available_course_schedule_id', $availableCourseSchedule->id)->count();
-        
-        // Group by day of week in case course meets multiple days
-        $slotsByDay = $scheduleSlots->groupBy('day_of_week');
-       
-        foreach ($slotsByDay as $dayOfWeek => $daySlotsCollection) {
-            $daySlots = $daySlotsCollection->sortBy('start_time');
-            $firstSlot = $daySlots->first();
-            $lastSlot = $daySlots->last();
+            // Get all schedule slots for this available course schedule
+            $scheduleSlots = $availableCourseSchedule->scheduleAssignments
+                ->pluck('scheduleSlot')
+                ->sortBy(['day_of_week', 'start_time']);
+                
+            if ($scheduleSlots->isEmpty()) {
+                \Log::warning("No schedule slots found for available course schedule: {$availableCourseSchedule->id}");
+                continue;
+            }
             
-            $schedules[] = [
-                'course' => [
-                    'id' => $course->id,
-                    'name' => $course->name, // From the enrollment->course relationship
-                    'code' => $course->code,
-                    'credit_hours' => $course->credit_hours,
-                    'available_course_id' => $availableCourse->id,
-                    'remaining_capacity' => ($availableCourseSchedule->max_capacity ?? 0) - $enrolledCount,
-                ],
-                'activity' => [
-                    'id' => $availableCourseSchedule->id,
-                    'activity_type' => $availableCourseSchedule->activity_type,
-                    'location' => $availableCourseSchedule->location,
-                    'min_capacity' => $availableCourseSchedule->min_capacity,
-                    'max_capacity' => $availableCourseSchedule->max_capacity,
-                    'enrolled_count' => $enrolledCount,
-                    'day_of_week' => $dayOfWeek,
-                    'start_time' => \Carbon\Carbon::parse($firstSlot->start_time)->format('h:i A'),
-                    'end_time' => \Carbon\Carbon::parse($lastSlot->end_time)->format('h:i A'),
-                ],
-                'group' => $availableCourseSchedule->group,
-            ];
+            // Calculate enrolled count for this schedule
+            $enrolledCount = EnrollmentSchedule::where('available_course_schedule_id', $availableCourseSchedule->id)->count();
+            
+            // Group by day of week in case course meets multiple days
+            $slotsByDay = $scheduleSlots->groupBy('day_of_week');
+        
+            foreach ($slotsByDay as $dayOfWeek => $daySlotsCollection) {
+                $daySlots = $daySlotsCollection->sortBy('start_time');
+                $firstSlot = $daySlots->first();
+                $lastSlot = $daySlots->last();
+                
+                $schedules[] = [
+                    'course' => [
+                        'id' => $course->id,
+                        'name' => $course->name, // From the enrollment->course relationship
+                        'code' => $course->code,
+                        'credit_hours' => $course->credit_hours,
+                        'available_course_id' => $availableCourse->id,
+                        'remaining_capacity' => ($availableCourseSchedule->max_capacity ?? 0) - $enrolledCount,
+                    ],
+                    'activity' => [
+                        'id' => $availableCourseSchedule->id,
+                        'activity_type' => $availableCourseSchedule->activity_type,
+                        'location' => $availableCourseSchedule->location,
+                        'min_capacity' => $availableCourseSchedule->min_capacity,
+                        'max_capacity' => $availableCourseSchedule->max_capacity,
+                        'enrolled_count' => $enrolledCount,
+                        'day_of_week' => $dayOfWeek,
+                        'start_time' => \Carbon\Carbon::parse($firstSlot->start_time)->format('h:i A'),
+                        'end_time' => \Carbon\Carbon::parse($lastSlot->end_time)->format('h:i A'),
+                    ],
+                    'group' => $availableCourseSchedule->group,
+                ];
+            }
         }
+    
+        return $schedules;
     }
-   
-    return $schedules;
-}
 
-} 
+    /**
+     * Check whether a given action is available according to system settings.
+     * Throws BusinessValidationException when the action is not allowed.
+     *
+     * @param string $action 'create'|'delete'|other
+     * @return bool
+     * @throws BusinessValidationException
+     */
+    private function actionAvailable($action)
+    {
+        $settings = $this->settingService->getEnrollmentSettings();
+
+        $enabled = isset($settings['enable_enrollment']) ? (int) $settings['enable_enrollment'] : 0;
+        if ($enabled !== 1) {
+            throw new BusinessValidationException('Enrollment editing is not available now.');
+        }
+
+        if ($action === 'create') {
+            $allowed = isset($settings['allow_create_enrollment']) ? (int) $settings['allow_create_enrollment'] : 0;
+            if ($allowed !== 1) {
+                throw new BusinessValidationException('Creating enrollments is currently disabled.');
+            }
+        }
+
+        if ($action === 'delete') {
+            $allowed = isset($settings['allow_delete_enrollment']) ? (int) $settings['allow_delete_enrollment'] : 0;
+            if ($allowed !== 1) {
+                throw new BusinessValidationException('Deleting enrollments is currently disabled.');
+            }
+        }
+
+        return true;
+    }
+}

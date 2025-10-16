@@ -37,6 +37,12 @@ Route::group([], function () {
 });
 
 // ====================
+// Settings Page Route
+// ====================
+
+require __DIR__.'/web/setting.php';
+
+// ====================
 // Include Available Courses Routes
 // ====================
 

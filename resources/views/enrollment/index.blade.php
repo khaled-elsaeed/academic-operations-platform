@@ -533,13 +533,14 @@ const EnrollmentManager = {
       }).then((result) => {
         if (result.isConfirmed) {
           ApiService.deleteEnrollment(enrollmentId)
-            .done(() => {
+            .done((response) => {
               $(SELECTORS.enrollmentsTable).DataTable().ajax.reload(null, false);
-              Utils.showSuccess('Enrollment has been deleted.');
+              Utils.showSuccess(response.message);
               StatsManager.loadEnrollmentStats();
             })
-            .fail(() => {
-              Utils.showError('Failed to delete enrollment.');
+            .fail((xhr) => {
+              const response = xhr.responseJSON;
+              Utils.showError(response.message || 'Failed to delete enrollment.');
             });
         }
       });

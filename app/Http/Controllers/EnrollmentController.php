@@ -104,6 +104,8 @@ class EnrollmentController extends Controller
         try {
             $this->enrollmentService->deleteEnrollment($enrollment);
             return successResponse('Enrollment deleted successfully.');
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
         } catch (Exception $e) {
             logError('EnrollmentController@destroy', $e, ['enrollment_id' => $enrollment->id]);
             return errorResponse('Internal server error.', [], 500);
@@ -138,7 +140,6 @@ class EnrollmentController extends Controller
      */
     public function storeWithoutSchedule(Request $request): JsonResponse
     {
-        // Dedicated endpoint for legacy/grade-only (without schedule) enrollment flow.
         $request->validate([
             'student_id' => ['required', 'exists:students,id', new AcademicAdvisorAccessRule()],
             'enrollment_data' => 'required|array|min:1',

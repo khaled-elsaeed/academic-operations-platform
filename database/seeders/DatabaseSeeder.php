@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             ProgramSeeder::class,
             CourseSeeder::class,
             TermSeeder::class,
+            SettingSeeder::class,
             RolesAndPermissionsSeeder::class,
             UserSeeder::class,
             ScheduleTypeSeeder::class,

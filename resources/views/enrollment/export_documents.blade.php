@@ -134,8 +134,7 @@ const SELECTORS = {
   programSelect: '#program_id',
   levelSelect: '#level_id',
   academicId: '#academic_id',
-  nationalId: '#national_id',
-    // select_all_programs removed from UI per request
+  nationalId: '#national_id'
 };
 
 // ===========================
@@ -249,26 +248,26 @@ const ApiDocs = {
 // DROPDOWN MANAGER
 // ===========================
 const DropdownManagerDocs = {
-  loadTerms(selector = SELECTORS.individualTermSelect) {
+  loadIndividualTerms() {
     return ApiDocs.fetchTerms()
       .done(response => {
         const terms = response.data || [];
-        const $s = $(selector);
+        const $s = $(SELECTORS.individualTermSelect);
         $s.empty().append('<option value="">All Terms</option>');
         terms.forEach(t => $s.append($('<option>', { value: t.id, text: t.name })));
-        
-
+        $s.trigger('change');
       })
       .fail(() => UtilsDocs.showError('Error', 'Failed to load terms'));
   },
 
-  loadTerms(selector = SELECTORS.groupTermSelect) {
+  loadGroupTerms() {
     return ApiDocs.fetchTerms()
       .done(response => {
         const terms = response.data || [];
-        const $s = $(selector);
+        const $s = $(SELECTORS.groupTermSelect);
         $s.empty().append('<option value="">All Terms</option>');
         terms.forEach(t => $s.append($('<option>', { value: t.id, text: t.name })));
+        $s.trigger('change');
       })
       .fail(() => UtilsDocs.showError('Error', 'Failed to load terms'));
   },
@@ -280,6 +279,7 @@ const DropdownManagerDocs = {
         const $s = $(selector);
         $s.empty().append('<option value="">All Programs</option>');
         programs.forEach(p => $s.append($('<option>', { value: p.id, text: p.name })));
+        $s.trigger('change');
       })
       .fail(() => UtilsDocs.showError('Error', 'Failed to load programs'));
   },
@@ -291,8 +291,36 @@ const DropdownManagerDocs = {
         const $s = $(selector);
         $s.empty().append('<option value="">All Levels</option>');
         levels.forEach(l => $s.append($('<option>', { value: l.id, text: l.name })));
+        $s.trigger('change');
       })
       .fail(() => UtilsDocs.showError('Error', 'Failed to load levels'));
+  },
+
+  initializeSelect2() {
+    // Initialize Select2 for all dropdowns
+    $(SELECTORS.individualTermSelect).select2({
+      placeholder: 'Select a term',
+      allowClear: true,
+      width: '100%'
+    });
+
+    $(SELECTORS.groupTermSelect).select2({
+      placeholder: 'Select a term',
+      allowClear: true,
+      width: '100%'
+    });
+
+    $(SELECTORS.programSelect).select2({
+      placeholder: 'Select a program',
+      allowClear: true,
+      width: '100%'
+    });
+
+    $(SELECTORS.levelSelect).select2({
+      placeholder: 'Select a level',
+      allowClear: true,
+      width: '100%'
+    });
   }
 };
 
@@ -302,10 +330,13 @@ const DropdownManagerDocs = {
 const ExportDocsManager = {
   init() {
     this.bindEvents();
+    // Initialize Select2 first
+    DropdownManagerDocs.initializeSelect2();
+    
     // Load dropdowns: terms for both individual and groups term selects
     $.when(
-      DropdownManagerDocs.loadTerms(SELECTORS.termSelect),
-      DropdownManagerDocs.loadTerms(SELECTORS.groupTermSelect),
+      DropdownManagerDocs.loadIndividualTerms(),
+      DropdownManagerDocs.loadGroupTerms(),
       DropdownManagerDocs.loadPrograms(),
       DropdownManagerDocs.loadLevels()
     ).done(() => {
@@ -328,10 +359,10 @@ const ExportDocsManager = {
     const $groupsTab = $('#groups');
     if ($individualTab.hasClass('show active')) {
       $(SELECTORS.groupTermSelect).prop('disabled', true);
-      $(SELECTORS.termSelect).prop('disabled', false);
+      $(SELECTORS.individualTermSelect).prop('disabled', false);
     } else {
       $(SELECTORS.groupTermSelect).prop('disabled', false);
-      $(SELECTORS.termSelect).prop('disabled', true);
+      $(SELECTORS.individualTermSelect).prop('disabled', true);
     }
 
     const formData = new FormData(formEl);

@@ -188,7 +188,7 @@
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
                 <tr>
                     <td style="padding: 6px; border: 1px solid #ddd; width: 30%;">الرقم الأكاديمي:</td>
-                    <td style="padding: 6px; border: 1px solid #ddd; width: 70%; font-size: 16px;">{{ $academic_number ?? '________' }}</td>
+                    <td style="padding: 6px; border: 1px solid #ddd; width: 70%; font-size: 16px; font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 12px;">{{ $academic_number ?? '________' }}</td>
                 </tr>
                 <tr>
                     <td style="padding: 6px; border: 1px solid #ddd;">اسم الطالب:</td>

@@ -92,4 +92,16 @@ class Course extends Model
     {
         return $this->hasMany(AvailableCourse::class);
     }
+
+    public function curriculumGroups()
+    {
+        return $this->hasMany(CurriculumElectiveCourse::class);
+    }
+
+    public function studyPlan()
+    {
+        return $this->hasMany(StudyPlan::class);
+    }
+
+
 }

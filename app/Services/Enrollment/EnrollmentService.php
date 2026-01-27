@@ -9,12 +9,10 @@ use App\Models\Term;
 use App\Models\AvailableCourse;
 use App\Models\CreditHoursException;
 use App\Models\EnrollmentSchedule;
-use App\Imports\EnrollmentsImport;
 use App\Exports\EnrollmentsTemplateExport;
 use App\Exceptions\BusinessValidationException;
 use App\Rules\AcademicAdvisorAccessRule;
 use App\Rules\EnrollmentCreditHoursLimit;
-use App\Validators\EnrollmentImportValidator;
 use App\Services\CreditHoursExceptionService;
 use App\Services\Enrollment\Operations\ImportEnrollmentService;
 use App\Services\SettingService;
@@ -70,7 +68,6 @@ class EnrollmentService
             $student = Student::findOrFail($data['student_id']);
             $term = Term::findOrFail($data['term_id']);
             
-            // Calculate total credit hours for requested courses
             $requestedCreditHours = 0;
             $availableCourses = [];
             $courseIds = [];
@@ -81,13 +78,9 @@ class EnrollmentService
                 $availableCourses[] = $availableCourse;
                 $courseIds[] = $availableCourse->course_id;
             }
-            \Log::debug('Requested credit hours calculated', [
-                'requestedCreditHours' => $requestedCreditHours,
-                'courseIds' => $courseIds,
-            ]);
-            // Validate credit hours limit BEFORE creating enrollments
+         
             $this->validateCreditHoursLimit($student, $term, $requestedCreditHours);
-            // Pass optional course_schedule_mapping from input for schedule-level capacity checks
+            $this->validatePrerequisites($student, $courseIds);
             $this->validateAvailableCourseScheduleCapacity($availableCourses, $term->id, $data['course_schedule_mapping'] ?? null);
             $enrollments = [];
             foreach ($availableCourses as $availableCourse) {
@@ -427,6 +420,34 @@ class EnrollmentService
     }
 
     /**
+     * Validate that the student has met all prerequisites for the courses being enrolled.
+     *
+     * @param Student $student
+     * @param array $courseIds
+     * @throws BusinessValidationException
+     */
+    private function validatePrerequisites(Student $student, array $courseIds): void
+    {
+        foreach ($courseIds as $courseId) {
+            $course = Course::with('prerequisites')->find($courseId);
+            if (!$course) {
+                continue;
+            }
+
+            foreach ($course->prerequisites as $prerequisite) {
+                $hasPassed = Enrollment::where('student_id', $student->id)
+                    ->where('course_id', $prerequisite->id)
+                    ->whereIn('grade', ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'P']) // Assuming these are passing grades
+                    ->exists();
+
+                if (!$hasPassed) {
+                    throw new BusinessValidationException("Cannot enroll in {$course->name}. Prerequisite {$prerequisite->name} has not been passed.");
+                }
+            }
+        }
+    }
+
+    /**
      * Validate available course and schedule capacities before creating enrollments.
      *
      * @param array $availableCourses Array of AvailableCourse models
@@ -593,15 +614,12 @@ class EnrollmentService
         $student = Student::findOrFail($studentId);
         $term = Term::findOrFail($termId);
 
-        // Calculate current enrollment credit hours
         $currentEnrollmentHours = $this->getCurrentEnrollmentHours($studentId, $termId);
 
         $maxAllowedHours = $this->getMaxCreditHours($student, $term);
 
-        // Calculate remaining credit hours
         $remainingHours = $maxAllowedHours - $currentEnrollmentHours;
 
-        // Get additional hours from admin exception
         $exceptionHours = $this->creditHoursExceptionService->getAdditionalHoursAllowed($studentId, $termId);
 
         return [
@@ -664,7 +682,6 @@ class EnrollmentService
             }
         }
 
-        // Default fallback (shouldn't reach here with valid semesters)
         return 14;
     }
 
@@ -701,7 +718,6 @@ class EnrollmentService
             $availableCourse = $availableCourseSchedule->availableCourse;
             $course = $enrollmentSchedule->enrollment->course;
         
-            // Get all schedule slots for this available course schedule
             $scheduleSlots = $availableCourseSchedule->scheduleAssignments
                 ->pluck('scheduleSlot')
                 ->sortBy(['day_of_week', 'start_time']);
@@ -711,10 +727,8 @@ class EnrollmentService
                 continue;
             }
             
-            // Calculate enrolled count for this schedule
             $enrolledCount = EnrollmentSchedule::where('available_course_schedule_id', $availableCourseSchedule->id)->count();
             
-            // Group by day of week in case course meets multiple days
             $slotsByDay = $scheduleSlots->groupBy('day_of_week');
         
             foreach ($slotsByDay as $dayOfWeek => $daySlotsCollection) {
@@ -725,7 +739,7 @@ class EnrollmentService
                 $schedules[] = [
                     'course' => [
                         'id' => $course->id,
-                        'name' => $course->name, // From the enrollment->course relationship
+                        'name' => $course->name,
                         'code' => $course->code,
                         'credit_hours' => $course->credit_hours,
                         'available_course_id' => $availableCourse->id,

@@ -37,4 +37,16 @@ class Program extends Model
     {
         return $this->hasMany(Student::class);
     }
+
+    public function curriculumElectiveGroups()
+    {
+        return $this->hasMany(CurriculumElectiveGroup::class);
+    }
+
+    public function studyPlan()
+    {
+        return $this->hasMany(StudyPlan::class);
+    }
+
+
 }

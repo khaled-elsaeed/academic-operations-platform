@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\View\View;
 use App\Services\Enrollment\EnrollmentService;
+use App\Services\Enrollment\EnrollmentGuidingService;
 use App\Services\CreditHoursExceptionService;
 use App\Models\Enrollment;
 use App\Rules\AcademicAdvisorAccessRule;
@@ -411,6 +412,28 @@ class EnrollmentController extends Controller
         } catch (Exception $e) {
             logError('EnrollmentController@getSchedules', $e);
             return errorResponse('Failed to get student schedules.', [], 500);
+        }
+    }
+
+    /**
+     * Get enrollment guide for a student.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getGuiding(Request $request): JsonResponse
+    {
+        $request->validate([
+            'student_id' => 'required|exists:students,id',
+        ]);
+
+        try {
+            $guidingService = new EnrollmentGuidingService($request->student_id, $request->term_id);
+            $guide = $guidingService->guide();
+            return successResponse('Enrollment guide fetched successfully.', $guide);
+        } catch (Exception $e) {
+            logError('EnrollmentController@getGuiding', $e, ['student_id' => $request->student_id]);
+            return errorResponse('Failed to fetch enrollment guide.', [], 500);
         }
     }
 }

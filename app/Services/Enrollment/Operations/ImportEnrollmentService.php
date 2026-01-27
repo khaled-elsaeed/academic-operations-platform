@@ -2,26 +2,30 @@
 
 namespace App\Services\Enrollment\Operations;
 
-use App\Imports\EnrollmentsImport;
-use App\Exports\EnrollmentsTemplateExport;
 use App\Exceptions\BusinessValidationException;
-use App\Rules\AcademicAdvisorAccessRule;
+use App\Imports\EnrollmentsImport;
+use App\Models\AvailableCourse;
+use App\Models\AvailableCourseSchedule;
+use App\Models\Course;
+use App\Models\Enrollment;
+use App\Models\EnrollmentSchedule;
+use App\Models\Student;
+use App\Models\Term;
 use App\Validators\EnrollmentImportValidator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
-use App\Models\Enrollment;
-use App\Models\Student;
-use App\Models\Course;
-use App\Models\Term;
-use App\Models\AvailableCourse;
-use App\Models\AvailableCourseSchedule;
-use App\Models\EnrollmentSchedule;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ImportEnrollmentService
 {
+    private const PASSING_GRADES = ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'P'];
+    private const STATUS_ACTIVE = 'active';
+    private const STATUS_CREATED = 'created';
+    private const STATUS_UPDATED = 'updated';
+
     /**
      * Import enrollments from an uploaded file.
      *
@@ -32,7 +36,7 @@ class ImportEnrollmentService
     {
         $import = new EnrollmentsImport();
 
-        \Maatwebsite\Excel\Facades\Excel::import($import, $file);
+        Excel::import($import, $file);
 
         $rows = $import->rows ?? collect();
         return $this->importEnrollmentsFromRows($rows);
@@ -54,10 +58,16 @@ class ImportEnrollmentService
             $rowNum = $index + 2;
 
             try {
-                DB::transaction(function () use ($row, $rowNum, &$created, &$updated) {
-                    $result = $this->processImportRow($row->toArray(), $rowNum);
-                    $result === 'created' ? $created++ : $updated++;
+                // Use a variable to capture the result from the transaction
+                $result = DB::transaction(function () use ($row, $rowNum) {
+                    return $this->processImportRow($row->toArray(), $rowNum);
                 });
+
+                if ($result === self::STATUS_CREATED) {
+                    $created++;
+                } else {
+                    $updated++;
+                }
             } catch (ValidationException $e) {
                 $errors[] = [
                     'row' => $rowNum,
@@ -117,24 +127,39 @@ class ImportEnrollmentService
         $term = $this->findTermByCode($row['term_code'] ?? '');
 
         $availableCourseSchedules = $this->findAvailableCourseSchedule($row, $student, $course, $term);
-        
+
+        $this->validatePrerequisites($student, [$course->id]);
 
         $enrollment = $this->createOrUpdateEnrollment($row, $student, $course, $term);
 
-        if ($availableCourseSchedules->isNotEmpty()) {
-            foreach ($availableCourseSchedules as $availableCourseSchedule) {
-                EnrollmentSchedule::firstOrCreate([
+        foreach ($availableCourseSchedules as $availableCourseSchedule) {
+            $exists = EnrollmentSchedule::where('enrollment_id', $enrollment->id)
+                ->where('available_course_schedule_id', $availableCourseSchedule->id)
+                ->exists();
+
+            if (!$exists) {
+                $this->validateScheduleCapacity($availableCourseSchedule);
+
+                EnrollmentSchedule::create([
                     'enrollment_id' => $enrollment->id,
                     'available_course_schedule_id' => $availableCourseSchedule->id,
-                ], [
-                    'status' => 'active',
+                    'status' => self::STATUS_ACTIVE,
                 ]);
             }
         }
 
-        return $enrollment->wasRecentlyCreated ? 'created' : 'updated';
+        return $enrollment->wasRecentlyCreated ? self::STATUS_CREATED : self::STATUS_UPDATED;
     }
 
+    /**
+     * Create or update an enrollment record.
+     *
+     * @param array $row
+     * @param Student $student
+     * @param Course $course
+     * @param Term $term
+     * @return Enrollment
+     */
     private function createOrUpdateEnrollment(array $row, Student $student, Course $course, Term $term): Enrollment
     {
         return Enrollment::updateOrCreate(
@@ -217,7 +242,6 @@ class ImportEnrollmentService
      */
     private function findAvailableCourseSchedule(array $row, Student $student, Course $course, Term $term): Collection
     {
-        // Find the AvailableCourse entry for this course and term
         $availableCourse = AvailableCourse::where('course_id', $course->id)
             ->where('term_id', $term->id)
             ->first();
@@ -241,5 +265,53 @@ class ImportEnrollmentService
         }
 
         return $schedules;
+    }
+
+    /**
+     * Validate that the student has met all prerequisites for the courses being enrolled.
+     *
+     * @param Student $student
+     * @param array $courseIds
+     * @throws BusinessValidationException
+     */
+    private function validatePrerequisites(Student $student, array $courseIds): void
+    {
+        foreach ($courseIds as $courseId) {
+            $course = Course::with('prerequisites')->find($courseId);
+            if (!$course) {
+                continue;
+            }
+
+            foreach ($course->prerequisites as $prerequisite) {
+                $hasPassed = Enrollment::where('student_id', $student->id)
+                    ->where('course_id', $prerequisite->id)
+                    ->whereIn('grade', self::PASSING_GRADES)
+                    ->exists();
+
+                if (!$hasPassed) {
+                    throw new BusinessValidationException("Cannot enroll in {$course->name}. Prerequisite {$prerequisite->name} has not been passed.");
+                }
+            }
+        }
+    }
+
+    /**
+     * Validate the capacity of the schedule.
+     *
+     * @param AvailableCourseSchedule $schedule
+     * @throws BusinessValidationException
+     */
+    private function validateScheduleCapacity(AvailableCourseSchedule $schedule): void
+    {
+        if (is_null($schedule->max_capacity) || $schedule->max_capacity <= 0) {
+            return;
+        }
+
+        $currentEnrollmentCount = $schedule->enrollments()->count();
+
+        if ($currentEnrollmentCount >= $schedule->max_capacity) {
+            $courseCode = $schedule->availableCourse->course->code ?? 'Unknown Course';
+            throw new BusinessValidationException("Schedule for course '{$courseCode}' (Group {$schedule->group}) is full. Capacity: {$schedule->max_capacity}.");
+        }
     }
 }

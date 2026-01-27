@@ -34,15 +34,8 @@ class EnrollmentCreditHoursLimit implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        \Log::debug('EnrollmentCreditHoursLimit validate called', [
-            'attribute' => $attribute,
-            'value_received' => $value,
-            'studentId' => $this->studentId,
-            'termId' => $this->termId,
-        ]);
         $totalCreditHours = (int) $value;
         
-        // Get student and term data
         $student = Student::find($this->studentId);
         $term = Term::find($this->termId);
         
@@ -53,14 +46,13 @@ class EnrollmentCreditHoursLimit implements ValidationRule
         
         $semester = strtolower($term->season);
         $cgpa = $student->cgpa;
+        $takenCreditHours = $student->taken_credit_hours;
         
-        // Get current enrollment credit hours for this term
         $currentEnrollmentHours = $this->getCurrentEnrollmentHours();
         
-        $maxAllowedHours = $this->getMaxCreditHours($semester, $cgpa);
+        $maxAllowedHours = $this->getMaxCreditHours($semester, $cgpa, $takenCreditHours);
         $remainingHours = $maxAllowedHours - $currentEnrollmentHours;
 
-        // Fix: Use correct totalCreditHours in error message
         if ($totalCreditHours > $maxAllowedHours) {
             if ($remainingHours <= 0) {
                 $fail("You cannot add any more credit hours for this term. The maximum allowed is {$maxAllowedHours} based on your CGPA ({$cgpa}) and semester ({$semester}).");
@@ -73,9 +65,9 @@ class EnrollmentCreditHoursLimit implements ValidationRule
     /**
      * Get the maximum allowed credit hours based on CGPA and semester
      */
-    private function getMaxCreditHours(string $semester, float $cgpa): int
+    private function getMaxCreditHours(string $semester, float $cgpa, int $takenCreditHours): int
     {
-        $baseHours = $this->getBaseHours($semester, $cgpa);
+        $baseHours = $this->getBaseHours($semester, $cgpa, $takenCreditHours);
         $graduationBonus = $this->isGraduating ? 3 : 0;
         $adminException = $this->getAdminExceptionHours();
 
@@ -83,17 +75,25 @@ class EnrollmentCreditHoursLimit implements ValidationRule
     }
 
     /**
-     * Get base credit hours based on semester and CGPA
+     * Credit Hour Limits:
+     * - Summer: 9 hours
+     * - Fall/Spring:
+     *   - CGPA < 2.0: 14 hours
+     *   - 2.0 <= CGPA < 3.0: 18 hours
+     *   - CGPA >= 3.0: 21 hours
+     * - If no credit hours taken yet, allow maximum of 18 hours , for new students.
      */
-    private function getBaseHours(string $semester, float $cgpa): int
+    private function getBaseHours(string $semester, float $cgpa, int $takenCreditHours): int
     {
-        // Summer semester has fixed 9 hours regardless of CGPA
+        if ($takenCreditHours == 0) {
+            return 18;
+        }
+
         if ($semester === 'summer') {
             return 9;
         }
 
-        // Fall and Spring semesters have CGPA-based limits
-        if (in_array($semester, ['fall', 'spring'])) {
+        if (in_array($semester,  ['fall', 'spring'])) {
             if ($cgpa < 2.0) {
                 return 14;
             } elseif ($cgpa >= 2.0 && $cgpa < 3.0) {
@@ -103,7 +103,6 @@ class EnrollmentCreditHoursLimit implements ValidationRule
             }
         }
 
-        // Default fallback (shouldn't reach here with valid semesters)
         return 14;
     }
 

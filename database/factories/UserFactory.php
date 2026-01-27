@@ -49,7 +49,7 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'first_name' => 'Admin',
             'last_name' => 'User',
-            'email' => 'admin@acadops.com',
+            'email' => 'admin2@acadops.com',
             'email_verified_at' => now(),
         ]);
     }

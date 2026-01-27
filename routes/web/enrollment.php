@@ -25,6 +25,7 @@ Route::middleware(['auth'])
         Route::post('available-courses', 'availableCourses')->name('availableCourses')->middleware('can:enrollment.view');
         Route::post('student-enrollments', 'studentEnrollments')->name('studentEnrollments')->middleware('can:enrollment.view');
         Route::get('get-schedules', 'getSchedules')->name('getSchedules')->middleware('can:enrollment.view');
+        Route::post('guiding', 'getGuiding')->name('guiding')->middleware('can:enrollment.view');
 
         // ===== Import/Export Operations =====
         Route::post('import', 'import')->name('import')->middleware('can:enrollment.import');
@@ -39,10 +40,10 @@ Route::middleware(['auth'])
         Route::get('/', 'index')->name('index')->middleware('can:enrollment.view');
         
         // Create
-    Route::post('/', 'store')->name('store')->middleware('can:enrollment.create');
-    // Create (grade-only / without schedule) - separate endpoint
-    Route::post('store-without-schedule', 'storeWithoutSchedule')->name('storeWithoutSchedule')->middleware('can:enrollment.create');
-        
+        Route::post('/', 'store')->name('store')->middleware('can:enrollment.create');
+        // Create (grade-only / without schedule) - separate endpoint
+        Route::post('store-without-schedule', 'storeWithoutSchedule')->name('storeWithoutSchedule')->middleware('can:enrollment.create');
+            
         // Delete
         Route::delete('{enrollment}', 'destroy')->name('destroy')->middleware('can:enrollment.delete');
     }); 

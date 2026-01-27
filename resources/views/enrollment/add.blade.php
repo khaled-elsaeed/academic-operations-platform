@@ -83,6 +83,37 @@
       </div>
     </div>
 
+    <!-- Enrollment Guide Card -->
+    <div class="card mb-4 shadow-sm" id="guidingCard" style="display:none;">
+      <div class="card-header bg-light d-flex align-items-center">
+        <i class="bx bx-info-circle me-2 text-primary"></i>
+        <h5 class="mb-0 text-dark">Enrollment Guide</h5>
+      </div>
+      <div class="card-body">
+        <div id="guidingInfo">
+          <!-- Guiding info will be populated here -->
+          <div class="row" id="guidingContent">
+             <div class="col-md-3">
+                <h6><i class="bx bx-check-circle text-success me-1"></i>Passed Courses</h6>
+                <div id="passedCoursesList" class="small"></div>
+             </div>
+             <div class="col-md-3">
+                <h6><i class="bx bx-error text-danger me-1"></i>Failed/Incomplete</h6>
+                <div id="failedCoursesList" class="small"></div>
+             </div>
+             <div class="col-md-3">
+                <h6><i class="bx bx-book-add text-primary me-1"></i>Study Plan (Current)</h6>
+                <div id="studyPlanCoursesList" class="small"></div>
+             </div>
+             <div class="col-md-3">
+                <h6><i class="bx bx-calendar-exclamation text-warning me-1"></i>Missing (Previous)</h6>
+                <div id="missingCoursesList" class="small"></div>
+             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Credit Hour Info Box -->
     <div id="chInfoBox" class="alert alert-info shadow-sm mt-3" style="display:none;">
       <strong class="text-dark">Maximum Allowed Credit Hours (CH):</strong>
@@ -547,49 +578,49 @@ const EnrollmentHistoryModule = {
 // TIME CONFLICT MODULE
 // ========================================
 const TimeConflictModule = {
+  /**
+   * Checks if two activities have a time conflict.
+   * @param {Object} activity1 - First activity object
+   * @param {Object} activity2 - Second activity object
+   * @returns {boolean} True if activities conflict, false otherwise
+   */
   hasConflict(activity1, activity2) {
     if (!activity1 || !activity2) {
-      console.log('Missing activity data for conflict check');
       return false;
     }
-    
+
     if (!activity1.day_of_week || !activity2.day_of_week) {
-      console.log('Missing day_of_week for conflict check');
       return false;
     }
-    
-    // FIX: Case insensitive day comparison
+
     if (activity1.day_of_week.toLowerCase() !== activity2.day_of_week.toLowerCase()) {
       return false;
     }
-    
+
     if (!activity1.start_time || !activity1.end_time || !activity2.start_time || !activity2.end_time) {
-      console.log('Missing time data for conflict check');
       return false;
     }
-    
+
     const start1 = Utils.parseTime(activity1.start_time);
     const end1 = Utils.parseTime(activity1.end_time);
     const start2 = Utils.parseTime(activity2.start_time);
     const end2 = Utils.parseTime(activity2.end_time);
-    
+
     if (start1 === null || end1 === null || start2 === null || end2 === null) {
-      console.log('Failed to parse time for conflict check:', {
-        activity1: `${activity1.start_time} - ${activity1.end_time}`,
-        activity2: `${activity2.start_time} - ${activity2.end_time}`
-      });
       return false;
     }
-    
+
     const hasConflict = (start1 < end2) && (start2 < end1);
-    
-    if (hasConflict) {
-      console.log(`Conflict detected: ${activity1.day_of_week} ${activity1.start_time}-${activity1.end_time} vs ${activity2.day_of_week} ${activity2.start_time}-${activity2.end_time}`);
-    }
-    
+
     return hasConflict;
-  }
-  ,
+  },
+  
+  /**
+   * Checks for schedule conflicts between new course data and existing selections.
+   * @param {Object} newCourseData - Data for the new course being added
+   * @param {number} currentCourseId - ID of the current course
+   * @returns {Array} Array of conflict objects
+   */
   checkScheduleConflicts(newCourseData, currentCourseId) {
     const conflicts = [];
     
@@ -639,6 +670,12 @@ const TimeConflictModule = {
     return conflicts;
   },
 
+  /**
+   * Shows a warning modal for schedule conflicts.
+   * @param {Array} conflicts - Array of conflict objects
+   * @param {Function} onConfirm - Callback for confirm action
+   * @param {Function} onCancel - Callback for cancel action
+   */
   showConflictWarning(conflicts, onConfirm, onCancel) {
     let conflictDetailsHtml = '';
     
@@ -749,6 +786,10 @@ const CourseModule = {
     CreditHoursModule.updateSummary();
   },
 
+  /**
+   * Loads available courses with prerequisite information.
+   * @param {Array} courses - Array of course objects
+   */
   loadWithPrerequisites(courses) {
     const courseIds = courses.map(course => course.available_course_id);
     
@@ -769,6 +810,11 @@ const CourseModule = {
     });
   },
 
+  /**
+   * Displays courses with prerequisite information.
+   * @param {Array} courses - Array of course objects
+   * @param {Array} prerequisites - Array of prerequisite data
+   */
   display(courses, prerequisites) {
     let html = '';
     
@@ -857,6 +903,12 @@ const CourseModule = {
     `;
   },
 
+  /**
+   * Renders prerequisite information for a course.
+   * @param {Array} coursePrereqs - Array of prerequisite objects for the course
+   * @param {boolean} hasUnfulfilledPrereqs - Whether there are unfulfilled prerequisites
+   * @returns {string} HTML string for prerequisites display
+   */
   renderPrerequisites(coursePrereqs, hasUnfulfilledPrereqs) {
     if (coursePrereqs.length === 0) {
       return '<div class="mt-2"><small class="text-success"><i class="bx bx-check me-1"></i>No prerequisites required</small></div>';
@@ -908,6 +960,9 @@ const CourseModule = {
     return html;
   },
 
+  /**
+   * Attaches event handlers for course selection.
+   */
   attachEventHandlers() {
     $('.course-checkbox').on('change', function() {
       const courseId = $(this).val();
@@ -916,14 +971,12 @@ const CourseModule = {
       if (isChecked) {
         ActivitySelectionModule.show(courseId);
       } else {
-        console.log('Unchecking course:', courseId);
         EnrollmentState.selectedCourseGroups.delete(courseId);
         $(`#groupInfo_${courseId}`).hide();
         $(this).closest('.course-item').removeClass('selected');
         EnrollmentUIModule.updateEnrollButton();
         CreditHoursModule.updateSummary();
-        
-        // FIXED: Update schedule when unchecking
+
         setTimeout(() => {
           ScheduleModule.update();
         }, 100);
@@ -931,6 +984,10 @@ const CourseModule = {
     });
   },
 
+  /**
+   * Filters courses based on search term.
+   * @param {string} searchTerm - The search term to filter by
+   */
   filter(searchTerm) {
     if (!EnrollmentState.originalCoursesData.length) return;
     
@@ -953,6 +1010,10 @@ const CourseModule = {
 // PREREQUISITE MODULE
 // ========================================
 const PrerequisiteModule = {
+  /**
+   * Shows missing prerequisites in a modal.
+   * @param {Array} missingPrereqs - Array of missing prerequisite objects
+   */
   showMissing(missingPrereqs) {
     let html = '';
     missingPrereqs.forEach((prereq) => {
@@ -981,19 +1042,17 @@ const PrerequisiteModule = {
 // ACTIVITY SELECTION MODULE
 // ========================================
 const ActivitySelectionModule = {
+  /**
+   * Shows activity selection modal for a course.
+   * @param {number} courseId - The course ID
+   */
   show(courseId) {
-    console.log('ActivitySelectionModule.show called with courseId:', courseId);
-    console.log('Available courses data:', EnrollmentState.originalCoursesData);
-    
-    // Try to find course by both possible field names
     let course = EnrollmentState.originalCoursesData.find(c => c.available_course_id == courseId);
     if (!course) {
       course = EnrollmentState.originalCoursesData.find(c => c.id == courseId);
     }
-    
+
     if (!course) {
-      console.error('Course not found for ID:', courseId);
-      console.log('Available courses:', EnrollmentState.originalCoursesData);
       Swal.fire({
         icon: 'error',
         title: 'Course Not Found',
@@ -1001,8 +1060,6 @@ const ActivitySelectionModule = {
       });
       return;
     }
-
-    console.log('Found course:', course);
 
     $('#activitySelectionModalLabel').html(`
       <i class="bx bx-chalkboard me-2"></i>
@@ -1377,8 +1434,6 @@ const ActivitySelectionModule = {
     }
 
     if (conflicts.length > 0) {
-      console.log('Conflicts detected:', conflicts);
-      // Block proceeding when conflicts exist
       TimeConflictModule.showConflictWarning(conflicts, () => {}, () => {});
       return;
     } else {
@@ -1590,6 +1645,11 @@ const CreditHoursModule = {
 // SCHEDULE MODULE
 // ========================================
 const ScheduleModule = {
+  /**
+   * Initializes the schedule module for a student and term.
+   * @param {number} studentId - The student ID
+   * @param {number} termId - The term ID
+   */
   initialize(studentId, termId) {
     if (!studentId || !termId) {
       $('#weeklyScheduleCard').hide();
@@ -1625,7 +1685,6 @@ const ScheduleModule = {
         }
       },
       error: (xhr) => {
-        console.error('Schedule initialization error:', xhr);
         EnrollmentState.selectedActivities = [];
         $('#weeklyScheduleCard').hide();
         $('#scheduleConflictAlert').hide();
@@ -1633,14 +1692,13 @@ const ScheduleModule = {
     });
   },
 
+  /**
+   * Generates the schedule grid HTML.
+   * @param {Array} selectedActivities - Array of selected activity objects
+   */
   generateGrid(selectedActivities) {
-    console.log('Generating grid with activities:', selectedActivities);
-    
-
-    // We'll render rows per day and columns per time slot (transpose)
     const days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
 
-    // Updated time slots to better match typical university schedules
     const timeSlots = [
       '9:00 AM – 9:50 AM',
       '9:50 AM – 10:40 AM',
@@ -1654,37 +1712,28 @@ const ScheduleModule = {
 
     let html = '';
 
-    // Ensure CSS grid knows how many time columns we will render
     const scheduleEl = document.getElementById('weeklySchedule');
     if (scheduleEl && scheduleEl.style) {
       scheduleEl.style.setProperty('--time-cols', timeSlots.length);
     }
 
-    // Create top-left header (Time) and column headers for each time slot
     html += `<div class="schedule-header">Time</div>`;
     timeSlots.forEach(slot => {
       html += `<div class="schedule-header time-slot-header">${slot}</div>`;
     });
 
-    // For each day, create a row: day name cell followed by one cell per time slot
     days.forEach(day => {
       html += `<div class="schedule-header day-header">${day}</div>`; // left-most column for day name
 
       timeSlots.forEach(timeSlot => {
-        // find activities matching this day and time slot
         const activitiesInCell = selectedActivities.filter(item => {
           if (!item.activity || !item.activity.day_of_week) {
-            console.log('Missing day_of_week for activity:', item);
             return false;
           }
 
           const scheduleDay = item.activity.day_of_week.toLowerCase();
           const dayMatches = scheduleDay === day.toLowerCase();
           const timeMatches = this.isActivityInTimeSlot(timeSlot, item.activity.start_time, item.activity.end_time);
-
-          if (dayMatches && timeMatches) {
-            console.log(`Activity matched: ${item.course.name} on ${day} at ${item.activity.start_time}-${item.activity.end_time}`);
-          }
 
           return dayMatches && timeMatches;
         });
@@ -1751,59 +1800,47 @@ const ScheduleModule = {
     });
   },
 
-  // NEW: Better time slot matching function
+  /**
+   * Checks if an activity falls within a time slot.
+   * @param {string} timeSlot - The time slot string
+   * @param {string} startTime - Activity start time
+   * @param {string} endTime - Activity end time
+   * @returns {boolean} True if activity is in the time slot
+   */
   isActivityInTimeSlot(timeSlot, startTime, endTime) {
     if (!startTime || !endTime) {
-      console.log('Missing start or end time');
       return false;
     }
-    
-    // Extract start and end times from the slot (e.g., "10:50 AM – 11:40 AM")
+
     const slotParts = timeSlot.split(/[–-]/).map(t => t.trim());
     if (slotParts.length < 2) {
-      console.log('Invalid time slot format:', timeSlot);
       return false;
     }
-    
+
     const slotStart = Utils.parseTime(slotParts[0]);
     const slotEnd = Utils.parseTime(slotParts[1]);
     const activityStart = Utils.parseTime(startTime);
     const activityEnd = Utils.parseTime(endTime);
-    
+
     if (slotStart === null || slotEnd === null || activityStart === null || activityEnd === null) {
-      console.log('Failed to parse times:', {
-        slot: timeSlot,
-        activity: `${startTime} - ${endTime}`,
-        parsed: { slotStart, slotEnd, activityStart, activityEnd }
-      });
       return false;
     }
 
-    // Check if the activity overlaps with the time slot
-    // Activity overlaps if: activity_start < slot_end AND activity_end > slot_start
     const overlaps = (activityStart < slotEnd) && (activityEnd > slotStart);
-    
-    if (overlaps) {
-      console.log(`Time slot match: ${timeSlot} contains ${startTime} - ${endTime}`);
-    }
-    
+
     return overlaps;
   },
 
-  // ... rest of the methods remain the same ...
-  
+  /**
+   * Updates the schedule display.
+   */
   update() {
-    console.log('Updating schedule...');
-    
-    // Remove only selection activities, keep old_schedule activities
     EnrollmentState.selectedActivities = EnrollmentState.selectedActivities.filter(activity => activity.source !== 'selection');
 
-    // Add new selected activities
     $('.course-checkbox:checked').each(function() {
       const courseId = $(this).val();
       const groupData = EnrollmentState.selectedCourseGroups.get(courseId);
       if (groupData && groupData.group_activities) {
-        console.log(`Adding selected activities for course ${courseId}:`, groupData.group_activities);
         groupData.group_activities.forEach(activity => {
           EnrollmentState.selectedActivities.push({
             course: groupData.course,
@@ -1858,12 +1895,10 @@ const EnrollmentUIModule = {
   }
   ,
   refreshAfterEnrollment() {
-    // Clear only selection state and reload authoritative data from backend
     EnrollmentState.selectedCourseGroups.clear();
     $('.course-item').removeClass('selected');
     $('.selected-group-info').hide();
     $('.course-checkbox').prop('checked', false);
-    // Reload history, courses, and schedule fresh
     if (EnrollmentState.currentStudentId && EnrollmentState.currentTermId) {
       EnrollmentHistoryModule.load(EnrollmentState.currentStudentId);
       CourseModule.load(EnrollmentState.currentStudentId, EnrollmentState.currentTermId);
@@ -1880,7 +1915,6 @@ const EnrollmentUIModule = {
 // ========================================
 const EnrollmentSubmissionModule = {
   submit() {
-    // Validate basic form data
     if (!this.validateBasicForm()) {
       return;
     }
@@ -1896,7 +1930,6 @@ const EnrollmentSubmissionModule = {
       return;
     }
     
-    // Check if all selected courses have groups selected
     let missingGroups = [];
     $('.course-checkbox:checked').each(function() {
       const courseId = $(this).val();
@@ -1951,11 +1984,9 @@ const EnrollmentSubmissionModule = {
   processEnrollment() {
     const formData = new FormData();
     
-    // Add basic required data
     formData.append('student_id', $('#student_id').val());
     formData.append('term_id', $('#term_id').val());
 
-    // Collect selected courses and their schedule data
     const selectedCourseIds = [];
     const scheduleIds = [];
     const courseScheduleMapping = {};
@@ -1967,26 +1998,21 @@ const EnrollmentSubmissionModule = {
       if (groupData && groupData.group_activities) {
         selectedCourseIds.push(courseId);
         
-        // Collect schedule IDs for this course
         const courseScheduleIds = groupData.group_activities.map(activity => activity.id);
         scheduleIds.push(...courseScheduleIds);
         
-        // Create mapping as expected by backend
         courseScheduleMapping[courseId] = JSON.stringify(courseScheduleIds);
       }
     });
 
-    // Add course data to form
     selectedCourseIds.forEach(courseId => {
       formData.append('available_course_ids[]', courseId);
     });
 
-    // Add schedule IDs
     scheduleIds.forEach(scheduleId => {
       formData.append('available_course_schedule_ids[]', scheduleId);
     });
 
-    // Add course schedule mapping
     Object.keys(courseScheduleMapping).forEach(courseId => {
       formData.append(`course_schedule_mapping[${courseId}]`, courseScheduleMapping[courseId]);
     });
@@ -1994,7 +2020,6 @@ const EnrollmentSubmissionModule = {
     const enrollBtn = $('#enrollBtn');
     const originalText = enrollBtn.html();
     
-    // Disable form and show loading state
     enrollBtn.html('<i class="bx bx-loader-alt bx-spin me-1"></i>Processing Enrollment...').prop('disabled', true);
     $('.course-checkbox').prop('disabled', true);
     $('#term_id').prop('disabled', true);
@@ -2006,7 +2031,6 @@ const EnrollmentSubmissionModule = {
       totalSchedules: scheduleIds.length
     });
 
-    // Store request data for potential retry
     this.lastRequestData = {
       formData: formData,
       selectedCourseIds: selectedCourseIds,
@@ -2019,7 +2043,7 @@ const EnrollmentSubmissionModule = {
       data: formData,
       processData: false,
       contentType: false,
-      timeout: 30000, // 30 second timeout
+      timeout: 30000, 
       success: (res) => {
         
         this.lastRequestData = null; 
@@ -2065,7 +2089,6 @@ const EnrollmentSubmissionModule = {
       showConfirmButton: false,
       allowOutsideClick: false,
       didOpen: () => {
-        // Immediately refresh schedule behind the dialog
         if (EnrollmentState.currentStudentId && EnrollmentState.currentTermId) {
           ScheduleModule.initialize(EnrollmentState.currentStudentId, EnrollmentState.currentTermId);
         }
@@ -2190,7 +2213,6 @@ const EnrollmentSubmissionModule = {
       errorMessage = xhr.responseJSON.message || errorMessage;
       
       if (xhr.status === 422) {
-        // Validation errors
         const errors = xhr.responseJSON.errors;
         if (errors) {
           errorDetails = '<div class="alert alert-danger text-start mt-3"><ul class="mb-0">';
@@ -2203,21 +2225,17 @@ const EnrollmentSubmissionModule = {
           errorDetails += '</ul></div>';
         }
       } else if (xhr.status === 400) {
-        // Business validation errors
         errorDetails = `<div class="alert alert-warning text-start mt-3"><small>${errorMessage}</small></div>`;
       } else if (xhr.status === 500) {
-        // Server errors
         errorMessage = 'Internal server error occurred. Please contact administrator.';
         errorDetails = '<div class="alert alert-danger text-start mt-3"><small>Please try again later or contact support if the problem persists.</small></div>';
         showRetryButton = true;
       }
     } else if (xhr.status === 0 || xhr.statusText === 'timeout') {
-      // Network or timeout errors
       errorMessage = 'Connection failed or request timed out. Please check your internet connection.';
       errorDetails = '<div class="alert alert-warning text-start mt-3"><small>This might be a temporary network issue.</small></div>';
       showRetryButton = true;
     } else {
-      // Other errors
       errorMessage = 'An unexpected error occurred. Please try again.';
       errorDetails = '<div class="alert alert-danger text-start mt-3"><small>Please try again later.</small></div>';
       showRetryButton = true;
@@ -2250,7 +2268,6 @@ const EnrollmentSubmissionModule = {
       ...buttonConfig
     }).then((result) => {
       if (result.isConfirmed && showRetryButton && this.lastRequestData) {
-        // Retry the request
         console.log('Retrying enrollment submission...');
         setTimeout(() => {
           this.retrySubmission();
@@ -2334,6 +2351,169 @@ const TermsModule = {
 };
 
 // ========================================
+// GUIDING MODULE
+// ========================================
+const GuidingModule = {
+  load(studentId, termId = null) {
+    if (!studentId) {
+      $('#guidingCard').hide();
+      return;
+    }
+
+    $('#guidingCard').show();
+    $('#guidingContent').css('opacity', '0.5');
+
+    $.ajax({
+      url: window.routes.guiding,
+      method: 'POST',
+      data: { 
+        student_id: studentId,
+        term_id: termId
+      },
+      success: (res) => {
+        $('#guidingContent').css('opacity', '1');
+        if (res.success && res.data) {
+          this.display(res.data);
+        } else {
+          $('#guidingCard').hide();
+        }
+      },
+      error: () => {
+        $('#guidingContent').css('opacity', '1');
+        $('#guidingCard').hide();
+        console.error('Failed to load enrollment guide');
+      }
+    });
+  },
+
+  display(data) {
+    const history = data.courses_history || {};
+    const studyPlan = data.study_plan_courses || {};
+
+    this.renderList('#passedCoursesList', history.passed_courses || [], 'course');
+    
+    const failedWithStatus = (history.failed_courses || []).map(c => ({ ...c, statusBadge: { text: 'Failed', class: 'bg-label-danger' } }));
+    const incompleteWithStatus = (history.incomplete_courses || []).map(c => ({ ...c, statusBadge: { text: 'Incomplete', class: 'bg-label-warning' } }));
+    this.renderList('#failedCoursesList', [...failedWithStatus, ...incompleteWithStatus], 'course');
+    
+    this.renderList('#studyPlanCoursesList', studyPlan.courses || [], 'course', true);
+
+    if (studyPlan.elective_info && studyPlan.elective_info.count > 0) {
+        const slotCodes = (studyPlan.elective_info.codes || []).join(', ');
+        const codesDisplay = slotCodes ? ` (${slotCodes})` : '';
+        
+        let electiveHtml = `<div class="mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <strong class="text-primary">Elective Courses${codesDisplay}: Choose ${studyPlan.elective_info.count}</strong>
+            </div>
+            <div class="ms-1">`;
+        
+        this.renderElectivePool(studyPlan.elective_info.pool, electiveHtml, '#studyPlanCoursesList');
+    }
+
+    // Missing Courses Rendering
+    const missing = data.missing_courses || {};
+    this.renderList('#missingCoursesList', missing.core || [], 'course', true);
+
+    if (missing.electives && missing.electives.count > 0) {
+        const slotCodes = (missing.electives.codes || []).join(', ');
+        const codesDisplay = slotCodes ? ` (${slotCodes})` : '';
+        
+        let electiveHtml = `<div class="mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <strong class="text-warning">Missing Electives${codesDisplay}: Need ${missing.electives.count}</strong>
+            </div>
+            <div class="ms-1">`;
+            
+        this.renderElectivePool(missing.electives.pool, electiveHtml, '#missingCoursesList');
+    }
+  },
+
+  renderElectivePool(pool, containerHtml, targetSelector) {
+        let html = containerHtml;
+        if (this.isValidArray(pool)) {
+            pool.forEach(item => {
+                const courseName = this.formatCourseName(item.course);
+                const availabilityIcon = item.available === false ? '<i class="bx bx-lock-alt text-danger ms-1" title="Prerequisites not met"></i>' : '';
+                let itemColorClass = 'text-secondary';
+                let statusBadge = '';
+                let statusIcon = 'bx-caret-right';
+                
+                if (item.is_passed) { // Should not happen for missing/study plan usually unless showing status
+                    itemColorClass = 'text-success';
+                    statusIcon = 'bx-check-circle';
+                    statusBadge = `<span class="badge bg-label-success ms-1" style="font-size:0.7em">Already Taken</span>`;
+                } else if (item.is_incomplete) {
+                    itemColorClass = 'text-danger'; // Incomplete is usually failed/retake
+                    statusIcon = 'bx-error';
+                    statusBadge = `<span class="badge bg-label-danger ms-1" style="font-size:0.7em">Incomplete/Failed</span>`;
+                } else if (item.available === false) {
+                    itemColorClass = 'text-danger';
+                    statusIcon = 'bx-lock-alt';
+                    statusBadge = `<span class="badge bg-label-danger ms-1" style="font-size:0.7em">Locked</span>`;
+                } else {
+                    itemColorClass = 'text-warning';
+                    statusIcon = 'bx-info-circle';
+                    statusBadge = `<span class="badge bg-label-warning ms-1" style="font-size:0.7em">Available</span>`;
+                }
+                
+                html += `<div class="ps-3 mb-1 small ${itemColorClass} d-flex align-items-center">
+                    <i class="bx ${statusIcon} me-1"></i>
+                    <span>${courseName}</span>
+                    ${statusBadge}
+                </div>`;
+            });
+        }
+        html += `</div></div>`;
+        $(targetSelector).append(html);
+  },
+
+  isValidArray(arr) {
+    return Array.isArray(arr) && arr.length > 0;
+  },
+
+  renderList(selector, items, path, checkAvailability = false) {
+    const $list = $(selector);
+    $list.empty();
+
+    if (items.length === 0) {
+      $list.append('<div class="text-muted italic">None</div>');
+      return;
+    }
+
+    items.forEach(item => {
+      const course = this.getValueByPath(item, path);
+      if (!course) return;
+      
+      const name = this.formatCourseName(course);
+      let html = `<div><i class="bx bx-caret-right text-primary me-1"></i>${name}`;
+      
+      if (item.statusBadge) {
+        html += ` <span class="badge ${item.statusBadge.class} ms-1" style="font-size: 0.65em;">${item.statusBadge.text}</span>`;
+      }
+      
+      if (checkAvailability && item.available === false) {
+          html += ` <span class="badge bg-label-danger ms-1" title="${item.reason || 'Locked'}"><i class="bx bx-lock-alt"></i></span>`;
+      }
+      
+      html += '</div>';
+      $list.append(html);
+    });
+  },
+
+  formatCourseName(course) {
+    if (!course) return 'Unknown';
+    if (course.name) return course.name;
+    if (course.title && course.code) return `${course.title} (${course.code})`;
+    return course.title || course.code || 'Unknown';
+  },
+
+  getValueByPath(obj, path) {
+    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+  }
+};
+
+// ========================================
 // MAIN APPLICATION MODULE
 // ========================================
 const EnrollmentApp = {
@@ -2356,12 +2536,12 @@ const EnrollmentApp = {
         storeEnrollment: '{{ route("enrollments.store") }}',
         downloadPdf: '{{ route("students.download.pdf", ":id") }}',
         terms: '{{ route("terms.all") }}',
-        termsWithInactive: '{{ route("terms.all.with_inactive") }}'
+        termsWithInactive: '{{ route("terms.all.with_inactive") }}',
+        guiding: '{{ route("enrollments.guiding") }}'
       };
   },
 
   initializeComponents() {
-    // Initialize Select2
     $('#term_id').select2({
       theme: 'bootstrap-5',
       placeholder: 'Please select an academic term',
@@ -2369,29 +2549,22 @@ const EnrollmentApp = {
       width: '100%'
     });
 
-    // Hide page loader
     Utils.hidePageLoader();
   },
 
   attachEventHandlers() {
-    // Student search form
     $('#findStudentForm').on('submit', this.handleStudentSearch.bind(this));
 
-    // Term selection
     $('#term_id').on('change', this.handleTermChange.bind(this));
 
-    // Activity selection modal
     $('#confirmActivitySelection').on('click', () => {
       ActivitySelectionModule.confirmSelection();
     });
 
-    // Handle modal close without selection
     $('#activitySelectionModal').on('hidden.bs.modal', this.handleActivityModalClose.bind(this));
 
-    // Enrollment form submission
     $('#enrollForm').on('submit', this.handleEnrollmentSubmission.bind(this));
 
-    // Search functionality
     $('#historySearch').on('input', (e) => {
       const searchTerm = $(e.target).val().toLowerCase();
       EnrollmentHistoryModule.filter(searchTerm);
@@ -2402,7 +2575,6 @@ const EnrollmentApp = {
       CourseModule.filter(searchTerm);
     });
 
-    // Toggle: exception for different levels
     $(document).on('change', '#exceptionForDifferentLevels', () => {
       if (EnrollmentState.currentStudentId && EnrollmentState.currentTermId) {
         CourseModule.load(EnrollmentState.currentStudentId, EnrollmentState.currentTermId);
@@ -2418,7 +2590,6 @@ const EnrollmentApp = {
     e.preventDefault();
     const identifier = $('#identifier').val();
     
-    // Reset everything
     this.resetAllComponents();
     
     StudentModule.findStudent(identifier)
@@ -2431,6 +2602,7 @@ const EnrollmentApp = {
         EnrollmentState.currentTermId = null;
         
         EnrollmentHistoryModule.load(EnrollmentState.currentStudentId);
+        GuidingModule.load(EnrollmentState.currentStudentId);
       })
       .fail((xhr) => {
         $('#studentDetails').hide();
@@ -2452,6 +2624,7 @@ const EnrollmentApp = {
     if (EnrollmentState.currentStudentId) {
       EnrollmentHistoryModule.load(EnrollmentState.currentStudentId);
       ScheduleModule.initialize(EnrollmentState.currentStudentId, EnrollmentState.currentTermId);
+      GuidingModule.load(EnrollmentState.currentStudentId, EnrollmentState.currentTermId);
     }
     
     CourseModule.load(EnrollmentState.currentStudentId, EnrollmentState.currentTermId);
@@ -2489,6 +2662,7 @@ const EnrollmentApp = {
     $('#creditHoursSummary').hide();
     $('#exceptionAlert').hide();
     $('#weeklyScheduleCard').hide();
+    $('#guidingCard').hide();
     EnrollmentState.reset();
   }
 };
@@ -2505,7 +2679,6 @@ function showMissingPrerequisites(missingPrereqs) {
 // ========================================
 $(document).ready(function() {
   EnrollmentApp.init();
-  // Lazy-load html2canvas on demand when user clicks download
   $(document).on('click', '#downloadTimetableBtn', async function() {
     const btn = $(this);
     btn.prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i>Preparing...');

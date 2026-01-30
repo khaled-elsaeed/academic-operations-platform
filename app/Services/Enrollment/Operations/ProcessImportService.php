@@ -28,6 +28,7 @@ class ProcessImportService
     private const GRADE_COLUMN = 3;
 
     private const PASSING_GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'P'];
+
     private const STATUS_ACTIVE = 'active';
 
     protected array $results = [
@@ -42,8 +43,7 @@ class ProcessImportService
 
     public function __construct(
         protected array $rows
-    ) {
-    }
+    ) {}
 
     /**
      * Main entry point for processing enrollments
@@ -74,7 +74,7 @@ class ProcessImportService
     private function processRows(): void
     {
         foreach ($this->rows as $index => $row) {
-            $rowNum = $index + 2; // +2 because Excel is 1-indexed and we skip header
+            $rowNum = $index + 2; 
 
             try {
                 DB::transaction(function () use ($row, $rowNum) {

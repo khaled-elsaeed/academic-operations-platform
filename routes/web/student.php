@@ -20,7 +20,14 @@ Route::middleware(['auth'])
 
         // ===== Import/Export Operations =====
         Route::post('import', 'import')->name('import')->middleware('can:student.import');
-        Route::get('export', 'export')->name('export')->middleware('can:student.export');
+        Route::get('/import/status/{uuid}', 'importStatus')->name('import.status')->middleware('can:student.import');
+        Route::post('/import/cancel/{uuid}', 'importCancel')->name('import.cancel')->middleware('can:student.import');
+        Route::get('/import/download/{uuid}', 'importDownload')->name('import.download')->middleware('can:student.import');
+        // Export operations
+        Route::post('export', 'export')->name('export')->middleware('can:student.export');
+        Route::get('/export/status/{uuid}', 'exportStatus')->name('export.status')->middleware('can:student.export');
+        Route::post('/export/cancel/{uuid}', 'exportCancel')->name('export.cancel')->middleware('can:student.export');
+        Route::get('/export/download/{uuid}', 'exportDownload')->name('export.download')->middleware('can:student.export');
 
         // ===== CRUD Operations =====
         // List & View

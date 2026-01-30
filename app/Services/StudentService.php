@@ -19,9 +19,48 @@ use App\Services\EnrollmentDocumentService;
 use App\Exceptions\BusinessValidationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
+use App\Traits\Progressable;
+use App\Traits\Importable;
+use App\Traits\Exportable;
+use App\Jobs\Student\ImportStudentsJob;
+use App\Jobs\Student\ExportStudentsJob;
 
 class StudentService
 {
+    use Progressable, Importable, Exportable;
+
+    /**
+     * Configure import for students.
+     */
+    protected function getImportConfig(): array
+    {
+        return [
+            'job' => ImportStudentsJob::class,
+            'subtype' => 'student',
+            'download_route' => 'students.import.download',
+            'filename_prefix' => 'students_import_results',
+        ];
+    }
+
+    /**
+     * Configure export for students.
+     */
+    protected function getExportConfig(): array
+    {
+        return [
+            'job' => ExportStudentsJob::class,
+            'subtype' => 'student',
+            'download_route' => 'students.export.download',
+        ];
+    }
+
+    /**
+     * Export students (wrapper for the trait method).
+     */
+    public function exportStudentsAsync(array $data = []): array
+    {
+        return $this->export($data);
+    }
     /**
      * StudentService constructor.
      *
@@ -96,15 +135,15 @@ class StudentService
         $latestFemale = Student::where('gender', 'female')->max('updated_at');
         return [
             'students' => [
-                'total' => formatNumber(Student::count()),
+                'count' => formatNumber(Student::count()),
                 'lastUpdateTime' => formatDate($latestStudent),
             ],
-            'maleStudents' => [
-                'total' => formatNumber(Student::where('gender', 'male')->count()),
+            'male-students' => [
+                'count' => formatNumber(Student::where('gender', 'male')->count()),
                 'lastUpdateTime' => formatDate($latestMale),
             ],
-            'femaleStudents' => [
-                'total' => formatNumber(Student::where('gender', 'female')->count()),
+            'female-students' => [
+                'count' => formatNumber(Student::where('gender', 'female')->count()),
                 'lastUpdateTime' => formatDate($latestFemale),
             ],
         ];

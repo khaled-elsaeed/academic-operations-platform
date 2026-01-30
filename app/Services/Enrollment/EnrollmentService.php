@@ -32,6 +32,9 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use App\Exports\GenericImportResultsExport;
 use App\Policies\FeatureAvailabilityPolicy;
 use App\Services\Enrollment\Operations\CreateEnrollmentService;
+use App\Services\Enrollment\Operations\RemainingCreditHoursService;
+use Illuminate\Database\Eloquent\Builder;
+
 
 class EnrollmentService
 {
@@ -40,12 +43,14 @@ class EnrollmentService
     protected CreditHoursExceptionService $creditHoursExceptionService;
     protected FeatureAvailabilityPolicy $featureAvailabilityPolicy;
     protected CreateEnrollmentService $createService;
+    protected RemainingCreditHoursService $remainingCreditHoursService;
 
-    public function __construct(CreditHoursExceptionService $creditHoursExceptionService, FeatureAvailabilityPolicy $featureAvailabilityPolicy,CreateEnrollmentService $createService)
+    public function __construct(CreditHoursExceptionService $creditHoursExceptionService, FeatureAvailabilityPolicy $featureAvailabilityPolicy, CreateEnrollmentService $createService, RemainingCreditHoursService $remainingCreditHoursService)
     {
         $this->creditHoursExceptionService = $creditHoursExceptionService;
         $this->featureAvailabilityPolicy = $featureAvailabilityPolicy;
         $this->createService = $createService;
+        $this->remainingCreditHoursService = $remainingCreditHoursService;
     }
 
     /**
@@ -101,46 +106,41 @@ class EnrollmentService
 
     public function getStats(): array
     {
-        $latest = Enrollment::latest('updated_at')->value('updated_at');
-        $totalEnrollments = Enrollment::count();
-        
+        $stats = Enrollment::selectRaw('
+            COUNT(*) as total,
+            COUNT(CASE WHEN grade IS NOT NULL THEN 1 END) as graded,
+            MAX(updated_at) as latest,
+            MAX(CASE WHEN grade IS NOT NULL THEN updated_at END) as graded_latest
+        ')->first();
+
         return [
             'enrollments' => [
-                'count' => formatNumber($totalEnrollments),
-                'lastUpdateTime' => formatDate($latest),
-            ]
+                'count' => formatNumber($stats->total),
+                'lastUpdateTime' => formatDate($stats->latest),
+            ],
+            'graded-enrollments' => [
+                'count' => formatNumber($stats->graded),
+                'lastUpdateTime' => formatDate($stats->graded_latest),
+            ],
         ];
     }
 
     public function getDatatable(): \Illuminate\Http\JsonResponse
     {
-        $query = Enrollment::join('students', 'enrollments.student_id', '=', 'students.id')
-            ->join('courses', 'enrollments.course_id', '=', 'courses.id')
-            ->join('terms', 'enrollments.term_id', '=', 'terms.id')
-            ->select(
-                'enrollments.*',
-                'students.name_en as student_name',
-                'students.academic_id as student_academic_id',
-                'courses.title as course_title',
-                'courses.code as course_code',
-                'terms.season as term_season',
-                'terms.year as term_year'
-            );
+        $query = Enrollment::with(['student', 'course', 'term']);
 
-        $request = request();
-
-        $this->applySearchFilters($query, $request);
+        $query = $this->applySearchFilters($query);
 
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('student', function($enrollment) {
-                return $enrollment->student_name ?? '-';
+                return $enrollment->student?->name_en ?? '-';
             })
             ->addColumn('course', function($enrollment) {
-                return $enrollment->course_title && $enrollment->course_code ? "{$enrollment->course_title} ({$enrollment->course_code})" : '-';
+                return $enrollment->course?->title && $enrollment->course?->code ? "{$enrollment->course->title} ({$enrollment->course->code})" : '-';
             })
             ->addColumn('term', function($enrollment) {
-                return $enrollment->term_season && $enrollment->term_year ? "{$enrollment->term_season} {$enrollment->term_year}" : '-';
+                return $enrollment->term?->season && $enrollment->term?->year ? "{$enrollment->term->season} {$enrollment->term->year}" : '-';
             })
             ->addColumn('grade', function($enrollment) {
                 return $enrollment->grade ?? "No Grade Yet" ;
@@ -148,66 +148,101 @@ class EnrollmentService
             ->addColumn('action', function($enrollment) {
                 return $this->renderActionButtons($enrollment);
             })
-            ->orderColumn('student', 'students.name_en $1')
-            ->orderColumn('course', 'courses.title $1')
-            ->orderColumn('term', 'terms.season $1, terms.year $1')
-            ->orderColumn('grade', 'enrollments.grade $1')
             ->rawColumns(['action'])
             ->make(true);
     }
 
-    private function applySearchFilters($query, $request): void
+    /**
+     * Apply filters.
+     *
+     * @param Builder<Enrollment> $query
+     * @return Builder<Enrollment>
+     */
+    private function applySearchFilters(Builder $query): Builder
     {
-        // Apply search filters
-        if ($request->has('search_student') && !empty($request->input('search_student'))) {
-            $searchStudent = $request->input('search_student');
-            $query->where(function($q) use ($searchStudent) {
-                $q->where('students.name_en', 'like', "%{$searchStudent}%")
-                  ->orWhere('students.academic_id', 'like', "%{$searchStudent}%");
+        if ($searchStudent = request('search_student')) {
+            $query->whereHas('student', function($q) use($searchStudent) {
+                $q->where('name_en', 'LIKE', "%{$searchStudent}%")
+                  ->orWhere('academic_id', 'LIKE', "%{$searchStudent}%");
             });
         }
-        
-        if ($request->has('search_course') && !empty($request->input('search_course'))) {
-            $searchCourse = $request->input('search_course');
-            $query->where(function($q) use ($searchCourse) {
-                $q->where('courses.title', 'like', "%{$searchCourse}%")
-                  ->orWhere('courses.code', 'like', "%{$searchCourse}%");
+
+        if ($searchCourse = request('search_course')) {
+            $query->whereHas('course', function($q) use($searchCourse) {
+                $q->where('title', 'LIKE', "%{$searchCourse}%")
+                  ->orWhere('code', 'LIKE', "%{$searchCourse}%");
             });
         }
-        
-        if ($request->has('search_term') && !empty($request->input('search_term'))) {
-            $searchTerm = $request->input('search_term');
-            $query->where(function($q) use ($searchTerm) {
-                $q->where('terms.season', 'like', "%{$searchTerm}%")
-                  ->orWhere('terms.year', 'like', "%{$searchTerm}%")
-                  ->orWhere('terms.code', 'like', "%{$searchTerm}%");
+
+        if ($searchTerm = request('search_term')) {
+            $query->whereHas('term', function($q) use($searchTerm) {
+                $q->where('season', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('year', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('code', 'LIKE', "%{$searchTerm}%");
             });
         }
-        
-        if ($request->has('search_grade') && !empty($request->input('search_grade'))) {
-            $searchGrade = $request->input('search_grade');
+
+        if ($searchGrade = request('search_grade')) {
             if ($searchGrade === 'no-grade') {
-                $query->whereNull('enrollments.grade');
+                $query->whereNull('grade');
             } else {
-                $query->where('enrollments.grade', $searchGrade);
+                $query->where('grade', $searchGrade);
             }
         }
+
+        return $query;
     }
 
-    protected function renderActionButtons($enrollment)
+    /**
+     * Render action buttons.
+     *
+     * @param Enrollment $enrollment
+     * @return string
+     */
+    protected function renderActionButtons(Enrollment $enrollment): string
     {
         $user = auth()->user();
-        $buttons = '<div class="d-flex gap-2">';
-        if ($user && $user->can('enrollment.delete')) {
-            $buttons .= '<button type="button"
-                class="btn btn-sm btn-icon btn-danger rounded-circle deleteEnrollmentBtn"
-                data-id="' . e($enrollment->id) . '"
-                title="Delete">
-                <i class="bx bx-trash"></i>
-              </button>';
+        if (!$user) {
+            return '';
         }
-        $buttons .= '</div>';
-        return trim($buttons) === '<div class="d-flex gap-2"></div>' ? '' : $buttons;
+
+        $singleActions = $this->buildSingleActions($user, $enrollment);
+
+        if (empty($singleActions)) {
+            return '';
+        }
+
+        return view('components.ui.datatable.table-actions', [
+            'mode' => 'single',
+            'actions' => [],
+            'id' => $enrollment->id,
+            'type' => 'Enrollment',
+            'singleActions' => $singleActions,
+        ])->render();
+    }
+
+    /**
+     * Build single actions.
+     *
+     * @param mixed $user
+     * @param Enrollment $enrollment
+     * @return array<int, array{action: string, icon: string, class: string, label: string, data: array}>
+     */
+    protected function buildSingleActions($user, Enrollment $enrollment): array
+    {
+        $actions = [];
+
+        if ($user->can('enrollment.delete')) {
+            $actions[] = [
+                'action' => 'delete',
+                'icon' => 'bx bx-trash',
+                'class' => 'btn-danger',
+                'label' => __('Delete'),
+                'data' => ['id' => $enrollment->id],
+            ];
+        }
+
+        return $actions;
     }
 
     public function getStudentEnrollments($studentId)
@@ -229,92 +264,10 @@ class EnrollmentService
      */
     public function getRemainingCreditHoursForStudent(int $studentId, int $termId): array
     {
-        $student = Student::findOrFail($studentId);
-        $term = Term::findOrFail($termId);
-
-        $currentEnrollmentHours = $this->getCurrentEnrollmentHours($studentId, $termId);
-
-        $maxAllowedHours = $this->getMaxCreditHours($student, $term);
-
-        $remainingHours = $maxAllowedHours - $currentEnrollmentHours;
-
-        $exceptionHours = $this->creditHoursExceptionService->getAdditionalHoursAllowed($studentId, $termId);
-
-        return [
-            'current_enrollment_hours' => $currentEnrollmentHours,
-            'max_allowed_hours' => $maxAllowedHours,
-            'remaining_hours' => max(0, $remainingHours),
-            'exception_hours' => $exceptionHours,
-            'student_cgpa' => $student->cgpa,
-            'term_season' => $term->season,
-            'term_year' => $term->year,
-        ];
+        return $this->remainingCreditHoursService->getRemainingCreditHoursForStudent($studentId, $termId);
     }
 
 
-
-    /**
-     * Get current enrollment credit hours for the student in this term
-     */
-    private function getCurrentEnrollmentHours(int $studentId, int $termId): int
-    {
-        return Enrollment::where('student_id', $studentId)
-            ->where('term_id', $termId)
-            ->join('courses', 'enrollments.course_id', '=', 'courses.id')
-            ->sum('courses.credit_hours');
-    }
-
-    /**
-     * Get the maximum allowed credit hours based on CGPA and semester
-     */
-    private function getMaxCreditHours(Student $student, Term $term): int
-    {
-        $semester = strtolower($term->season);
-        $cgpa = $student->cgpa;
-        
-        $baseHours = $this->getBaseHours($semester, $cgpa);
-        $graduationBonus = 0; // TODO: Implement graduation check logic
-        $adminException = $this->getAdminExceptionHours($student->id, $term->id);
-
-        return $baseHours + $graduationBonus + $adminException;
-    }
-
-    /**
-     * Get base credit hours based on semester and CGPA
-     */
-    private function getBaseHours(string $semester, float $cgpa): int
-    {
-        // Summer semester has fixed 9 hours regardless of CGPA
-        if ($semester === 'summer') {
-            return 9;
-        }
-
-        // Fall and Spring semesters have CGPA-based limits
-        if (in_array($semester, ['fall', 'spring'])) {
-            if ($cgpa < 2.0) {
-                return 14;
-            } elseif ($cgpa >= 2.0 && $cgpa < 3.0) {
-                return 18;
-            } elseif ($cgpa >= 3.0) {
-                return 21;
-            }
-        }
-
-        return 14;
-    }
-
-    /**
-     * Get additional hours from admin exception for this student and term
-     */
-    private function getAdminExceptionHours(int $studentId, int $termId): int
-    {
-        $exception = CreditHoursException::where('student_id', $studentId)
-            ->where('term_id', $termId)
-            ->active()
-            ->first();
-
-        return $exception ? $exception->getEffectiveAdditionalHours() : 0;
-    }
 
     public function getEnrollmentsByStudent(int $studentId): array
     {
@@ -325,78 +278,4 @@ class EnrollmentService
 
         return $enrollments;
     }
-
-     /**
-     * Get schedules for a student in a specific term.
-     *
-     * @param int $studentId
-     * @param int $termId
-     * @return array
-     */
-    public function getSchedules(int $studentId, int $termId): array
-    {    
-        $enrollmentSchedules = EnrollmentSchedule::with([
-            'enrollment.course',           
-            'availableCourseSchedule.availableCourse', 
-            'availableCourseSchedule.scheduleAssignments.scheduleSlot' 
-        ])
-        ->whereHas('enrollment', function ($query) use ($studentId, $termId) {
-            $query->where('student_id', $studentId)
-                ->where('term_id', $termId);
-        })
-        ->get();
-        
-        $schedules = [];
-    
-        foreach ($enrollmentSchedules as $enrollmentSchedule) {
-            $availableCourseSchedule = $enrollmentSchedule->availableCourseSchedule;
-            $availableCourse = $availableCourseSchedule->availableCourse;
-            $course = $enrollmentSchedule->enrollment->course;
-        
-            $scheduleSlots = $availableCourseSchedule->scheduleAssignments
-                ->pluck('scheduleSlot')
-                ->sortBy(['day_of_week', 'start_time']);
-                
-            if ($scheduleSlots->isEmpty()) {
-                \Log::warning("No schedule slots found for available course schedule: {$availableCourseSchedule->id}");
-                continue;
-            }
-            
-            $enrolledCount = EnrollmentSchedule::where('available_course_schedule_id', $availableCourseSchedule->id)->count();
-            
-            $slotsByDay = $scheduleSlots->groupBy('day_of_week');
-        
-            foreach ($slotsByDay as $dayOfWeek => $daySlotsCollection) {
-                $daySlots = $daySlotsCollection->sortBy('start_time');
-                $firstSlot = $daySlots->first();
-                $lastSlot = $daySlots->last();
-                
-                $schedules[] = [
-                    'course' => [
-                        'id' => $course->id,
-                        'name' => $course->name,
-                        'code' => $course->code,
-                        'credit_hours' => $course->credit_hours,
-                        'available_course_id' => $availableCourse->id,
-                        'remaining_capacity' => ($availableCourseSchedule->max_capacity ?? 0) - $enrolledCount,
-                    ],
-                    'activity' => [
-                        'id' => $availableCourseSchedule->id,
-                        'activity_type' => $availableCourseSchedule->activity_type,
-                        'location' => $availableCourseSchedule->location,
-                        'min_capacity' => $availableCourseSchedule->min_capacity,
-                        'max_capacity' => $availableCourseSchedule->max_capacity,
-                        'enrolled_count' => $enrolledCount,
-                        'day_of_week' => $dayOfWeek,
-                        'start_time' => \Carbon\Carbon::parse($firstSlot->start_time)->format('h:i A'),
-                        'end_time' => \Carbon\Carbon::parse($lastSlot->end_time)->format('h:i A'),
-                    ],
-                    'group' => $availableCourseSchedule->group,
-                ];
-            }
-        }
-    
-        return $schedules;
-    }
-
 }

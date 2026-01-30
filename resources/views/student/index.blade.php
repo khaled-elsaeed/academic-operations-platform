@@ -3,164 +3,104 @@
 @section('title', 'Admin Students | AcadOps')
 
 @section('page-content')
-<div class="container-xxl flex-grow-1 container-p-y">
-    
-    {{-- ===== STATISTICS CARDS ===== --}}
-    <div class="row g-4 mb-4">
-        <div class="col-sm-6 col-xl-4">
-            <x-ui.card.stat2 
-                id="students"
-                label="Total Students"
-                color="primary"
-                icon="bx bx-group"
-            />
+    <div class="container-xxl flex-grow-1 container-p-y">
+        <!-- Statistics Cards -->
+        <div class="row mb-4 g-3">
+            <div class="col-12 col-sm-6 col-lg-4">
+                <x-ui.card.stat2 color="primary" icon="bx bx-group" :label="'Total Students'" id="students" />
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4">
+                <x-ui.card.stat2 color="danger" icon="bx bx-user-plus" :label="'Total Male Students'"
+                    id="male-students" />
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4">
+                <x-ui.card.stat2 color="success" icon="bx bx-user-check" :label="'Total Female Students'"
+                    id="female-students" />
+            </div>
         </div>
-        <div class="col-sm-6 col-xl-4">
-            <x-ui.card.stat2 
-                id="male-students"
-                label="Total Male Students"
-                color="danger"
-                icon="bx bx-user-plus"
-            />
-        </div>
-        <div class="col-sm-6 col-xl-4">
-            <x-ui.card.stat2 
-                id="female-students"
-                label="Total Female Students"
-                color="success"
-                icon="bx bx-user-check"
-            />
-        </div>
-    </div>
 
-    {{-- ===== PAGE HEADER & ACTION BUTTONS ===== --}}
-    <x-ui.page-header 
-        title="Students"
-        description="Manage all student records, add new students, or import/export in bulk using the options on the right."
-        icon="bx bx-group"
-    >
-        
-        @can('student.create')
-            <button class="btn btn-primary mx-2" 
-                    id="addStudentBtn" 
-                    type="button" 
-                    data-bs-toggle="modal" 
-                    data-bs-target="#studentModal">
-                <i class="bx bx-plus me-1"></i> Add Student
-            </button>
-        @endcan
-        
-        <button class="btn btn-secondary"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#studentSearchCollapse"
-                aria-expanded="false"
-                aria-controls="studentSearchCollapse">
-            <i class="bx bx-filter-alt me-1"></i> Search
-        </button>
-        <div class="btn-group me-2">
-            <button
-                type="button"
-                class="btn btn-primary btn-icon rounded-pill dropdown-toggle hide-arrow"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-            >
-                <i class="bx bx-download"></i>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
+        <!-- Page Header -->
+        <x-ui.page-header :title="'Students'"
+            :description="'Manage all student records, add new students, or import/export in bulk using the options on the right.'" icon="bx bx-group">
+            <div class="d-flex flex-wrap gap-2">
+                @can('student.create')
+                    <button class="btn btn-primary" id="addStudentBtn">
+                        <i class="bx bx-plus"></i> Add Student
+                    </button>
+                @endcan
                 @can('student.import')
-                    <li>
-                        <a class="dropdown-item" href="javascript:void(0);" 
-                           id="importStudentsBtn"
-                           data-bs-toggle="modal"
-                           data-bs-target="#importStudentsModal">
-                            <i class="bx bx-upload me-1"></i> Import Students
-                        </a>
-                    </li>
+                    <button class="btn btn-success" id="importBtn">
+                        <i class="bx bx-upload"></i> Import
+                    </button>
                 @endcan
                 @can('student.export')
-                <li>
-                    <a class="dropdown-item" href="javascript:void(0);"
-                       id="exportStudentsBtn"
-                       data-bs-toggle="modal"
-                       data-bs-target="#exportStudentsModal">
-                        <i class="bx bx-download me-1"></i> Export Students
-                    </a>
-                </li>
+                    <button class="btn btn-info" id="exportBtn">
+                        <i class="bx bx-download"></i> Export
+                    </button>
                 @endcan
-            </ul>
-        </div>
-    </x-ui.page-header>
+                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#studentSearchCollapse">
+                    <i class="bx bx-filter-alt"></i> Filter
+                </button>
+            </div>
+        </x-ui.page-header>
 
-    {{-- ===== ADVANCED SEARCH SECTION ===== --}}
-    <x-ui.advanced-search 
-        title="Advanced Search" 
-        formId="advancedStudentSearch" 
-        collapseId="studentSearchCollapse"
-        :collapsed="false"
-    >
-        <div class="col-md-4">
-            <label for="search_name" class="form-label">Name:</label>
-            <input type="text" class="form-control" id="search_name" placeholder="Student Name">
-        </div>
-        
-        <div class="col-md-4">
-            <label for="search_national_id" class="form-label">National ID:</label>
-            <input type="text" class="form-control" id="search_national_id" placeholder="National ID">
-        </div>
-        
-        <div class="col-md-4">
-            <label for="search_academic_id" class="form-label">Academic ID:</label>
-            <input type="text" class="form-control" id="search_academic_id" placeholder="Academic ID">
-        </div>
-        
-        <div class="w-100"></div>
-        
-        <div class="col-md-4">
-            <label for="search_gender" class="form-label">Gender:</label>
-            <select class="form-control" id="search_gender">
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-            </select>
-        </div>
-        
-        <div class="col-md-4">
-            <label for="search_program" class="form-label">Program:</label>
-            <select class="form-control" id="search_program">
-                <option value="">Select Program</option>
-                <!-- Options loaded via AJAX -->
-            </select>
-        </div>
-        
-        <div class="col-md-4">
-            <label for="search_level" class="form-label">Level:</label>
-            <select class="form-control" id="search_level">
-                <option value="">Select Level</option>
-                <!-- Options loaded via AJAX -->
-            </select>
-        </div>
-        
-        <button class="btn btn-outline-secondary" id="clearFiltersBtn" type="button">
-            <i class="bx bx-x"></i> Clear Filters
-        </button>
-    </x-ui.advanced-search>
+        <!-- Advanced Search -->
+        <x-ui.advanced-search :title="'Search Students'" formId="advancedStudentSearch" collapseId="studentSearchCollapse"
+            :collapsed="true">
+            <div class="col-md-4">
+                <label for="search_name" class="form-label">Name</label>
+                <input type="text" class="form-control" id="search_name" name="search_name" placeholder="Student Name">
+            </div>
+            <div class="col-md-4">
+                <label for="search_national_id" class="form-label">National ID</label>
+                <input type="text" class="form-control" id="search_national_id" name="search_national_id"
+                    placeholder="National ID">
+            </div>
+            <div class="col-md-4">
+                <label for="search_academic_id" class="form-label">Academic ID</label>
+                <input type="text" class="form-control" id="search_academic_id" name="search_academic_id"
+                    placeholder="Academic ID">
+            </div>
+            <div class="w-100"></div>
+            <div class="col-md-4">
+                <label for="search_gender" class="form-label">Gender</label>
+                <select class="form-select" id="search_gender" name="search_gender">
+                    <option value="">All Genders</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="search_program" class="form-label">Program</label>
+                <select class="form-select" id="search_program" name="search_program">
+                    <option value="">All Programs</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="search_level" class="form-label">Level</label>
+                <select class="form-select" id="search_level" name="search_level">
+                    <option value="">All Levels</option>
+                </select>
+            </div>
+            <button class="btn btn-outline-secondary mt-2" id="clearStudentFiltersBtn" type="button">
+                <i class="bx bx-x"></i> Clear
+            </button>
+        </x-ui.advanced-search>
 
-    {{-- ===== DATA TABLE ===== --}}
-    <x-ui.datatable
-        :headers="[
-            'Name (EN)', 
-            'Name (AR)', 
-            'Academic ID', 
-            'National ID', 
-            'Academic Email', 
-            'Level', 
-            'CGPA', 
-            'Gender', 
-            'Program', 
-            'Action'
-        ]"
-        :columns="[
+        <!-- Data Table -->
+        <x-ui.datatable.table :headers="[
+            'Name (EN)',
+            'Name (AR)',
+            'Academic ID',
+            'National ID',
+            'Academic Email',
+            'Level',
+            'CGPA',
+            'Gender',
+            'Program',
+            'Actions',
+        ]" :columns="[
             ['data' => 'name_en', 'name' => 'name_en'],
             ['data' => 'name_ar', 'name' => 'name_ar'],
             ['data' => 'academic_id', 'name' => 'academic_id'],
@@ -171,1130 +111,859 @@
             ['data' => 'gender', 'name' => 'gender'],
             ['data' => 'program', 'name' => 'program', 'orderable' => false, 'searchable' => false],
             ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
-        ]"
-        :ajax-url="route('students.datatable')"
-        table-id="students-table"
-        :filter-fields="[
+        ]" :ajax-url="route('students.datatable')" :table-id="'students-table'" :filter-fields="[
             'search_name',
             'search_national_id',
             'search_academic_id',
             'search_gender',
             'search_program',
-            'search_level'
-        ]"
-    />
+            'search_level',
+        ]" />
 
-    {{-- ===== MODALS SECTION ===== --}}
-    
-    {{-- Add/Edit Student Modal --}}
-    <x-ui.modal 
-        id="studentModal"
-        title="Add/Edit Student"
-        size="lg"
-        :scrollable="true"
-        class="student-modal"
-    >
-        <x-slot name="slot">
-            <form id="studentForm">
-                <input type="hidden" id="student_id" name="student_id">
-                
-                <div class="row">
-                    {{-- Name Fields --}}
-                    <div class="col-md-6 mb-3">
-                        <label for="name_en" class="form-label">Name (EN)</label>
-                        <input type="text" class="form-control" id="name_en" name="name_en" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="name_ar" class="form-label">Name (AR)</label>
-                        <input type="text" class="form-control" id="name_ar" name="name_ar" required>
-                    </div>
-                    
-                    {{-- ID Fields --}}
-                    <div class="col-md-6 mb-3">
-                        <label for="academic_id" class="form-label">Academic ID</label>
-                        <input type="text" class="form-control" id="academic_id" name="academic_id" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="national_id" class="form-label">National ID</label>
-                        <input type="text" class="form-control" id="national_id" name="national_id" required>
-                    </div>
-                    
-                    {{-- Email and Level --}}
-                    <div class="col-md-6 mb-3">
-                        <label for="academic_email" class="form-label">Academic Email</label>
-                        <input type="email" class="form-control" id="academic_email" name="academic_email" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="level_id" class="form-label">Level</label>
-                        <select class="form-control" id="level_id" name="level_id" required>
-                            <option value="">Select Level</option>
-                            <!-- Options will be loaded via AJAX -->
-                        </select>
-                    </div>
-                    
-                    {{-- CGPA and Gender --}}
-                    <div class="col-md-6 mb-3">
-                        <label for="cgpa" class="form-label">CGPA</label>
-                        <input type="number" step="0.001" class="form-control" id="cgpa" name="cgpa" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="gender" class="form-label">Gender</label>
-                        <select class="form-control" id="gender" name="gender" required>
-                            <option value="">Select Gender</option>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                        </select>
-                    </div>
-                    
-                    {{-- Program --}}
-                    <div class="col-md-6 mb-3">
-                        <label for="program_id" class="form-label">Program</label>
-                        <select class="form-control" id="program_id" name="program_id" required>
-                            <option value="">Select Program</option>
-                            <!-- Options will be loaded via AJAX -->
-                        </select>
-                    </div>
-                </div>
-            </form>
-        </x-slot>
-        
-        <x-slot name="footer">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                Close
-            </button>
-            <button type="submit" class="btn btn-primary" id="saveStudentBtn" form="studentForm">
-                Save
-            </button>
-        </x-slot>
-    </x-ui.modal>
+        <!-- Modals -->
+        @can('student.create')
+            <!-- Add/Edit Student Modal -->
+            <x-ui.modal id="studentModal" :title="'Add/Edit Student'" size="lg" :scrollable="true" class="student-modal">
+                <x-slot name="slot">
+                    <form id="studentForm" novalidate>
+                        <input type="hidden" id="student_id" name="student_id">
 
-    {{-- Import Students Modal --}}
-    @can('student.import')
-    <x-ui.modal 
-        id="importStudentsModal"
-        title="Import Students"
-        size="md"
-        :scrollable="false"
-        class="import-students-modal"
-    >
-        <x-slot name="slot">
-            <form id="importStudentsForm" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label for="students_file" class="form-label">Upload Excel File</label>
-                    <input type="file" 
-                           class="form-control" 
-                           id="students_file" 
-                           name="students_file" 
-                           accept=".xlsx,.xls" 
-                           required>
-                </div>
-                
-                <div class="alert alert-info d-flex align-items-center justify-content-between p-3 mb-3">
-                    <div>
-                        <i class="bx bx-info-circle me-2"></i>
-                        <span class="small">Use the template for correct student data formatting.</span>
+                        <div class="row g-3">
+                            <!-- Name Fields -->
+                            <div class="col-md-6">
+                                <label for="name_en" class="form-label">Name (EN) <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name_en" name="name_en" required>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="name_ar" class="form-label">Name (AR) <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name_ar" name="name_ar" required>
+                                <div class="invalid-feedback"></div>
+                            </div>
+
+                            <!-- ID Fields -->
+                            <div class="col-md-6">
+                                <label for="academic_id" class="form-label">Academic ID <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="academic_id" name="academic_id" required>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="national_id" class="form-label">National ID <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="national_id" name="national_id" required>
+                                <div class="invalid-feedback"></div>
+                            </div>
+
+                            <!-- Email and Level -->
+                            <div class="col-md-6">
+                                <label for="academic_email" class="form-label">Academic Email <span
+                                        class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="academic_email" name="academic_email"
+                                    required>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="level_id" class="form-label">Level <span class="text-danger">*</span></label>
+                                <select class="form-select" id="level_id" name="level_id" required>
+                                    <option value="">Select Level</option>
+                                </select>
+                                <div class="invalid-feedback"></div>
+                            </div>
+
+                            <!-- CGPA and Gender -->
+                            <div class="col-md-6">
+                                <label for="cgpa" class="form-label">CGPA <span class="text-danger">*</span></label>
+                                <input type="number" step="0.001" class="form-control" id="cgpa" name="cgpa"
+                                    required>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="gender" class="form-label">Gender <span class="text-danger">*</span></label>
+                                <select class="form-select" id="gender" name="gender" required>
+                                    <option value="">Select Gender</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                </select>
+                                <div class="invalid-feedback"></div>
+                            </div>
+
+                            <!-- Program -->
+                            <div class="col-md-6">
+                                <label for="program_id" class="form-label">Program <span
+                                        class="text-danger">*</span></label>
+                                <select class="form-select" id="program_id" name="program_id" required>
+                                    <option value="">Select Program</option>
+                                </select>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                    </form>
+                </x-slot>
+                <x-slot name="footer">
+                    <div class="d-flex justify-content-between w-100">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="bx bx-x me-1"></i>Cancel
+                        </button>
+                        <button type="button" class="btn btn-primary" id="saveStudentBtn">
+                            <i class="bx bx-save me-1"></i>Save
+                        </button>
                     </div>
-                    <button type="button" 
-                            class="btn btn-sm btn-outline-primary" 
-                            id="downloadTemplateBtn">
-                        <i class="bx bx-download me-1"></i>Template
+                </x-slot>
+            </x-ui.modal>
+        @endcan
+
+        @can('student.import')
+            <!-- Import Modal -->
+            <x-ui.modal id="importModal" :title="'Import Students'" scrollable="true" class="import-modal">
+                <x-slot name="slot">
+                    <form id="importForm" enctype="multipart/form-data" novalidate>
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="d-flex align-items-center p-3 bg-light rounded">
+                                    <div class="flex-shrink-0">
+                                        <i class="bx bx-info-circle fs-2 text-primary"></i>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-1 text-primary">Import Information</h6>
+                                        <p class="mb-0 text-muted small">
+                                            Upload an Excel file to import students.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-4">
+                            <div class="col-lg-12">
+                                <!-- File Upload -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Excel File <span
+                                            class="text-danger">*</span></label>
+                                    <input type="file" class="form-control" id="import_file" name="file"
+                                        accept=".xlsx,.xls" required>
+                                    <small class="text-muted">Required: Select an Excel file (.xlsx or .xls)</small>
+                                    <div class="invalid-feedback d-block"></div>
+                                </div>
+                                <!-- Template Download -->
+                                <div class="mb-3">
+                                    <button type="button" class="btn btn-outline-primary" id="downloadTemplateBtn">
+                                        <i class="bx bx-download me-1"></i>Download Template
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </x-slot>
+                <x-slot name="footer">
+                    <div class="d-flex justify-content-between w-100">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="bx bx-x me-1"></i>Cancel
+                        </button>
+                        <button type="button" class="btn btn-success" id="submitImportBtn">
+                            <i class="bx bx-upload me-1"></i>Start Import
+                        </button>
+                    </div>
+                </x-slot>
+            </x-ui.modal>
+        @endcan
+
+        @can('student.export')
+            <!-- Export Modal -->
+            <x-ui.modal id="exportModal" :title="'Export Students'" size="md" :scrollable="false" class="export-modal">
+                <x-slot name="slot">
+                    <form id="exportForm" novalidate>
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="d-flex align-items-center p-3 bg-light rounded">
+                                    <div class="flex-shrink-0">
+                                        <i class="bx bx-info-circle fs-2 text-primary"></i>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-1 text-primary">Export Information</h6>
+                                        <p class="mb-0 text-muted small">
+                                            Select filters to export specific students or leave blank for all.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="export_program_id" class="form-label">Program</label>
+                                <select class="form-select" id="export_program_id" name="program_id">
+                                    <option value="">All Programs</option>
+                                </select>
+                                <small class="text-muted">Optional: Leave blank to export all programs</small>
+                            </div>
+                            <div class="col-12">
+                                <label for="export_level_id" class="form-label">Level</label>
+                                <select class="form-select" id="export_level_id" name="level_id">
+                                    <option value="">All Levels</option>
+                                </select>
+                                <small class="text-muted">Optional: Leave blank to export all levels</small>
+                            </div>
+                        </div>
+                    </form>
+                </x-slot>
+                <x-slot name="footer">
+                    <div class="d-flex justify-content-between w-100">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="bx bx-x me-1"></i>Cancel
+                        </button>
+                        <button type="button" class="btn btn-info" id="submitExportBtn">
+                            <i class="bx bx-download me-1"></i>Start Export
+                        </button>
+                    </div>
+                </x-slot>
+            </x-ui.modal>
+        @endcan
+
+        <!-- Download Enrollment Document Modal -->
+        <x-ui.modal id="downloadEnrollmentModal" :title="'Download Enrollment Document'" size="md" :scrollable="false"
+            class="download-enrollment-modal">
+            <x-slot name="slot">
+                <form id="downloadEnrollmentForm" novalidate>
+                    <input type="hidden" id="modal_student_id" name="student_id">
+                    <input type="hidden" id="download_type" name="download_type">
+
+                    <div class="mb-3">
+                        <label for="term_id" class="form-label">
+                            Select Term
+                            <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="term_id" name="term_id" required>
+                            <option value="">Select Term</option>
+                        </select>
+                        <small class="form-text text-muted">
+                            You must select a term to download the enrollment document.
+                        </small>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </form>
+            </x-slot>
+            <x-slot name="footer">
+                <div class="d-flex justify-content-between w-100">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bx bx-x me-1"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" id="downloadEnrollmentBtn">
+                        <i class="bx bx-download me-1"></i>Download
                     </button>
                 </div>
-            </form>
-        </x-slot>
-        
-        <x-slot name="footer">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                Close
-            </button>
-            <button type="submit" class="btn btn-success" id="importStudentsSubmitBtn" form="importStudentsForm">
-                Import
-            </button>
-        </x-slot>
-    </x-ui.modal>
-    @endcan
+            </x-slot>
+        </x-ui.modal>
 
-    {{-- Download Enrollment Document Modal --}}
-    <x-ui.modal 
-        id="downloadEnrollmentModal"
-        title="Download Enrollment Document"
-        size="md"
-        :scrollable="false"
-        class="download-enrollment-modal"
-    >
-        <x-slot name="slot">
-            <form id="downloadEnrollmentForm">
-                <input type="hidden" id="modal_student_id" name="student_id">
-                <input type="hidden" id="download_type" name="download_type">
-                
-                <div class="mb-3">
-                    <label for="term_id" class="form-label">
-                        Select Term 
-                        <span class="text-danger">(Required)</span>
-                    </label>
-                    <select class="form-control" id="term_id" name="term_id" required>
-                        <!-- Options will be loaded via AJAX -->
-                    </select>
-                    <small class="form-text text-muted">
-                        You must select a term to download the enrollment document.
-                    </small>
-                </div>
-            </form>
-        </x-slot>
-        
-        <x-slot name="footer">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                Close
-            </button>
-            <button type="button" class="btn btn-primary" id="downloadEnrollmentBtn">
-                Download
-            </button>
-        </x-slot>
-    </x-ui.modal>
-
-    {{-- Export Students Modal --}}
-    @can('student.export')
-    <x-ui.modal 
-        id="exportStudentsModal"
-        title="Export Students"
-        size="md"
-        :scrollable="false"
-        class="export-students-modal"
-    >
-        <x-slot name="slot">
-            <form id="exportStudentsForm" method="GET" action="{{ route('students.export') }}">
-                <div class="mb-3">
-                    <label for="export_program_id" class="form-label">
-                        Select Program
-                        <span class="text-muted">(Optional, leave blank for all programs)</span>
-                    </label>
-                    <select class="form-control" id="export_program_id" name="program_id">
-                        <option value="">All Programs</option>
-                        <!-- Options will be loaded via AJAX -->
-                    </select>
-                    <small class="form-text text-muted">
-                        You may leave this blank to export students for all programs.
-                    </small>
-                </div>
-                <div class="mb-3">
-                    <label for="export_level_id" class="form-label">
-                        Select Level
-                        <span class="text-muted">(Optional, leave blank for all levels)</span>
-                    </label>
-                    <select class="form-control" id="export_level_id" name="level_id">
-                        <option value="">All Levels</option>
-                        <!-- Options will be loaded via AJAX -->
-                    </select>
-                    <small class="form-text text-muted">
-                        You may leave this blank to export students for all levels.
-                    </small>
-                </div>
-                <div class="alert alert-info d-flex align-items-center justify-content-between p-3 mb-3">
-                    <div>
-                        <i class="bx bx-info-circle me-2"></i>
-                        <span class="small">Exported file will contain all student data based on your selected filters.</span>
-                    </div>
-                </div>
-            </form>
-        </x-slot>
-        <x-slot name="footer">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                Close
-            </button>
-            <button type="submit" class="btn btn-primary" id="exportStudentsSubmitBtn" form="exportStudentsForm">
-                Export
-            </button>
-        </x-slot>
-    </x-ui.modal>
-    @endcan
-</div>
+        <!-- Progress Modals -->
+        <x-progress-modal modalId="importProgressModal" modalTitle="Importing Students" />
+        <x-progress-modal modalId="exportProgressModal" modalTitle="Exporting Students" />
+    </div>
 @endsection
+
 @push('scripts')
-<script>
-/**
- * Student Management System JavaScript
- * Organized and structured for better maintainability
- * Handles CRUD operations, imports, exports, and document downloads for students
- */
+    <script src="{{ asset('js/utils.js') }}"></script>
+    <script>
+        'use strict';
 
-// ===========================
-// CONSTANTS AND CONFIGURATION
-// ===========================
+        // ===========================
+        // ROUTES CONFIGURATION
+        // ===========================
+        const ROUTES = {
+            programs: {
+                all: @json(route('programs.all'))
+            },
+            levels: {
+                all: @json(route('levels.all'))
+            },
+            terms: {
+                all: @json(route('terms.all'))
+            },
+            students: {
+                stats: @json(route('students.stats')),
+                store: @json(route('students.store')),
+                show: @json(route('students.show', ':id')),
+                destroy: @json(route('students.destroy', ':id')),
+                import: @json(route('students.import')),
+                importStatus: @json(route('students.import.status', ['uuid' => ':uuid'])),
+                importCancel: @json(route('students.import.cancel', ['uuid' => ':uuid'])),
+                importDownload: @json(route('students.import.download', ['uuid' => ':uuid'])),
+                export: @json(route('students.export')),
+                exportStatus: @json(route('students.export.status', ['uuid' => ':uuid'])),
+                exportCancel: @json(route('students.export.cancel', ['uuid' => ':uuid'])),
+                exportDownload: @json(route('students.export.download', ['uuid' => ':uuid'])),
+                template: @json(route('students.template')),
+                downloadPdf: @json(route('students.download.pdf', ':id')),
+                downloadWord: @json(route('students.download.word', ':id'))
+            }
+        };
 
-const ROUTES = {
-  programs: {
-    all: '{{ route('programs.all') }}'
-  },
-  levels: {
-    all: '{{ route('levels.all') }}'
-  },
-  terms: {
-    all: '{{ route('terms.all') }}'
-  },
-  students: {
-    stats: '{{ route('students.stats') }}',
-    store: '{{ route('students.store') }}',
-    show: '{{ route('students.show', ':id') }}',
-    destroy: '{{ route('students.destroy', ':id') }}',
-    import: '{{ route('students.import') }}',
-    export: '{{ route('students.export') }}',
-    template: '{{ route('students.template') }}',
-    downloadPdf: '{{ route('students.download.pdf', ':id') }}',
-    downloadWord: '{{ route('students.download.word', ':id') }}'
-  }
-};
+        // ===========================
+        // API SERVICE
+        // ===========================
+        const ApiService = {
+            fetchStats() {
+                return Utils.get(ROUTES.students.stats);
+            },
+            fetchPrograms() {
+                return Utils.get(ROUTES.programs.all);
+            },
+            fetchLevels() {
+                return Utils.get(ROUTES.levels.all);
+            },
+            fetchTerms() {
+                return Utils.get(ROUTES.terms.all);
+            },
+            fetchStudent(id) {
+                return Utils.get(Utils.replaceRouteId(ROUTES.students.show, id));
+            },
+            saveStudent(data, id = null) {
+                const url = id ? Utils.replaceRouteId(ROUTES.students.show, id) : ROUTES.students.store;
+                const method = id ? 'PUT' : 'POST';
+                return Utils.request(url, method, data);
+            },
+            deleteStudent(id) {
+                return Utils.delete(Utils.replaceRouteId(ROUTES.students.destroy, id));
+            }
+        };
 
-const SELECTORS = {
-  // Forms
-  studentForm: '#studentForm',
-  importForm: '#importStudentsForm',
-  exportForm: '#exportStudentsForm',
-  // Modals
-  studentModal: '#studentModal',
-  importModal: '#importStudentsModal',
-  downloadModal: '#downloadEnrollmentModal',
-  exportModal: '#exportStudentsModal',
-  // Buttons
-  addStudentBtn: '#addStudentBtn',
-  saveStudentBtn: '#saveStudentBtn',
-  importSubmitBtn: '#importStudentsSubmitBtn',
-  exportSubmitBtn: '#exportStudentsSubmitBtn',
-  downloadBtn: '#downloadEnrollmentBtn',
-  downloadTemplateBtn: '#downloadTemplateBtn',
-  clearFiltersBtn: '#clearFiltersBtn',
-  // Tables
-  studentsTable: '#students-table',
-  // Search inputs
-  searchName: '#search_name',
-  searchNationalId: '#search_national_id',
-  searchAcademicId: '#search_academic_id',
-  searchGender: '#search_gender',
-  searchProgram: '#search_program',
-  searchLevel: '#search_level'
-};
+        // ===========================
+        // MODAL MANAGERS
+        // ===========================
+        const StudentModal = Utils.createModalManager('studentModal');
+        const ImportModal = Utils.createModalManager('importModal');
+        const ExportModal = Utils.createModalManager('exportModal');
+        const DownloadEnrollmentModal = Utils.createModalManager('downloadEnrollmentModal');
 
-// ===========================
-// UTILITY FUNCTIONS
-// ===========================
-
-const Utils = {
-  showSuccess(message) {
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: message,
-      showConfirmButton: false,
-      timer: 2500,
-      timerProgressBar: true
-    });
-  },
-
-  showError(message) {
-    Swal.fire({
-      title: 'Error',
-      html: message,
-      icon: 'error'
-    });
-  },
-
-  toggleLoadingState(elementId, isLoading) {
-    const $value = $(`#${elementId}-value`);
-    const $loader = $(`#${elementId}-loader`);
-    const $updated = $(`#${elementId}-last-updated`);
-    const $updatedLoader = $(`#${elementId}-last-updated-loader`);
-
-    if (isLoading) {
-      $value.addClass('d-none');
-      $loader.removeClass('d-none');
-      $updated.addClass('d-none');
-      $updatedLoader.removeClass('d-none');
-    } else {
-      $value.removeClass('d-none');
-      $loader.addClass('d-none');
-      $updated.removeClass('d-none');
-      $updatedLoader.addClass('d-none');
-    }
-  },
-
-  replaceRouteId(route, id) {
-    return route.replace(':id', id);
-  },
-  /**
-     * Hide the page loader overlay.
-     */
-    hidePageLoader() {
-      const loader = document.getElementById('pageLoader');
-      if (loader) {
-        loader.classList.add('fade-out');
-        // Restore scrollbars when loader is hidden
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
-      }
-    }
-};
-
-// ===========================
-// API SERVICE LAYER
-// ===========================
-
-const ApiService = {
-  request(options) {
-    return $.ajax(options);
-  },
-
-  fetchPrograms() {
-    return this.request({
-      url: ROUTES.programs.all,
-      method: 'GET'
-    });
-  },
-
-  fetchLevels() {
-    return this.request({
-      url: ROUTES.levels.all,
-      method: 'GET'
-    });
-  },
-
-  fetchTerms() {
-    return this.request({
-      url: ROUTES.terms.all,
-      method: 'GET'
-    });
-  },
-
-  fetchStudentStats() {
-    return this.request({
-      url: ROUTES.students.stats,
-      method: 'GET'
-    });
-  },
-
-  fetchStudent(id) {
-    return this.request({
-      url: Utils.replaceRouteId(ROUTES.students.show, id),
-      method: 'GET'
-    });
-  },
-
-  saveStudent(data, id = null) {
-    const url = id ? Utils.replaceRouteId(ROUTES.students.show, id) : ROUTES.students.store;
-    const method = id ? 'PUT' : 'POST';
-    
-    return this.request({
-      url: url,
-      method: method,
-      data: data
-    });
-  },
-
-  deleteStudent(id) {
-    return this.request({
-      url: Utils.replaceRouteId(ROUTES.students.destroy, id),
-      method: 'DELETE'
-    });
-  },
-
-  importStudents(formData) {
-    return this.request({
-      url: ROUTES.students.import,
-      method: 'POST',
-      data: formData,
-      processData: false,
-      contentType: false
-    });
-  },
-
-  exportStudents(queryParams) {
-    return this.request({
-      url: `${ROUTES.students.export}?${queryParams}`,
-      method: 'GET',
-      xhrFields: {
-        responseType: 'blob'
-      }
-    });
-  },
-
-  downloadDocument(studentId, type, termId) {
-    let url;
-    switch (type) {
-      case 'pdf':
-        url = Utils.replaceRouteId(ROUTES.students.downloadPdf, studentId);
-        break;
-      case 'word':
-        url = Utils.replaceRouteId(ROUTES.students.downloadWord, studentId);
-        break;
-      default:
-        url = '/enrollment/download/' + studentId;
-    }
-
-    if (termId) {
-      url += '?term_id=' + termId;
-    }
-
-    return this.request({
-      url: url,
-      method: 'GET',
-      dataType: 'json'
-    });
-  },
-
-  downloadTemplate() {
-    return this.request({
-      url: ROUTES.students.template,
-      method: 'GET',
-      xhrFields: {
-        responseType: 'blob'
-      }
-    });
-  }
-};
-
-// ===========================
-// DROPDOWN MANAGEMENT
-// ===========================
-
-const DropdownManager = {
-  loadPrograms(selector = '#program_id', selectedId = null) {
-    return ApiService.fetchPrograms()
-      .done((response) => {
-        const programs = response.data || response || [];
-        const $select = $(selector);
-        $select.empty().append('<option value="">Select Program</option>');
-        programs.forEach((program) => {
-          $select.append($('<option>', { value: program.id, text: program.name }));
+        // ===========================
+        // STATS MANAGER
+        // ===========================
+        const StatsManager = Utils.createStatsManager({
+            apiMethod: ApiService.fetchStats,
+            statsKeys: ['students', 'male-students', 'female-students']
         });
-        if (selectedId) {
-          $select.val(selectedId);
-        }
-        $select.trigger('change');
-      })
-      .fail(() => {
-        Utils.showError('Failed to load programs');
-      });
-  },
 
-  loadLevels(selector = '#level_id', selectedId = null) {
-    return ApiService.fetchLevels()
-      .done((response) => {
-        const levels = response.data || response || [];
-        const $select = $(selector);
-        $select.empty().append('<option value="">Select Level</option>');
-        levels.forEach((level) => {
-          $select.append($('<option>', { value: level.id, text: level.name }));
+        // ===========================
+        // SELECT2 MANAGER
+        // ===========================
+        const Select2Manager = {
+            init() {
+                // Search filters
+                Utils.initSelect2('#search_gender, #search_program, #search_level', {
+                    placeholder: function() {
+                        const id = $(this).attr('id');
+                        if (id === 'search_gender') return 'All Genders';
+                        if (id === 'search_program') return 'All Programs';
+                        if (id === 'search_level') return 'All Levels';
+                        return '';
+                    },
+                    allowClear: true,
+                    dropdownParent: $('#studentSearchCollapse')
+                });
+
+                // Student modal
+                Utils.initSelect2('#studentModal select', {
+                    placeholder: function() {
+                        const id = $(this).attr('id');
+                        if (id === 'level_id') return 'Select Level';
+                        if (id === 'gender') return 'Select Gender';
+                        if (id === 'program_id') return 'Select Program';
+                        return '';
+                    },
+                    allowClear: true,
+                    dropdownParent: $('#studentModal')
+                });
+
+                // Download enrollment modal
+                Utils.initSelect2('#downloadEnrollmentModal #term_id', {
+                    placeholder: 'Select Term',
+                    allowClear: true,
+                    dropdownParent: $('#downloadEnrollmentModal')
+                });
+
+                // Export modal
+                Utils.initSelect2('#exportModal select', {
+                    placeholder: function() {
+                        const id = $(this).attr('id');
+                        if (id === 'export_program_id') return 'All Programs';
+                        if (id === 'export_level_id') return 'All Levels';
+                        return '';
+                    },
+                    allowClear: true,
+                    dropdownParent: $('#exportModal')
+                });
+            },
+
+            async loadPrograms(selector = '#program_id', selectedId = null) {
+                try {
+                    const response = await ApiService.fetchPrograms();
+                    if (Utils.isResponseSuccess(response)) {
+                        const programs = Utils.getResponseData(response);
+                        Utils.populateSelect(selector, programs, {
+                            valueField: 'id',
+                            textField: 'name',
+                            placeholder: ''
+                        }, true);
+                        if (selectedId) {
+                            $(selector).val(selectedId).trigger('change');
+                        }
+                    }
+                } catch (error) {
+                    Utils.handleError(error);
+                }
+            },
+
+            async loadLevels(selector = '#level_id', selectedId = null) {
+                try {
+                    const response = await ApiService.fetchLevels();
+                    if (Utils.isResponseSuccess(response)) {
+                        const levels = Utils.getResponseData(response);
+                        Utils.populateSelect(selector, levels, {
+                            valueField: 'id',
+                            textField: 'name',
+                            placeholder: ''
+                        }, true);
+                        if (selectedId) {
+                            $(selector).val(selectedId).trigger('change');
+                        }
+                    }
+                } catch (error) {
+                    Utils.handleError(error);
+                }
+            },
+
+            async loadTerms(selector = '#term_id', selectedId = null) {
+                try {
+                    const response = await ApiService.fetchTerms();
+                    if (Utils.isResponseSuccess(response)) {
+                        const terms = Utils.getResponseData(response);
+                        Utils.populateSelect(selector, terms, {
+                            valueField: 'id',
+                            textField: 'name',
+                            placeholder: ''
+                        }, true);
+                        if (selectedId) {
+                            $(selector).val(selectedId).trigger('change');
+                        }
+                    }
+                } catch (error) {
+                    Utils.handleError(error);
+                }
+            }
+        };
+
+        // ===========================
+        // TEMPLATE MANAGER
+        // ===========================
+        const TemplateManager = {
+            init() {
+                $('#downloadTemplateBtn').on('click', async () => {
+                    const $btn = $('#downloadTemplateBtn');
+
+                    Utils.setLoadingState($btn, true, {
+                        loadingText: 'Downloading...'
+                    });
+
+                    try {
+                        const response = await $.ajax({
+                            url: ROUTES.students.template,
+                            method: 'GET',
+                            xhrFields: {
+                                responseType: 'blob'
+                            }
+                        });
+
+                        const blob = new Blob([response], {
+                            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                        });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'students_template.xlsx';
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+
+                        Utils.showSuccess('Template downloaded successfully!');
+                    } catch (error) {
+                        Utils.showError('Failed to download template');
+                    } finally {
+                        Utils.setLoadingState($btn, false);
+                    }
+                });
+            }
+        };
+
+        // ===========================
+        // IMPORT TASK MANAGER
+        // ===========================
+        const ImportTaskManager = Utils.createAsyncTaskManager({
+            startRoute: ROUTES.students.import,
+            checkStatusRoute: ROUTES.students.importStatus,
+            cancelRoute: ROUTES.students.importCancel,
+            downloadRoute: ROUTES.students.importDownload,
+            progressModalId: 'importProgressModal',
+            taskName: 'Students Import',
+            onStart() {
+                ImportModal.hide();
+            },
+            onComplete() {
+                Utils.reloadDataTable('students-table');
+                StatsManager.refresh();
+            },
+            completionFields: [{
+                    key: 'processed',
+                    label: 'Records Processed',
+                    type: 'number'
+                },
+                {
+                    key: 'created',
+                    label: 'Records Created',
+                    type: 'number'
+                },
+                {
+                    key: 'updated',
+                    label: 'Records Updated',
+                    type: 'number'
+                },
+                {
+                    key: 'skipped',
+                    label: 'Records Skipped',
+                    type: 'number'
+                }
+            ],
+            translations: {
+                processing: 'The import is being processed. This may take a few minutes.',
+                taskInitializing: 'The import task is initializing.',
+                taskPreparing: 'The import task is preparing the data.',
+                taskCompleted: 'The import task has completed.',
+                taskFailed: 'The import task has failed.',
+                statusCheckFailed: 'Failed to check the status of the import task.'
+            }
         });
-        if (selectedId) {
-          $select.val(selectedId);
-        }
-        $select.trigger('change');
-      })
-      .fail(() => {
-        Utils.showError('Failed to load levels');
-      });
-  },
 
-  loadTerms(selector = '#term_id', selectedId = null) {
-    return ApiService.fetchTerms()
-      .done((response) => {
-        const terms = response.data || response || [];
-        const $select = $(selector);
-        $select.empty().append('<option value="">Select Term</option>');
-        terms.forEach((term) => {
-          $select.append($('<option>', { value: term.id, text: term.name }));
+        // ===========================
+        // EXPORT TASK MANAGER
+        // ===========================
+        const ExportTaskManager = Utils.createAsyncTaskManager({
+            startRoute: ROUTES.students.export,
+            checkStatusRoute: ROUTES.students.exportStatus,
+            cancelRoute: ROUTES.students.exportCancel,
+            downloadRoute: ROUTES.students.exportDownload,
+            progressModalId: 'exportProgressModal',
+            taskName: 'Students Export',
+            onStart() {
+                ExportModal.hide();
+            },
+            completionFields: [{
+                key: 'total',
+                label: 'Total Records Exported',
+                type: 'number'
+            }],
+            translations: {
+                processing: 'The export is being processed. This may take a few minutes.',
+                taskInitializing: 'The export task is initializing.',
+                taskPreparing: 'The export task is preparing the data.',
+                taskCompleted: 'The export task has completed.',
+                taskFailed: 'The export task has failed.',
+                statusCheckFailed: 'Failed to check the status of the export task.'
+            }
         });
-        if (selectedId) {
-          $select.val(selectedId);
-        }
-        $select.trigger('change');
-      })
-      .fail(() => {
-        Utils.showError('Failed to load terms');
-      });
-  }
-};
 
-// ===========================
-// EXPORT FUNCTIONALITY
-// ===========================
+        // ===========================
+        // IMPORT MANAGER
+        // ===========================
+        const ImportManager = {
+            init() {
+                $('#importBtn').on('click', () => {
+                    $('#importForm')[0].reset();
+                    ImportModal.show();
+                });
 
-const ExportManager = {
-  handleExportStudents() {
-    $(SELECTORS.exportModal).on('show.bs.modal', () => {
-      DropdownManager.loadPrograms('#export_program_id');
-      DropdownManager.loadLevels('#export_level_id');
-    });
+                $('#submitImportBtn').on('click', () => {
+                    const fileInput = $('#import_file')[0];
+                    if (!fileInput.files[0]) {
+                        Utils.showValidationError('#import_file', 'Please select a file to import');
+                        return;
+                    }
 
-    $(SELECTORS.exportForm).on('submit', function (e) {
-      e.preventDefault();
+                    const formData = new FormData();
+                    formData.append('file', fileInput.files[0]);
 
-      const $form = $(this);
-      const programId = $form.find('#export_program_id').val();
-      const levelId = $form.find('#export_level_id').val();
-      const $submitBtn = $(SELECTORS.exportSubmitBtn);
+                    ImportTaskManager.start(formData, {
+                        button: $('#submitImportBtn')
+                    });
+                });
+            }
+        };
 
-      $submitBtn.prop('disabled', true).text('Exporting...');
+        // ===========================
+        // EXPORT MANAGER
+        // ===========================
+        const ExportManager = {
+            init() {
+                $('#exportBtn').on('click', () => {
+                    $('#exportForm')[0].reset();
+                    Select2Manager.loadPrograms('#export_program_id');
+                    Select2Manager.loadLevels('#export_level_id');
+                    ExportModal.show();
+                });
 
-      const queryParams = new URLSearchParams();
-      if (programId) queryParams.append('program_id', programId);
-      if (levelId) queryParams.append('level_id', levelId);
+                $('#submitExportBtn').on('click', () => {
+                    const formData = new FormData($('#exportForm')[0]);
 
-      ApiService.exportStudents(queryParams.toString())
-        .done((response) => {
-          const blob = new Blob([response], {
-            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-          });
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'students_' + new Date().toISOString().replace(/[-:T]/g, '').slice(0, 15) + '.xlsx';
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
+                    ExportTaskManager.start(formData, {
+                        button: $('#submitExportBtn')
+                    });
+                });
+            }
+        };
 
-          $(SELECTORS.exportModal).modal('hide');
-          Utils.showSuccess('Students exported successfully!');
-        })
-        .fail((xhr) => {
-          const response = xhr.responseJSON || {};
-          let message = response.message || 'Export failed. Please check your input.';
-          if (response.errors) {
-            const errorMessages = [];
-            Object.keys(response.errors).forEach(field => {
-              if (Array.isArray(response.errors[field])) {
-                errorMessages.push(...response.errors[field]);
-              } else {
-                errorMessages.push(response.errors[field]);
-              }
-            });
-            message = errorMessages.join('<br>');
-          }
-          Utils.showError(message);
-        })
-        .always(() => {
-          $submitBtn.prop('disabled', false).text('Export');
+        // ===========================
+        // STUDENT CRUD MANAGER
+        // ===========================
+        const StudentManager = {
+            init() {
+                this.handleAdd();
+                this.handleEdit();
+                this.handleDelete();
+                this.handleSave();
+            },
+
+            handleAdd() {
+                $('#addStudentBtn').on('click', () => {
+                    $('#studentForm')[0].reset();
+                    $('#student_id').val('');
+                    Utils.clearValidationErrors('#studentForm');
+
+                    $('#studentModal .modal-title').text('Add Student');
+                    $('#saveStudentBtn').html('<i class="bx bx-save me-1"></i>Save');
+
+                    Select2Manager.loadPrograms();
+                    Select2Manager.loadLevels();
+
+                    StudentModal.show();
+                });
+            },
+
+            handleEdit() {
+                $(document).on('click', '.editStudentBtn', async (e) => {
+                    const id = Utils.getElementData(e.currentTarget, ['id']);
+
+                    try {
+                        const response = await ApiService.fetchStudent(id);
+                        if (Utils.isResponseSuccess(response)) {
+                            const student = Utils.getResponseData(response);
+
+                            $('#student_id').val(student.id);
+                            $('#name_en').val(student.name_en);
+                            $('#name_ar').val(student.name_ar);
+                            $('#academic_id').val(student.academic_id);
+                            $('#national_id').val(student.national_id);
+                            $('#academic_email').val(student.academic_email);
+                            $('#cgpa').val(student.cgpa);
+                            $('#gender').val(student.gender).trigger('change');
+
+                            await Select2Manager.loadPrograms('#program_id', student.program_id);
+                            await Select2Manager.loadLevels('#level_id', student.level_id);
+
+                            $('#studentModal .modal-title').text('Edit Student');
+                            $('#saveStudentBtn').html('<i class="bx bx-save me-1"></i>Update');
+
+                            StudentModal.show();
+                        }
+                    } catch (error) {
+                        Utils.handleError(error);
+                    }
+                });
+            },
+
+            handleDelete() {
+                $(document).on('click', '.deleteStudentBtn', async (e) => {
+                    const id = Utils.getElementData(e.currentTarget, ['id']);
+                    const {
+                        isConfirmed
+                    } = await Utils.showConfirmDialog({
+                        title: 'Are you sure?',
+                        text: "You won't be able to revert this!",
+                        confirmButtonText: 'Yes, delete it!'
+                    });
+
+                    if (isConfirmed) {
+                        try {
+                            const response = await ApiService.deleteStudent(id);
+                            Utils.reloadDataTable('students-table');
+                            Utils.showSuccess(response.message || 'Student has been deleted.');
+                            StatsManager.refresh();
+                        } catch (error) {
+                            Utils.handleError(error);
+                        }
+                    }
+                });
+            },
+
+            handleSave() {
+                $('#saveStudentBtn').on('click', async () => {
+                    Utils.clearValidationErrors('#studentForm');
+
+                    const studentId = $('#student_id').val();
+                    const formData = Utils.serializeForm('#studentForm');
+                    const $btn = $('#saveStudentBtn');
+
+                    Utils.setLoadingState($btn, true, {
+                        loadingText: studentId ? 'Updating...' : 'Saving...'
+                    });
+
+                    try {
+                        const response = await ApiService.saveStudent(formData, studentId || null);
+
+                        if (Utils.isResponseSuccess(response)) {
+                            StudentModal.hide();
+                            Utils.reloadDataTable('students-table');
+                            Utils.showSuccess(response.message || 'Student has been saved successfully.');
+                            StatsManager.refresh();
+                        }
+                    } catch (error) {
+                        if (error.status === 422) {
+                            Utils.displayValidationErrors(error.responseJSON.errors, '#studentForm');
+                        } else {
+                            Utils.handleError(error);
+                        }
+                    } finally {
+                        Utils.setLoadingState($btn, false);
+                    }
+                });
+            }
+        };
+
+        // ===========================
+        // DOWNLOAD MANAGER
+        // ===========================
+        const DownloadManager = {
+            init() {
+                this.handleDownloadEnrollment();
+                this.handleDownloadPdf();
+                this.handleDownloadWord();
+                this.handleDownloadProcess();
+            },
+
+            handleDownloadEnrollment() {
+                $(document).on('click', '.downloadEnrollmentBtn', function() {
+                    const studentId = $(this).data('id');
+                    DownloadManager.setupDownloadModal(studentId, 'legacy', 'Download Enrollment Document');
+                });
+            },
+
+            handleDownloadPdf() {
+                $(document).on('click', '.downloadPdfBtn', function(e) {
+                    e.preventDefault();
+                    const studentId = $(this).data('id');
+                    DownloadManager.setupDownloadModal(studentId, 'pdf', 'Download Enrollment as PDF');
+                });
+            },
+
+            handleDownloadWord() {
+                $(document).on('click', '.downloadWordBtn', function(e) {
+                    e.preventDefault();
+                    const studentId = $(this).data('id');
+                    DownloadManager.setupDownloadModal(studentId, 'word', 'Download Enrollment as Word');
+                });
+            },
+
+            setupDownloadModal(studentId, downloadType, modalTitle) {
+                $('#modal_student_id').val(studentId);
+                $('#download_type').val(downloadType);
+
+                Select2Manager.loadTerms('#term_id').then(() => {
+                    $('#downloadEnrollmentModal .modal-title').text(modalTitle);
+                    DownloadEnrollmentModal.show();
+                });
+            },
+
+            handleDownloadProcess() {
+                $('#downloadEnrollmentBtn').on('click', async () => {
+                    const studentId = $('#modal_student_id').val();
+                    const termId = $('#term_id').val();
+                    const downloadType = $('#download_type').val();
+
+                    if (!termId) {
+                        Utils.showValidationError('#term_id', 'Please select a term.');
+                        return;
+                    }
+
+                    DownloadEnrollmentModal.hide();
+
+                    const $loadingSwal = Swal.fire({
+                        title: 'Generating Document...',
+                        text: 'Please wait while we prepare your document.',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        willOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    try {
+                        let url;
+                        switch (downloadType) {
+                            case 'pdf':
+                                url = Utils.replaceRouteId(ROUTES.students.downloadPdf, studentId);
+                                break;
+                            case 'word':
+                                url = Utils.replaceRouteId(ROUTES.students.downloadWord, studentId);
+                                break;
+                            default:
+                                url = '/enrollment/download/' + studentId;
+                        }
+
+                        url += '?term_id=' + termId;
+
+                        const response = await Utils.get(url);
+
+                        if (response.url) {
+                            window.open(response.url, '_blank');
+                            Swal.close();
+                        } else {
+                            Utils.showError('Invalid response from server.');
+                        }
+                    } catch (error) {
+                        Swal.close();
+                        Utils.handleError(error);
+                    }
+                });
+            }
+        };
+
+        // ===========================
+        // SEARCH MANAGER
+        // ===========================
+        const SearchManager = Utils.createSearchManager({
+            searchFields: ['#search_name', '#search_national_id', '#search_academic_id', '#search_gender',
+                '#search_program', '#search_level'
+            ],
+            clearButtonId: '#clearStudentFiltersBtn',
+            tableId: '#students-table',
+            debounceDelay: 500
         });
-    });
-  }
-};
 
-// ===========================
-// STATISTICS MANAGEMENT
-// ===========================
-
-const StatsManager = {
-  loadStudentStats() {
-    Utils.toggleLoadingState('students', true);
-    Utils.toggleLoadingState('male-students', true);
-    Utils.toggleLoadingState('female-students', true);
-    
-    ApiService.fetchStudentStats()
-      .done((response) => {
-        const data = response.data;
-        
-        $('#students-value').text(data.students?.total ?? '--');
-        $('#students-last-updated').text(data.students?.lastUpdateTime ?? '--');
-        $('#male-students-value').text(data.maleStudents?.total ?? '--');
-        $('#male-students-last-updated').text(data.maleStudents?.lastUpdateTime ?? '--');
-        $('#female-students-value').text(data.femaleStudents?.total ?? '--');
-        $('#female-students-last-updated').text(data.femaleStudents?.lastUpdateTime ?? '--');
-        
-        Utils.toggleLoadingState('students', false);
-        Utils.toggleLoadingState('male-students', false);
-        Utils.toggleLoadingState('female-students', false);
-      })
-      .fail(() => {
-        $('#students-value, #male-students-value, #female-students-value').text('N/A');
-        $('#students-last-updated, #male-students-last-updated, #female-students-last-updated').text('N/A');
-        
-        Utils.toggleLoadingState('students', false);
-        Utils.toggleLoadingState('male-students', false);
-        Utils.toggleLoadingState('female-students', false);
-        
-        Utils.showError('Failed to load student statistics');
-      });
-  }
-};
-
-// ===========================
-// STUDENT CRUD OPERATIONS
-// ===========================
-
-const StudentManager = {
-  handleAddStudent() {
-    $(SELECTORS.addStudentBtn).on('click', () => {
-      $(SELECTORS.studentForm)[0].reset();
-      $('#student_id').val('');
-      
-      $(SELECTORS.studentModal + ' .modal-title').text('Add Student');
-      $(SELECTORS.saveStudentBtn).text('Save');
-      
-      DropdownManager.loadPrograms();
-      DropdownManager.loadLevels();
-      
-      $(SELECTORS.studentModal).modal('show');
-    });
-  },
-
-  handleStudentFormSubmit() {
-    $(SELECTORS.studentForm).on('submit', (e) => {
-      e.preventDefault();
-      
-      const studentId = $('#student_id').val();
-      const formData = $(SELECTORS.studentForm).serialize();
-      
-      const $submitBtn = $(SELECTORS.saveStudentBtn);
-      const originalText = $submitBtn.text();
-      $submitBtn.prop('disabled', true).text('Saving...');
-      
-      ApiService.saveStudent(formData, studentId || null)
-        .done(() => {
-          $(SELECTORS.studentModal).modal('hide');
-          $(SELECTORS.studentsTable).DataTable().ajax.reload(null, false);
-          Utils.showSuccess('Student has been saved successfully.');
-          StatsManager.loadStudentStats();
-        })
-        .fail((xhr) => {
-          const message = xhr.responseJSON?.message || 'An error occurred. Please check your input.';
-          Utils.showError(message);
-        })
-        .always(() => {
-          $submitBtn.prop('disabled', false).text(originalText);
+        // ===========================
+        // INITIALIZATION
+        // ===========================
+        $(() => {
+            StatsManager.init();
+            Select2Manager.init();
+            Select2Manager.loadPrograms('#search_program');
+            Select2Manager.loadLevels('#search_level');
+            SearchManager.init();
+            StudentManager.init();
+            ImportManager.init();
+            ExportManager.init();
+            TemplateManager.init();
+            DownloadManager.init();
+            ImportTaskManager.init();
+            ExportTaskManager.init();
+            Utils.hidePageLoader();
         });
-    });
-  },
-
-  handleEditStudent() {
-    $(document).on('click', '.editStudentBtn', function () {
-      const studentId = $(this).data('id');
-      
-      ApiService.fetchStudent(studentId)
-        .done((student) => {
-          $('#student_id').val(student.id);
-          $('#name_en').val(student.name_en);
-          $('#name_ar').val(student.name_ar);
-          $('#academic_id').val(student.academic_id);
-          $('#national_id').val(student.national_id);
-          $('#academic_email').val(student.academic_email);
-          $('#cgpa').val(student.cgpa);
-          $('#gender').val(student.gender).trigger('change');
-          
-          DropdownManager.loadPrograms('#program_id', student.program_id);
-          DropdownManager.loadLevels('#level_id', student.level_id);
-          
-          $(SELECTORS.studentModal + ' .modal-title').text('Edit Student');
-          $(SELECTORS.saveStudentBtn).text('Update');
-          $(SELECTORS.studentModal).modal('show');
-        })
-        .fail(() => {
-          Utils.showError('Failed to fetch student data.');
-        });
-    });
-  },
-
-  handleDeleteStudent() {
-    $(document).on('click', '.deleteStudentBtn', function () {
-      const studentId = $(this).data('id');
-      
-      Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          ApiService.deleteStudent(studentId)
-            .done(() => {
-              $(SELECTORS.studentsTable).DataTable().ajax.reload(null, false);
-              Utils.showSuccess('Student has been deleted.');
-              StatsManager.loadStudentStats();
-            })
-            .fail(() => {
-              Utils.showError('Failed to delete student.');
-            });
-        }
-      });
-    });
-  }
-};
-
-// ===========================
-// IMPORT FUNCTIONALITY
-// ===========================
-
-const ImportManager = {
-  handleImportStudents() {
-    $(SELECTORS.importForm).on('submit', (e) => {
-      e.preventDefault();
-      
-      const formData = new FormData(e.target);
-      const $submitBtn = $(SELECTORS.importSubmitBtn);
-      
-      $submitBtn.prop('disabled', true).text('Importing...');
-      
-      ApiService.importStudents(formData)
-        .done((response) => {
-          $(SELECTORS.importModal).modal('hide');
-          $(SELECTORS.studentsTable).DataTable().ajax.reload(null, false);
-          
-          Utils.showSuccess(response.message);
-          
-          if (response.data?.errors?.length > 0) {
-            this.showImportErrors(response.data.errors, response.data.imported_count);
-          }
-          
-          StatsManager.loadStudentStats();
-        })
-        .fail((xhr) => {
-          const response = xhr.responseJSON;
-          
-          if (response?.errors && Object.keys(response.errors).length > 0) {
-            const errorMessages = [];
-            Object.keys(response.errors).forEach(field => {
-              if (Array.isArray(response.errors[field])) {
-                errorMessages.push(...response.errors[field]);
-              } else {
-                errorMessages.push(response.errors[field]);
-              }
-            });
-            Utils.showError(errorMessages.join('<br>'));
-          } else {
-            const message = response?.message || 'Import failed. Please check your file.';
-            Utils.showError(message);
-          }
-        })
-        .always(() => {
-          $submitBtn.prop('disabled', false).text('Import');
-        });
-    });
-  },
-
-  showImportErrors(errors, importedCount) {
-    let errorHtml = '<div class="text-start">';
-    errorHtml += `<p class="mb-3"><strong>Successfully imported: ${importedCount} students</strong></p>`;
-    errorHtml += '<p class="mb-3"><strong>Errors found:</strong></p>';
-    
-    errorHtml += '<div class="table-responsive" style="max-height:400px; overflow-y:auto;">';
-    errorHtml += '<table class="table table-sm table-bordered table-striped mb-0">';
-    errorHtml += '<thead>';
-    errorHtml += '<tr>';
-    errorHtml += '<th style="width: 80px;">Row #</th>';
-    errorHtml += '<th style="width: 200px;">Error</th>';
-    errorHtml += '<th>Original Data</th>';
-    errorHtml += '</tr>';
-    errorHtml += '</thead>';
-    errorHtml += '<tbody>';
-    errors.forEach((error) => {
-      let errorMessages = '';
-      if (Array.isArray(error.errors)) {
-        errorMessages = error.errors.join('<br>');
-      } else if (typeof error.errors === 'object') {
-        Object.keys(error.errors).forEach((field) => {
-          const fieldErrors = error.errors[field];
-          if (Array.isArray(fieldErrors)) {
-            errorMessages += fieldErrors.join('<br>') + '<br>';
-          } else if (typeof fieldErrors === 'string') {
-            errorMessages += fieldErrors + '<br>';
-          } else {
-            errorMessages += String(fieldErrors) + '<br>';
-          }
-        });
-      } else {
-        errorMessages = String(error.errors);
-      }
-      
-      let originalDataHtml = '';
-      if (error.original_data) {
-        originalDataHtml = '<div class="small">';
-        Object.keys(error.original_data).forEach((key) => {
-          const value = error.original_data[key];
-          const displayValue = value === null || value === undefined ? '<em class="text-muted">null</em>' : value;
-          originalDataHtml += `<strong>${key}:</strong> ${displayValue}<br>`;
-        });
-        originalDataHtml += '</div>';
-      }
-      
-      errorHtml += '<tr>';
-      errorHtml += `<td class="text-center fw-bold">${error.row}</td>`;
-      errorHtml += `<td class="text-danger small">${errorMessages}</td>`;
-      errorHtml += `<td class="small">${originalDataHtml}</td>`;
-      errorHtml += '</tr>';
-    });
-    
-    errorHtml += '</tbody>';
-    errorHtml += '</table>';
-    errorHtml += '</div>';
-    
-    Swal.fire({
-      title: 'Import Completed with Errors',
-      html: errorHtml,
-      icon: 'warning',
-      confirmButtonText: 'OK',
-      width: '800px',
-      customClass: {
-        popup: 'swal-wide'
-      }
-    });
-  }
-};
-
-// ===========================
-// TEMPLATE DOWNLOAD FUNCTIONALITY
-// ===========================
-
-const TemplateDownloadManager = {
-  handleTemplateDownload() {
-    $(SELECTORS.downloadTemplateBtn).on('click', () => {
-      const $btn = $(SELECTORS.downloadTemplateBtn);
-      const originalText = $btn.html();
-      
-      $btn.prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i>Downloading...');
-      
-      ApiService.downloadTemplate()
-        .done((response) => {
-          const blob = new Blob([response], { 
-            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-          });
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'students_template.xlsx';
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-          
-          Utils.showSuccess('Template downloaded successfully!');
-        })
-        .fail((xhr) => {
-          const message = xhr.responseJSON?.message || 'Failed to download template.';
-          Utils.showError(message);
-        })
-        .always(() => {
-          $btn.prop('disabled', false).html(originalText);
-        });
-    });
-  }
-};
-
-// ===========================
-// DOWNLOAD FUNCTIONALITY
-// ===========================
-
-const DownloadManager = {
-  handleDownloadEnrollment() {
-    $(document).on('click', '.downloadEnrollmentBtn', function() {
-      const studentId = $(this).data('id');
-      DownloadManager.setupDownloadModal(studentId, 'legacy', 'Download Enrollment Document');
-    });
-  },
-
-  handleDownloadPdf() {
-    $(document).on('click', '.downloadPdfBtn', function(e) {
-      e.preventDefault();
-      const studentId = $(this).data('id');
-      DownloadManager.setupDownloadModal(studentId, 'pdf', 'Download Enrollment as PDF');
-    });
-  },
-
-  handleDownloadWord() {
-    $(document).on('click', '.downloadWordBtn', function(e) {
-      e.preventDefault();
-      const studentId = $(this).data('id');
-      DownloadManager.setupDownloadModal(studentId, 'word', 'Download Enrollment as Word');
-    });
-  },
-
-  setupDownloadModal(studentId, downloadType, modalTitle) {
-    $('#modal_student_id').val(studentId);
-    $('#download_type').val(downloadType);
-    
-    DropdownManager.loadTerms('#term_id').done(() => {
-      $(SELECTORS.downloadModal + ' .modal-title').text(modalTitle);
-      $(SELECTORS.downloadModal).modal('show');
-    });
-  },
-
-  handleDownloadProcess() {
-    $(SELECTORS.downloadBtn).on('click', () => {
-      const studentId = $('#modal_student_id').val();
-      const termId = $('#term_id').val();
-      const downloadType = $('#download_type').val();
-
-      if (!downloadType) {
-        Utils.showError('Please select a download type.');
-        return;
-      }
-
-      if (!termId) {
-        Utils.showError('Please select a term.');
-        return;
-      }
-
-      $(SELECTORS.downloadModal).modal('hide');
-
-      Swal.fire({
-        title: 'Generating Document...',
-        text: 'Please wait while we prepare your document.',
-        allowOutsideClick: false,
-        showConfirmButton: false,
-        willOpen: () => {
-          Swal.showLoading();
-        }
-      });
-
-      ApiService.downloadDocument(studentId, downloadType, termId)
-        .done((response) => {
-          if (response.url) {
-            window.open(response.url, '_blank');
-          Swal.close();
-          } else {
-            Utils.showError('Invalid response from server.');
-          }
-        })
-        .fail((xhr) => {
-          Swal.close();
-          const message = xhr.responseJSON?.message || 'Failed to generate document.';
-          Utils.showError(message);
-        });
-    });
-  }
-};
-
-// ===========================
-// SEARCH FUNCTIONALITY
-// ===========================
-
-const SearchManager = {
-  initializeAdvancedSearch() {
-    this.initSearchSelect2();
-    
-    DropdownManager.loadPrograms(SELECTORS.searchProgram);
-    DropdownManager.loadLevels(SELECTORS.searchLevel);
-    
-    this.bindSearchEvents();
-  },
-
-  initSearchSelect2() {
-    $(`${SELECTORS.searchGender}, ${SELECTORS.searchProgram}, ${SELECTORS.searchLevel}`).select2({
-      theme: 'bootstrap-5',
-      placeholder: function() {
-        const id = $(this).attr('id');
-        if (id === 'search_gender') return 'Select Gender';
-        if (id === 'search_program') return 'Select Program';
-        if (id === 'search_level') return 'Select Level';
-        return '';
-      },
-      allowClear: true,
-      width: '100%',
-      dropdownParent: $('#studentSearchCollapse')
-    });
-  },
-
-  bindSearchEvents() {
-    $(SELECTORS.clearFiltersBtn).on('click', () => {
-      $(`${SELECTORS.searchName}, ${SELECTORS.searchNationalId}, ${SELECTORS.searchAcademicId}`).val('');
-      $(`${SELECTORS.searchGender}, ${SELECTORS.searchProgram}, ${SELECTORS.searchLevel}`).val('').trigger('change');
-      $(SELECTORS.studentsTable).DataTable().ajax.reload();
-    });
-
-    $(`${SELECTORS.searchName}, ${SELECTORS.searchNationalId}, ${SELECTORS.searchAcademicId}, ${SELECTORS.searchGender}, ${SELECTORS.searchProgram}, ${SELECTORS.searchLevel}`).on('keyup change', () => {
-      $(SELECTORS.studentsTable).DataTable().ajax.reload();
-    });
-  }
-};
-
-// ===========================
-// SELECT2 INITIALIZATION
-// ===========================
-
-const Select2Manager = {
-  initStudentModalSelect2() {
-    $(`${SELECTORS.studentModal} select`).select2({
-      theme: 'bootstrap-5',
-      placeholder: function() {
-        const id = $(this).attr('id');
-        if (id === 'level_id') return 'Select Level';
-        if (id === 'gender') return 'Select Gender';
-        if (id === 'program_id') return 'Select Program';
-        return '';
-      },
-      allowClear: true,
-      width: '100%',
-      dropdownParent: $(SELECTORS.studentModal)
-    });
-  },
-
-  initDownloadModalSelect2() {
-    $(`${SELECTORS.downloadModal} #term_id`).select2({
-      theme: 'bootstrap-5',
-      placeholder: 'Select Term',
-      allowClear: true,
-      width: '100%',
-      dropdownParent: $(SELECTORS.downloadModal)
-    });
-  },
-
-  initExportModalSelect2() {
-    $(`${SELECTORS.exportModal} select`).select2({
-      theme: 'bootstrap-5',
-      placeholder: function() {
-        const id = $(this).attr('id');
-        if (id === 'export_program_id') return 'Select Program';
-        if (id === 'export_level_id') return 'Select Level';
-        return '';
-      },
-      allowClear: true,
-      width: '100%',
-      dropdownParent: $(SELECTORS.exportModal)
-    });
-  }
-};
-
-// ===========================
-// MAIN APPLICATION
-// ===========================
-
-const StudentManagementApp = {
-  init() {
-    StatsManager.loadStudentStats();
-    
-    StudentManager.handleAddStudent();
-    StudentManager.handleStudentFormSubmit();
-    StudentManager.handleEditStudent();
-    StudentManager.handleDeleteStudent();
-    
-    ImportManager.handleImportStudents();
-    
-    ExportManager.handleExportStudents();
-    
-    DownloadManager.handleDownloadEnrollment();
-    DownloadManager.handleDownloadPdf();
-    DownloadManager.handleDownloadWord();
-    DownloadManager.handleDownloadProcess();
-    
-    TemplateDownloadManager.handleTemplateDownload();
-    
-    Select2Manager.initStudentModalSelect2();
-    Select2Manager.initDownloadModalSelect2();
-    Select2Manager.initExportModalSelect2();
-    
-    SearchManager.initializeAdvancedSearch();
-    Utils.hidePageLoader();
-
-  }
-};
-
-// ===========================
-// DOCUMENT READY
-// ===========================
-
-$(document).ready(() => {
-  StudentManagementApp.init();
-});
-</script>
+    </script>
 @endpush

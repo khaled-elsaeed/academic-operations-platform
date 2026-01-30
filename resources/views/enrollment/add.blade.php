@@ -955,23 +955,83 @@
                         groupedByType[type] = [];
                     }
 
-                    if (schedule.schedule_assignments && Array.isArray(schedule.schedule_assignments)) {
+                    if (schedule.schedule_assignments && Array.isArray(schedule.schedule_assignments) && schedule.schedule_assignments.length > 0) {
+                        // Collect all slots for this schedule, grouped by day
+                        const slotsByDay = {};
+                        let totalEnrolled = 0;
+                        
                         schedule.schedule_assignments.forEach(assignment => {
                             if (assignment.schedule_slot) {
-                                const scheduleSlot = assignment.schedule_slot;
-                                groupedByType[type].push({
-                                    id: schedule.id,
-                                    activity_type: schedule.activity_type,
-                                    group_number: schedule.group,
-                                    start_time: scheduleSlot.start_time,
-                                    end_time: scheduleSlot.end_time,
-                                    day_of_week: scheduleSlot.day_of_week,
-                                    location: schedule.location || '',
-                                    enrolled_count: assignment.enrolled || 0,
-                                    max_capacity: schedule.max_capacity || schedule.capacity || 0,
-                                    min_capacity: schedule.min_capacity || 0
+                                const slot = assignment.schedule_slot;
+                                const day = slot.day_of_week || 'TBA';
+                                
+                                if (!slotsByDay[day]) {
+                                    slotsByDay[day] = [];
+                                }
+                                slotsByDay[day].push({
+                                    start_time: slot.start_time,
+                                    end_time: slot.end_time,
+                                    day_of_week: day
                                 });
+                                totalEnrolled = Math.max(totalEnrolled, assignment.enrolled || 0);
                             }
+                        });
+
+                        // For each day, consolidate slots (find min start and max end)
+                        const consolidatedSlots = [];
+                        Object.keys(slotsByDay).forEach(day => {
+                            const daySlots = slotsByDay[day];
+                            // Sort slots by start time
+                            daySlots.sort((a, b) => {
+                                const timeA = Utils.parseTime(a.start_time) || 0;
+                                const timeB = Utils.parseTime(b.start_time) || 0;
+                                return timeA - timeB;
+                            });
+                            
+                            // Find earliest start and latest end
+                            let earliestStart = daySlots[0].start_time;
+                            let latestEnd = daySlots[0].end_time;
+                            
+                            daySlots.forEach(slot => {
+                                const slotStart = Utils.parseTime(slot.start_time);
+                                const slotEnd = Utils.parseTime(slot.end_time);
+                                const currentStart = Utils.parseTime(earliestStart);
+                                const currentEnd = Utils.parseTime(latestEnd);
+                                
+                                if (slotStart && currentStart && slotStart < currentStart) {
+                                    earliestStart = slot.start_time;
+                                }
+                                if (slotEnd && currentEnd && slotEnd > currentEnd) {
+                                    latestEnd = slot.end_time;
+                                }
+                            });
+                            
+                            consolidatedSlots.push({
+                                day_of_week: day,
+                                start_time: earliestStart,
+                                end_time: latestEnd,
+                                all_slots: daySlots // Keep all individual slots for conflict checking
+                            });
+                        });
+
+                        // Create schedule entry with consolidated info
+                        // Use first consolidated slot for primary display, but store all for complete info
+                        const primarySlot = consolidatedSlots[0] || { day_of_week: 'TBA', start_time: '', end_time: '' };
+                        
+                        groupedByType[type].push({
+                            id: schedule.id,
+                            activity_type: schedule.activity_type,
+                            group_number: schedule.group,
+                            start_time: primarySlot.start_time,
+                            end_time: primarySlot.end_time,
+                            day_of_week: primarySlot.day_of_week,
+                            location: schedule.location || '',
+                            enrolled_count: totalEnrolled,
+                            max_capacity: schedule.max_capacity || schedule.capacity || 0,
+                            min_capacity: schedule.min_capacity || 0,
+                            // Store all consolidated slots for display and all individual slots for conflict checking
+                            all_day_slots: consolidatedSlots,
+                            all_individual_slots: Object.values(slotsByDay).flat()
                         });
                     }
                 });
@@ -1009,6 +1069,21 @@
                         const disabled = conflict ? 'disabled' : '';
                         const conflictClass = conflict ? 'border-danger activity-disabled' : '';
 
+                        // Build time/day display for all slots
+                        let timeDisplay = '';
+                        if (s.all_day_slots && s.all_day_slots.length > 0) {
+                            // Display each day's consolidated time range
+                            timeDisplay = s.all_day_slots.map(daySlot => 
+                                `<div><i class="bx bx-calendar me-1"></i>${Utils.escapeHtml(daySlot.day_of_week)}: ${Utils.formatTimeRange(daySlot.start_time, daySlot.end_time)}</div>`
+                            ).join('');
+                        } else {
+                            // Fallback to primary slot display
+                            timeDisplay = `
+                                <div><i class="bx bx-time me-1"></i>${Utils.formatTimeRange(s.start_time, s.end_time)}</div>
+                                <div><i class="bx bx-calendar me-1"></i>${Utils.escapeHtml(s.day_of_week || 'TBA')}</div>
+                            `;
+                        }
+
                         html += `
                                 <div class="activity-option mb-2 ${conflict ? 'activity-disabled' : ''}" data-activity-id="${s.id}" data-activity-type="${type}">
                                     <div class="card ${conflictClass}">
@@ -1021,8 +1096,7 @@
                                                         <div class="flex-grow-1">
                                                             <h6 class="mb-1 text-dark">Group ${s.group_number} ${conflict ? '<span class="badge bg-danger ms-2">CONFLICT</span>' : ''}</h6>
                                                             <div class="small text-muted">
-                                                                <div><i class="bx bx-time me-1"></i>${Utils.formatTimeRange(s.start_time, s.end_time)}</div>
-                                                                <div><i class="bx bx-calendar me-1"></i>${Utils.escapeHtml(s.day_of_week || 'TBA')}</div>
+                                                                ${timeDisplay}
                                                                 ${s.location ? `<div><i class="bx bx-map me-1"></i>${Utils.escapeHtml(s.location)}</div>` : ''}
                                                                 ${conflict ? '<div class="text-danger"><i class="bx bx-error-circle me-1"></i>Conflicts with current schedule</div>' : ''}
                                                             </div>
@@ -1163,11 +1237,34 @@
                 return s1 < e2 && s2 < e1;
             },
 
+            // Get all individual time slots from an activity (for consolidated schedules)
+            getIndividualSlots(activity) {
+                if (activity.all_individual_slots && Array.isArray(activity.all_individual_slots) && activity.all_individual_slots.length > 0) {
+                    return activity.all_individual_slots;
+                }
+                // Fallback: use the activity itself as a single slot
+                return [{ 
+                    day_of_week: activity.day_of_week, 
+                    start_time: activity.start_time, 
+                    end_time: activity.end_time 
+                }];
+            },
+
             checkActivity(activity) {
                 const allSchedules = AppState.getAllSchedules();
+                const newSlots = this.getIndividualSlots(activity);
+                
                 for (const item of allSchedules) {
-                    if (this.hasConflict(item.activity || item, activity)) {
-                        return true;
+                    const existingActivity = item.activity || item;
+                    const existingSlots = this.getIndividualSlots(existingActivity);
+                    
+                    // Check each new slot against each existing slot
+                    for (const newSlot of newSlots) {
+                        for (const existingSlot of existingSlots) {
+                            if (this.hasConflict(existingSlot, newSlot)) {
+                                return true;
+                            }
+                        }
                     }
                 }
                 return false;
@@ -1175,11 +1272,26 @@
 
             checkConflicts(newCourseData, currentCourseId) {
                 const conflicts = [];
+                
+                // Helper to check if two activities have any conflicting slots
+                const hasActivityConflict = (act1, act2) => {
+                    const slots1 = this.getIndividualSlots(act1);
+                    const slots2 = this.getIndividualSlots(act2);
+                    for (const s1 of slots1) {
+                        for (const s2 of slots2) {
+                            if (this.hasConflict(s1, s2)) {
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                };
+                
                 AppState.selections.courseGroups.forEach((data, id) => {
                     if (id != currentCourseId && data.group_activities) {
                         data.group_activities.forEach(act => {
                             newCourseData.selected_activities.forEach(newAct => {
-                                if (this.hasConflict(act, newAct)) {
+                                if (hasActivityConflict(act, newAct)) {
                                     conflicts.push({ type: 'selected', course: data.course.name, existing: act, new: newAct });
                                 }
                             });
@@ -1189,7 +1301,7 @@
 
                 AppState.schedules.enrolled.forEach(item => {
                     newCourseData.selected_activities.forEach(newAct => {
-                        if (this.hasConflict(item.activity, newAct)) {
+                        if (hasActivityConflict(item.activity, newAct)) {
                             conflicts.push({ type: 'enrolled', course: item.course.name, existing: item.activity, new: newAct });
                         }
                     });
@@ -1197,7 +1309,7 @@
 
                 for (let i = 0; i < newCourseData.selected_activities.length; i++) {
                     for (let j = i + 1; j < newCourseData.selected_activities.length; j++) {
-                        if (this.hasConflict(newCourseData.selected_activities[i], newCourseData.selected_activities[j])) {
+                        if (hasActivityConflict(newCourseData.selected_activities[i], newCourseData.selected_activities[j])) {
                             conflicts.push({ type: 'intra', course: newCourseData.course.name, existing: newCourseData.selected_activities[i], new: newCourseData.selected_activities[j] });
                         }
                     }
@@ -1207,6 +1319,16 @@
             },
 
             showWarning(conflicts, onConfirm) {
+                // Helper to format activity time display
+                const formatActivityTime = (activity) => {
+                    if (activity.all_day_slots && activity.all_day_slots.length > 0) {
+                        return activity.all_day_slots.map(s => 
+                            `${s.day_of_week}: ${s.start_time}-${s.end_time}`
+                        ).join(', ');
+                    }
+                    return `${activity.day_of_week || 'TBA'} ${activity.start_time}-${activity.end_time}`;
+                };
+                
                 let html = '';
                 conflicts.forEach((c, i) => {
                     const typeLabel = c.type === 'enrolled' ? 'Already Enrolled' : c.type === 'intra' ? 'Same Course' : 'Selected Course';
@@ -1214,8 +1336,8 @@
                             <div class="alert alert-warning mb-2">
                                 <strong>Conflict ${i + 1}: ${Utils.escapeHtml(c.course)}</strong> <span class="badge bg-warning">${typeLabel}</span>
                                 <div class="small">
-                                    Existing: ${c.existing.day_of_week} ${c.existing.start_time}-${c.existing.end_time} (${c.existing.activity_type})
-                                    <br>New: ${c.new.day_of_week} ${c.new.start_time}-${c.new.end_time} (${c.new.activity_type})
+                                    Existing: ${formatActivityTime(c.existing)} (${c.existing.activity_type || 'N/A'})
+                                    <br>New: ${formatActivityTime(c.new)} (${c.new.activity_type || 'N/A'})
                                 </div>
                             </div>
                         `;

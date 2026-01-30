@@ -1,52 +1,69 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Enrollment;
 
-use App\Models\Enrollment;
-use App\Models\Student;
-use App\Models\Course;
-use App\Models\Term;
-use App\Models\AvailableCourse;
-use App\Models\CreditHoursException;
-use App\Models\EnrollmentSchedule;
-use App\Exports\EnrollmentsTemplateExport;
 use App\Exceptions\BusinessValidationException;
-use App\Rules\AcademicAdvisorAccessRule;
-use App\Services\CreditHoursExceptionService;
-use App\Services\SettingService;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Http\JsonResponse;
-use Yajra\DataTables\DataTables;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Traits\Progressable;
-use App\Traits\Importable;
-use App\Traits\Exportable;
-use App\Jobs\Enrollment\ImportEnrollmentsJob;
 use App\Jobs\Enrollment\ExportEnrollmentsJob;
-use App\Models\Task;
+use App\Jobs\Enrollment\ImportEnrollmentsJob;
+use App\Models\Enrollment;
 use App\Models\User;
-use Exception;
-use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use App\Exports\GenericImportResultsExport;
 use App\Policies\FeatureAvailabilityPolicy;
+use App\Services\CreditHoursExceptionService;
 use App\Services\Enrollment\Operations\CreateEnrollmentService;
 use App\Services\Enrollment\Operations\RemainingCreditHoursService;
+use App\Traits\Exportable;
+use App\Traits\Importable;
+use App\Traits\Progressable;
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\JsonResponse;
+use Yajra\DataTables\DataTables;
+use Illuminate\Support\Facades\Cache;
 
 
 class EnrollmentService
 {
-    use Progressable, Importable, Exportable;
+    use Progressable;
+    use Importable;
+    use Exportable;
 
+    /**
+     * @var CreditHoursExceptionService Service for managing credit hours exceptions
+     */
     protected CreditHoursExceptionService $creditHoursExceptionService;
+
+    /**
+     * @var FeatureAvailabilityPolicy Policy for checking feature availability
+     */
     protected FeatureAvailabilityPolicy $featureAvailabilityPolicy;
+
+    /**
+     * @var CreateEnrollmentService Service for creating enrollments
+     */
     protected CreateEnrollmentService $createService;
+
+    /**
+     * @var RemainingCreditHoursService Service for calculating remaining credit hours
+     */
     protected RemainingCreditHoursService $remainingCreditHoursService;
 
-    public function __construct(CreditHoursExceptionService $creditHoursExceptionService, FeatureAvailabilityPolicy $featureAvailabilityPolicy, CreateEnrollmentService $createService, RemainingCreditHoursService $remainingCreditHoursService)
-    {
+    /**
+     * EnrollmentService constructor.
+     *
+     * @param CreditHoursExceptionService $creditHoursExceptionService
+     * @param FeatureAvailabilityPolicy $featureAvailabilityPolicy
+     * @param CreateEnrollmentService $createService
+     * @param RemainingCreditHoursService $remainingCreditHoursService
+     */
+    public function __construct(
+        CreditHoursExceptionService $creditHoursExceptionService,
+        FeatureAvailabilityPolicy $featureAvailabilityPolicy,
+        CreateEnrollmentService $createService,
+        RemainingCreditHoursService $remainingCreditHoursService
+    ) {
         $this->creditHoursExceptionService = $creditHoursExceptionService;
         $this->featureAvailabilityPolicy = $featureAvailabilityPolicy;
         $this->createService = $createService;
@@ -54,7 +71,12 @@ class EnrollmentService
     }
 
     /**
-     * Configure import for enrollments.
+     * Configure import settings for enrollments.
+     *
+     * This method is used by the Importable trait to define
+     * import-specific configuration.
+     *
+     * @return array<string, mixed> Import configuration
      */
     protected function getImportConfig(): array
     {
@@ -67,7 +89,12 @@ class EnrollmentService
     }
 
     /**
-     * Configure export for enrollments.
+     * Configure export settings for enrollments.
+     *
+     * This method is used by the Exportable trait to define
+     * export-specific configuration.
+     *
+     * @return array<string, mixed> Export configuration
      */
     protected function getExportConfig(): array
     {
@@ -79,13 +106,28 @@ class EnrollmentService
     }
 
     /**
-     * Export enrollments (wrapper for the trait method).
+     * Export enrollments to file.
+     *
+     * Wrapper method for the Exportable trait's export functionality.
+     *
+     * @param array<string, mixed> $data Optional filters and export parameters
+     * @return array<string, mixed> Export task information
      */
     public function exportEnrollments(array $data = []): array
     {
         return $this->export($data);
     }
 
+    /**
+     * Create new enrollment(s) for a student.
+     *
+     * @param array<string, mixed> $data Enrollment data containing:
+     *                                    - student_id: int
+     *                                    - term_id: int
+     *                                    - enrollments: array of course enrollments
+     * @return array<string, mixed> Created enrollment data
+     * @throws BusinessValidationException If validation fails
+     */
     public function create(array $data): array
     {
         return $this->createService->create(
@@ -95,23 +137,39 @@ class EnrollmentService
         )->toArray();
     }
 
-
-    
-
+    /**
+     * Delete an enrollment.
+     *
+     * Checks feature availability before performing deletion.
+     *
+     * @param Enrollment $enrollment The enrollment to delete
+     * @return void
+     * @throws \App\Exceptions\FeatureNotAvailableException If delete feature is disabled
+     */
     public function deleteEnrollment(Enrollment $enrollment): void
     {
         $this->featureAvailabilityPolicy->checkAvailable('enrollment', 'delete');
         $enrollment->delete();
     }
 
+    /**
+     * Get enrollment statistics.
+     *
+     * Returns total enrollments, graded enrollments, and last update times.
+     *
+     * @return array<string, array<string, string>> Statistics data with formatted counts and dates
+     */
     public function getStats(): array
     {
-        $stats = Enrollment::selectRaw('
-            COUNT(*) as total,
-            COUNT(CASE WHEN grade IS NOT NULL THEN 1 END) as graded,
-            MAX(updated_at) as latest,
-            MAX(CASE WHEN grade IS NOT NULL THEN updated_at END) as graded_latest
-        ')->first();
+
+        $stats = Cache::remember('enrollment_stats', now()->addMinutes(10), function () {
+            return Enrollment::selectRaw('
+                COUNT(*) as total,
+                COUNT(CASE WHEN grade IS NOT NULL THEN 1 END) as graded,
+                MAX(updated_at) as latest,
+                MAX(CASE WHEN grade IS NOT NULL THEN updated_at END) as graded_latest
+            ')->first();
+        });
 
         return [
             'enrollments' => [
@@ -125,7 +183,15 @@ class EnrollmentService
         ];
     }
 
-    public function getDatatable(): \Illuminate\Http\JsonResponse
+    /**
+     * Get datatable data for enrollments.
+     *
+     * Prepares and returns enrollment data formatted for DataTables.
+     * Supports filtering by student, course, term, and grade.
+     *
+     * @return JsonResponse DataTables JSON response
+     */
+    public function getDatatable(): JsonResponse
     {
         $query = Enrollment::with(['student', 'course', 'term']);
 
@@ -133,19 +199,23 @@ class EnrollmentService
 
         return DataTables::of($query)
             ->addIndexColumn()
-            ->addColumn('student', function($enrollment) {
+            ->addColumn('student', function (Enrollment $enrollment) {
                 return $enrollment->student?->name_en ?? '-';
             })
-            ->addColumn('course', function($enrollment) {
-                return $enrollment->course?->title && $enrollment->course?->code ? "{$enrollment->course->title} ({$enrollment->course->code})" : '-';
+            ->addColumn('course', function (Enrollment $enrollment) {
+                return $enrollment->course?->title && $enrollment->course?->code
+                    ? "{$enrollment->course->title} ({$enrollment->course->code})"
+                    : '-';
             })
-            ->addColumn('term', function($enrollment) {
-                return $enrollment->term?->season && $enrollment->term?->year ? "{$enrollment->term->season} {$enrollment->term->year}" : '-';
+            ->addColumn('term', function (Enrollment $enrollment) {
+                return $enrollment->term?->season && $enrollment->term?->year
+                    ? "{$enrollment->term->season} {$enrollment->term->year}"
+                    : '-';
             })
-            ->addColumn('grade', function($enrollment) {
-                return $enrollment->grade ?? "No Grade Yet" ;
+            ->addColumn('grade', function (Enrollment $enrollment) {
+                return $enrollment->grade ?? 'No Grade Yet';
             })
-            ->addColumn('action', function($enrollment) {
+            ->addColumn('action', function (Enrollment $enrollment) {
                 return $this->renderActionButtons($enrollment);
             })
             ->rawColumns(['action'])
@@ -153,35 +223,45 @@ class EnrollmentService
     }
 
     /**
-     * Apply filters.
+     * Apply search filters to enrollment query.
      *
-     * @param Builder<Enrollment> $query
-     * @return Builder<Enrollment>
+     * Filters can be applied for:
+     * - Student (name_en or academic_id)
+     * - Course (title or code)
+     * - Term (season, year, or code)
+     * - Grade (specific grade or 'no-grade')
+     *
+     * @param Builder<Enrollment> $query The query builder instance
+     * @return Builder<Enrollment> Filtered query
      */
     private function applySearchFilters(Builder $query): Builder
     {
+        // Filter by student name or academic ID
         if ($searchStudent = request('search_student')) {
-            $query->whereHas('student', function($q) use($searchStudent) {
+            $query->whereHas('student', function (Builder $q) use ($searchStudent) {
                 $q->where('name_en', 'LIKE', "%{$searchStudent}%")
-                  ->orWhere('academic_id', 'LIKE', "%{$searchStudent}%");
+                    ->orWhere('academic_id', 'LIKE', "%{$searchStudent}%");
             });
         }
 
+        // Filter by course title or code
         if ($searchCourse = request('search_course')) {
-            $query->whereHas('course', function($q) use($searchCourse) {
+            $query->whereHas('course', function (Builder $q) use ($searchCourse) {
                 $q->where('title', 'LIKE', "%{$searchCourse}%")
-                  ->orWhere('code', 'LIKE', "%{$searchCourse}%");
+                    ->orWhere('code', 'LIKE', "%{$searchCourse}%");
             });
         }
 
+        // Filter by term season, year, or code
         if ($searchTerm = request('search_term')) {
-            $query->whereHas('term', function($q) use($searchTerm) {
+            $query->whereHas('term', function (Builder $q) use ($searchTerm) {
                 $q->where('season', 'LIKE', "%{$searchTerm}%")
-                  ->orWhere('year', 'LIKE', "%{$searchTerm}%")
-                  ->orWhere('code', 'LIKE', "%{$searchTerm}%");
+                    ->orWhere('year', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('code', 'LIKE', "%{$searchTerm}%");
             });
         }
 
+        // Filter by grade or no grade
         if ($searchGrade = request('search_grade')) {
             if ($searchGrade === 'no-grade') {
                 $query->whereNull('grade');
@@ -194,14 +274,17 @@ class EnrollmentService
     }
 
     /**
-     * Render action buttons.
+     * Render action buttons for datatable rows.
      *
-     * @param Enrollment $enrollment
-     * @return string
+     * Generates HTML for action buttons based on user permissions.
+     *
+     * @param Enrollment $enrollment The enrollment instance
+     * @return string Rendered HTML for action buttons
      */
     protected function renderActionButtons(Enrollment $enrollment): string
     {
         $user = auth()->user();
+        
         if (!$user) {
             return '';
         }
@@ -222,16 +305,19 @@ class EnrollmentService
     }
 
     /**
-     * Build single actions.
+     * Build available actions for an enrollment.
      *
-     * @param mixed $user
-     * @param Enrollment $enrollment
-     * @return array<int, array{action: string, icon: string, class: string, label: string, data: array}>
+     * Determines which actions are available based on user permissions.
+     *
+     * @param User $user The authenticated user
+     * @param Enrollment $enrollment The enrollment instance
+     * @return array<int, array{action: string, icon: string, class: string, label: string, data: array<string, mixed>}> Available actions
      */
-    protected function buildSingleActions($user, Enrollment $enrollment): array
+    protected function buildSingleActions(User $user, Enrollment $enrollment): array
     {
         $actions = [];
 
+        // Add delete action if user has permission
         if ($user->can('enrollment.delete')) {
             $actions[] = [
                 'action' => 'delete',
@@ -245,7 +331,15 @@ class EnrollmentService
         return $actions;
     }
 
-    public function getStudentEnrollments($studentId)
+    /**
+     * Get all enrollments for a specific student.
+     *
+     * Returns enrollments ordered by creation date (newest first).
+     *
+     * @param int $studentId The student ID
+     * @return Collection<int, Enrollment> Collection of enrollments with course and term relations
+     */
+    public function getStudentEnrollments(int $studentId): Collection
     {
         return Enrollment::with(['course', 'term'])
             ->where('student_id', $studentId)
@@ -253,28 +347,45 @@ class EnrollmentService
             ->get();
     }
 
-
     /**
      * Get remaining credit hours for a student in a specific term.
      *
-     * @param int $studentId
-     * @param int $termId
-     * @return array
-     * @throws \Exception
+     * Calculates how many credit hours a student can still enroll in
+     * for the given term, considering exceptions and limits.
+     *
+     * @param int $studentId The student ID
+     * @param int $termId The term ID
+     * @return array<string, mixed> Remaining credit hours information
+     * @throws Exception If calculation fails
      */
     public function getRemainingCreditHoursForStudent(int $studentId, int $termId): array
     {
-        return $this->remainingCreditHoursService->getRemainingCreditHoursForStudent($studentId, $termId);
+        return $this->remainingCreditHoursService->getRemainingCreditHoursForStudent(
+            $studentId,
+            $termId
+        );
     }
 
-
-
+    /**
+     * Get detailed enrollments for a student including schedules.
+     *
+     * Returns enrollments with full schedule information including
+     * available course schedules and time slots.
+     *
+     * @param int $studentId The student ID
+     * @return array<int, array<string, mixed>> Array of enrollment data with schedules
+     */
     public function getEnrollmentsByStudent(int $studentId): array
     {
-        $enrollments = Enrollment::with(['course', 'term', 'schedules.availableCourseSchedule.scheduleAssignments.scheduleSlot'])
+        $enrollments = Enrollment::with([
+            'course',
+            'term',
+            'schedules.availableCourseSchedule.scheduleAssignments.scheduleSlot',
+        ])
             ->where('student_id', $studentId)
             ->orderByDesc('created_at')
-            ->get()->toArray();
+            ->get()
+            ->toArray();
 
         return $enrollments;
     }

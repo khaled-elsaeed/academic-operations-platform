@@ -10,6 +10,9 @@
             <div class="col-12 col-sm-6 col-lg-3">
                 <x-ui.card.stat2 color="primary" icon="bx bx-book-open" :label="'Total Enrollments'" id="enrollments" />
             </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <x-ui.card.stat2 color="secondary" icon="bx bx-book-open" :label="'Graded Enrollments'" id="graded-enrollments" />
+            </div>
         </div>
 
         <!-- Page Header -->
@@ -267,7 +270,7 @@
         // ===========================
         const StatsManager = Utils.createStatsManager({
             apiMethod: ApiService.fetchStats,
-            statsKeys: ['enrollments']
+            statsKeys: ['enrollments', 'graded-enrollments']
         });
 
         // ===========================

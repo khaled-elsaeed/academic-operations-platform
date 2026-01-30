@@ -12,7 +12,7 @@ use App\Models\EnrollmentSchedule;
 use App\Models\Student;
 use App\Models\Term;
 use App\Exceptions\BusinessValidationException;
-use Exception;
+use App\Rules\EnrollmentCreditHoursRule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -27,7 +27,7 @@ class ProcessImportService
     private const TERM_CODE_COLUMN = 2;
     private const GRADE_COLUMN = 3;
 
-    private const PASSING_GRADES = ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'P'];
+    private const PASSING_GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'P'];
     private const STATUS_ACTIVE = 'active';
 
     protected array $results = [
@@ -111,7 +111,8 @@ class ProcessImportService
 
         $availableCourseSchedules = $this->findAvailableCourseSchedules($student, $course, $term);
 
-        $this->validatePrerequisites($student, [$course->id]);
+        $this->validateTotalCreditHours($student->id, $term->id, $course);
+        $this->validatePrerequisites($student, $course);
 
         $enrollment = $this->createOrUpdateEnrollment($row, $student, $course, $term);
 
@@ -201,12 +202,69 @@ class ProcessImportService
     }
 
     /**
-     * Validate prerequisites (placeholder - implement based on your business logic)
+     * Validate course prerequisites are met.
      */
-    private function validatePrerequisites(Student $student, array $courseIds): void
+    private function validatePrerequisites(Student $student, Course $course): void
     {
-        // Implement prerequisite validation if needed
-        // For now, we'll skip this as it might be complex
+        $course->loadMissing('prerequisites');
+
+        $unmetPrerequisites = $course->prerequisites->filter(function ($prerequisite) use ($student) {
+            return !$this->hasPassedCourse($student->id, $prerequisite->id);
+        });
+
+        if ($unmetPrerequisites->isNotEmpty()) {
+            $prerequisiteName = $unmetPrerequisites->first()->name;
+            throw new BusinessValidationException(
+                "Prerequisite not met: {$prerequisiteName} must be passed before enrolling in {$course->name}."
+            );
+        }
+    }
+
+    /**
+     * Check if student has passed a course.
+     */
+    private function hasPassedCourse(int $studentId, int $courseId): bool
+    {
+        return Enrollment::where('student_id', $studentId)
+            ->where('course_id', $courseId)
+            ->whereIn('grade', self::PASSING_GRADES)
+            ->exists();
+    }
+
+
+    /**
+     * Validate total credit hours don't exceed limit.
+     */
+    private function validateTotalCreditHours(int $studentId, int $termId, Course $course): void
+    {
+        $isUpdating = Enrollment::where('student_id', $studentId)
+            ->where('term_id', $termId)
+            ->where('course_id', $course->id)
+            ->exists();
+
+        if ($isUpdating) {
+            return;
+        }
+
+        $currentHours = $this->getCurrentEnrollmentHours($studentId, $termId);
+        $totalHours = $currentHours + $course->credit_hours;
+
+        $rule = new EnrollmentCreditHoursRule($studentId, $termId);
+        
+        $rule->validate('credit_hours', $totalHours, function ($message) {
+            throw new BusinessValidationException($message);
+        });
+    }
+
+    /**
+     * Get current enrollment hours for student in term.
+     */
+    private function getCurrentEnrollmentHours(int $studentId, int $termId): int
+    {
+        return Enrollment::where('student_id', $studentId)
+            ->where('term_id', $termId)
+            ->join('courses', 'enrollments.course_id', '=', 'courses.id')
+            ->sum('courses.credit_hours') ?? 0;
     }
 
     /**

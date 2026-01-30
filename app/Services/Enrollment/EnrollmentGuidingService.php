@@ -368,13 +368,19 @@ class EnrollmentGuidingService
      */
     private function getGroupSetIdForElective(int $electiveId): ?int
     {
-        $curriculumGroup = CurriculumElectiveGroup::where('program_id', $this->programId)
-            ->whereHas('groupSet.electives', function($q) use ($electiveId) {
-                $q->where('elective_group_id', $electiveId);
-            })
-            ->first();
+        $setItems = ElectiveGroupSetItem::where('elective_group_id', $electiveId)->get();
+        
+        foreach ($setItems as $setItem) {
+            $curriculumGroup = CurriculumElectiveGroup::where('program_id', $this->programId)
+                ->where('elective_group_set_id', $setItem->elective_group_set_id)
+                ->first();
             
-        return $curriculumGroup ? $curriculumGroup->elective_group_set_id : null;
+            if ($curriculumGroup) {
+                return $setItem->elective_group_set_id;
+            }
+        }
+        
+        return null;
     }
 
     /**
@@ -392,14 +398,11 @@ class EnrollmentGuidingService
         }
 
         $pool = [];
-        if ($curriculumGroup->courses) {
-            foreach ($curriculumGroup->courses as $curriculumCourse) {
-                if ($curriculumCourse->course) {
-                    $pool[$curriculumCourse->course->id] = $curriculumCourse->course;
-                }
+        foreach ($curriculumGroup->courses as $curriculumCourse) {
+            if ($curriculumCourse->course) {
+                $pool[$curriculumCourse->course->id] = $curriculumCourse->course;
             }
         }
-        
         return $pool;
     }
 }

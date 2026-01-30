@@ -62,7 +62,7 @@ class ElectiveCurriculumSeeder extends Seeder
                         'ELE211', 'ELE331', 'ELE232', 'CHE142',
                         'MAT121', 'MAT122', 'MAT231'
                     ],
-                    'E3-E8' => [
+                    'E3-E7' => [
                         'CSE271','CSE273','CSE281','CSE311','CSE376',
                         'CSE382','CSE383','CSE425','CSE448','AIE322',
                         'AIE323','AIE332','AIE351'

@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 // Enrollment Routes
 // ====================
 
-Route::middleware(['auth'])
+Route::middleware('auth')
     ->prefix('enrollments')
     ->name('enrollments.')
     ->controller(EnrollmentController::class)
@@ -21,16 +21,21 @@ Route::middleware(['auth'])
         Route::get('template', 'downloadTemplate')->name('template')->middleware('can:enrollment.view');
 
         // ===== Student Operations =====
-        Route::post('find-student', 'findStudent')->name('findStudent')->middleware('can:enrollment.view');
         Route::post('available-courses', 'availableCourses')->name('availableCourses')->middleware('can:enrollment.view');
-        Route::post('student-enrollments', 'studentEnrollments')->name('studentEnrollments')->middleware('can:enrollment.view');
-        Route::get('get-schedules', 'getSchedules')->name('getSchedules')->middleware('can:enrollment.view');
+        Route::post('student-enrollments', 'getEnrollmentsByStudent')->name('studentEnrollments')->middleware('can:enrollment.view');
         Route::post('guiding', 'getGuiding')->name('guiding')->middleware('can:enrollment.view');
 
         // ===== Import/Export Operations =====
         Route::post('import', 'import')->name('import')->middleware('can:enrollment.import');
-        Route::get('export', 'export')->name('export')->middleware('can:enrollment.export');
-    // Export multiple enrollment documents page & action
+        Route::get('/import/status/{uuid}', 'importStatus')->name('import.status')->middleware('can:enrollment.import');
+        Route::post('/import/cancel/{uuid}', 'importCancel')->name('import.cancel')->middleware('can:enrollment.import');
+        Route::get('/import/download/{uuid}', 'importDownload')->name('import.download')->middleware('can:enrollment.import');
+        // Export operations
+        Route::post('export', 'export')->name('export')->middleware('can:enrollment.export');
+        Route::get('/export/status/{uuid}', 'exportStatus')->name('export.status')->middleware('can:enrollment.export');
+        Route::post('/export/cancel/{uuid}', 'exportCancel')->name('export.cancel')->middleware('can:enrollment.export');
+        Route::get('/export/download/{uuid}', 'exportDownload')->name('export.download')->middleware('can:enrollment.export');
+        // Export multiple enrollment documents page & action
         Route::get('export-documents', 'exportDocumentsPage')->name('exportDocuments.page')->middleware('can:enrollment.export');
         Route::post('export-documents', 'exportDocuments')->name('exportDocuments')->middleware('can:enrollment.export');
         Route::post('remaining-credit-hours', 'getRemainingCreditHours')->name('remainingCreditHours')->middleware('can:enrollment.view');

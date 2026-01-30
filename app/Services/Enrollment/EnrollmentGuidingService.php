@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\CurriculumElectiveCourse;
 use App\Models\CurriculumElectiveGroup;
 use App\Models\ElectiveCourse;
+use App\Models\ElectiveGroupSetItem;
 use App\Models\Enrollment;
 use App\Models\Student;
 use App\Models\StudyPlan;
@@ -17,7 +18,9 @@ class EnrollmentGuidingService
     private const PASSING_GRADES = ['A+','A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'P'];
     
     private int $studentLvl;
+
     private int $semesterNo;
+
     private int $programId;
 
     private array $coursesHistory = [
@@ -156,7 +159,8 @@ class EnrollmentGuidingService
         $courses = [];
         $electiveSlotCount = 0;
         $electiveSlotCodes = [];
-        $allElectiveCoursePool = [];
+        $processedGroupSets = [];
+        $masterPool = [];
 
         foreach ($studyPlans as $studyPlan) {
             if ($studyPlan->course) {
@@ -172,17 +176,20 @@ class EnrollmentGuidingService
                 $electiveSlotCount++;
                 $electiveSlotCodes[] = $studyPlan->electiveCourse->code;
                 
-                // Fetch all courses in this elective's pool
-                $pool = $this->getElectivePoolForGroup($studyPlan->electiveCourse->id);
-                foreach ($pool as $courseId => $course) {
-                    $allElectiveCoursePool[$courseId] = $course;
+                $groupSetId = $this->getGroupSetIdForElective($studyPlan->electiveCourse->id);
+                if ($groupSetId && !isset($processedGroupSets[$groupSetId])) {
+                    $processedGroupSets[$groupSetId] = true;
+                    $pool = $this->getElectivePoolForGroupSet($groupSetId);
+                    foreach ($pool as $courseId => $course) {
+                        $masterPool[$courseId] = $course;
+                    }
                 }
             }
         }
 
         // Format and sort the elective pool
         $formattedPool = [];
-        foreach ($allElectiveCoursePool as $courseId => $course) {
+        foreach ($masterPool as $courseId => $course) {
             $available = $this->arePrerequisitesMet($course, $passedCourseIds);
             $isTaken = in_array($courseId, $passedCourseIds) || in_array($courseId, $incompleteCourseIds);
             
@@ -257,33 +264,40 @@ class EnrollmentGuidingService
             ->toArray();
 
         $missingCore = [];
-        $electiveRequirements = []; 
+        $electiveRequirements = [];
+        $processedGroupSets = [];
 
         foreach ($previousPlans as $plan) {
             if ($plan->course) {
                 if (!in_array($plan->course->id, $passedCourseIds)) {
                     $available = $this->arePrerequisitesMet($plan->course, $passedCourseIds);
-                    $isTaken = in_array($plan->course->id, $incompleteCourseIds); // Incomplete means taken but not passed yet
+                    $isTaken = in_array($plan->course->id, $incompleteCourseIds);
                     
                     $missingCore[] = [
                         'course' => $plan->course,
                         'semester' => $plan->semester_no,
                         'available' => $available,
-                        'is_incomplete' => $isTaken, // To distinguish "Never Taken" vs "Failed/Incomplete"
+                        'is_incomplete' => $isTaken,
                         'reason' => $available ? null : 'Prerequisites not met'
                     ];
                 }
             } elseif ($plan->electiveCourse) {
-                 $groupId = $plan->electiveCourse->id;
+                 $electiveId = $plan->electiveCourse->id;
                  $code = $plan->electiveCourse->code;
-                 if (!isset($electiveRequirements[$groupId])) {
-                     $electiveRequirements[$groupId] = ['count' => 0, 'code' => $code];
+                 $groupSetId = $this->getGroupSetIdForElective($electiveId);
+                 
+                 // Track requirements by group set ID to consolidate
+                 if ($groupSetId) {
+                     if (!isset($electiveRequirements[$groupSetId])) {
+                         $electiveRequirements[$groupSetId] = ['count' => 0, 'codes' => []];
+                     }
+                     $electiveRequirements[$groupSetId]['count']++;
+                     $electiveRequirements[$groupSetId]['codes'][] = $code;
                  }
-                 $electiveRequirements[$groupId]['count']++;
             }
         }
 
-        // Process Electives
+        // Process Electives by group set
         $missingElectiveData = [
             'count' => 0,
             'codes' => [],
@@ -292,12 +306,12 @@ class EnrollmentGuidingService
         
         $masterPool = [];
 
-        foreach ($electiveRequirements as $groupId => $data) {
+        foreach ($electiveRequirements as $groupSetId => $data) {
              $requiredCount = $data['count'];
-             $code = $data['code'];
+             $codes = $data['codes'];
              
-             // Get pool for this group
-             $pool = $this->getElectivePoolForGroup($groupId); 
+             // Get pool for this group set (only once per set)
+             $pool = $this->getElectivePoolForGroupSet($groupSetId);
              
              // Count how many from this pool are passed
              $passedCount = 0;
@@ -311,15 +325,11 @@ class EnrollmentGuidingService
              
              if ($missingCount > 0) {
                  $missingElectiveData['count'] += $missingCount;
-                 $missingElectiveData['codes'][] = $code;
+                 $missingElectiveData['codes'] = array_merge($missingElectiveData['codes'], $codes);
 
-                 // Add available courses to master pool
+                 // Add available courses to master pool (only if not already added)
                  foreach ($pool as $course) {
-                     // Check if already in master pool to avoid duplicates
                      if (isset($masterPool[$course->id])) continue;
-                     
-                     // If passed, don't add to available pool (we are looking for what to take)
-                     // If incomplete, it IS available to retake, so add it.
                      if (in_array($course->id, $passedCourseIds)) continue;
 
                      $available = $this->arePrerequisitesMet($course, $passedCourseIds);
@@ -329,7 +339,7 @@ class EnrollmentGuidingService
                          'course' => $course,
                          'available' => $available,
                          'is_incomplete' => $isTaken,
-                         'is_taken' => $isTaken, // For sorting consistency
+                         'is_taken' => $isTaken,
                          'is_passed' => false,
                          'reason' => $available ? null : 'Prerequisites not met'
                      ];
@@ -354,23 +364,43 @@ class EnrollmentGuidingService
     }
 
     /**
-     * Helper to get elective pool for a specific group ID
+     * Get the ElectiveGroupSet ID for a given ElectiveCourse (e.g., E1, E2) that belongs to this program
      */
-    private function getElectivePoolForGroup(int $groupId): array
+    private function getGroupSetIdForElective(int $electiveId): ?int
     {
-        $curriculumGroups = CurriculumElectiveGroup::with(['courses.course.prerequisites'])
+        $setItems = ElectiveGroupSetItem::where('elective_group_id', $electiveId)->get();
+        
+        foreach ($setItems as $setItem) {
+            $curriculumGroup = CurriculumElectiveGroup::where('program_id', $this->programId)
+                ->where('elective_group_set_id', $setItem->elective_group_set_id)
+                ->first();
+            
+            if ($curriculumGroup) {
+                return $setItem->elective_group_set_id;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get elective pool for a specific ElectiveGroupSet ID
+     */
+    private function getElectivePoolForGroupSet(int $groupSetId): array
+    {
+        $curriculumGroup = CurriculumElectiveGroup::with(['courses.course.prerequisites'])
             ->where('program_id', $this->programId)
-            ->whereHas('groupSet.electives', function ($q) use ($groupId) {
-                $q->where('elective_group_id', $groupId);
-            })
-            ->get();
+            ->where('elective_group_set_id', $groupSetId)
+            ->first();
+
+        if (!$curriculumGroup) {
+            return [];
+        }
 
         $pool = [];
-        foreach ($curriculumGroups as $group) {
-            foreach ($group->courses as $curriculumCourse) {
-                if ($curriculumCourse->course) {
-                    $pool[$curriculumCourse->course->id] = $curriculumCourse->course;
-                }
+        foreach ($curriculumGroup->courses as $curriculumCourse) {
+            if ($curriculumCourse->course) {
+                $pool[$curriculumCourse->course->id] = $curriculumCourse->course;
             }
         }
         return $pool;

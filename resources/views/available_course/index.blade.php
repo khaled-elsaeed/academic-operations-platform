@@ -3,685 +3,647 @@
 @section('title', 'Available Courses | AcadOps')
 
 @section('page-content')
-<div class="container-xxl flex-grow-1 container-p-y">
-    {{-- ===== STATISTICS CARDS ===== --}}
-    <div class="row g-4 mb-4">
-        <div class="col-sm-6 col-xl-4">
-            <x-ui.card.stat2 
-                id="available-courses"
-                label="Total Available Courses"
-                color="primary"
-                icon="bx bx-book"
-            />
+    <div class="container-xxl flex-grow-1 container-p-y">
+        <!-- Statistics Cards -->
+        <div class="row mb-4 g-3">
+            <div class="col-12 col-sm-6 col-lg-3">
+                <x-ui.card.stat2 color="primary" icon="bx bx-book" :label="'Total Available Courses'"
+                    id="available-courses" />
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <x-ui.card.stat2 color="info" icon="bx bx-globe" :label="'Universal Courses'" id="universal-courses" />
+            </div>
         </div>
-        <div class="col-sm-6 col-xl-4">
-            <x-ui.card.stat2 
-                id="universal-courses"
-                label="Universal Courses"
-                color="info"
-                icon="bx bx-globe"
-            />
-        </div>
-    </div>
-    {{-- ===== PAGE HEADER & ACTION BUTTONS ===== --}}
-    <x-ui.page-header 
-      title="Available Courses"
-      description="List of all available courses for enrollment"
-      icon="bx bx-book"
-    >
-        @can('available_course.import')
-        <button class="btn btn-success me-2" 
-                id="importAvailableCoursesBtn" 
-                type="button" 
-                data-bs-toggle="modal" 
-                data-bs-target="#importAvailableCoursesModal">
-            <i class="bx bx-upload me-1"></i> Import Available Courses
-        </button>
-        @endcan
-        <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#availableCourseSearchCollapse" aria-expanded="false" aria-controls="availableCourseSearchCollapse">
-            <i class="bx bx-filter-alt me-1"></i> Search
-        </button>
-    </x-ui.page-header>
 
-    {{-- ===== ADVANCED SEARCH SECTION ===== --}}
-    <x-ui.advanced-search 
-        title="Advanced Search" 
-        formId="advancedAvailableCourseSearch" 
-        collapseId="availableCourseSearchCollapse"
-        :collapsed="false"
-    >
-        <div class="col-md-4">
-            <label for="search_course" class="form-label">Course:</label>
-            <input type="text" class="form-control" id="search_course" placeholder="Course Name or Code">
-        </div>
-        <div class="col-md-4">
-            <label for="search_term" class="form-label">Term:</label>
-            <select class="form-control" id="search_term" style="width:100%">
-                <option value="">Select Term</option>
-            </select>
-        </div>
-        <button class="btn btn-outline-secondary mt-3 ms-2" id="clearAvailableCourseFiltersBtn" type="button">
-            <i class="bx bx-x"></i> Clear Filters
-        </button>
-    </x-ui.advanced-search>
-
-    {{-- ===== DATA TABLE ===== --}}
-    <x-ui.datatable
-      :headers="['Course', 'Term', 'Eligibilities', 'Schedules','Enrollments', 'Action']"
-      :columns="[
-          ['data' => 'course', 'name' => 'course'],
-          ['data' => 'term', 'name' => 'term'],
-          ['data' => 'eligibility', 'name' => 'eligibility'],
-          ['data' => 'schedules', 'name' => 'schedules'],
-          ['data' => 'enrollments', 'name' => 'enrollments'],
-          ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
-      ]"
-      :ajax-url="route('available_courses.datatable')"
-      table-id="available-courses-table"
-      :filter-fields="['search_course','search_term']"
-    />
-
-    {{-- ===== MODALS SECTION ===== --}}
-    {{-- Eligibility Modal --}}
-    <x-ui.modal id="eligibilityModal" title="Eligibility (Program / Level / Group)" size="md" :scrollable="false" class="eligibility-modal">
-      <x-slot name="slot">
-        <div id="eligibilityContent"><!-- Content will be filled by JS --></div>
-      </x-slot>
-      <x-slot name="footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </x-slot>
-    </x-ui.modal>
-
-    {{-- Schedules Modal --}}
-    <x-ui.modal id="schedulesModal" title="Course Schedules" size="xl" :scrollable="true" class="schedules-modal">
-      <x-slot name="slot">
-        <div id="schedulesContent"><!-- Content will be filled by JS --></div>
-      </x-slot>
-      <x-slot name="footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </x-slot>
-    </x-ui.modal>
-
-    @can('available_course.import')
-    {{-- Import Available Courses Modal --}}
-    <x-ui.modal 
-        id="importAvailableCoursesModal"
-        title="Import Available Courses"
-        size="md"
-        :scrollable="false"
-        class="import-available-courses-modal"
-    >
-        <x-slot name="slot">
-            <form id="importAvailableCoursesForm" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label for="courses_file" class="form-label">Upload Excel File</label>
-                    <input type="file" 
-                           class="form-control" 
-                           id="courses_file" 
-                           name="courses_file" 
-                           accept=".xlsx,.xls" 
-                           required>
-                </div>
-                <div class="alert alert-info d-flex align-items-center justify-content-between p-3 mb-3">
-                    <button type="button" 
-                            class="btn btn-sm btn-outline-primary" 
-                            id="downloadAvailableCourseTemplateBtn">
-                        <i class="bx bx-download me-1"></i>Template
+        <!-- Page Header -->
+        <x-ui.page-header :title="'Available Courses'" :description="'List of all available courses for enrollment'"
+            icon="bx bx-book">
+            <div class="d-flex flex-wrap gap-2">
+                @can('available_course.import')
+                    <button class="btn btn-success" id="importBtn">
+                        <i class="bx bx-upload"></i> Import
                     </button>
-                </div>
-            </form>
-        </x-slot>
-        <x-slot name="footer">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                Close
+                @endcan
+                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#availableCourseSearchCollapse">
+                    <i class="bx bx-filter-alt"></i> Filter
+                </button>
+            </div>
+        </x-ui.page-header>
+
+        <!-- Advanced Search -->
+        <x-ui.advanced-search :title="'Search Available Courses'" formId="advancedAvailableCourseSearch"
+            collapseId="availableCourseSearchCollapse" :collapsed="true">
+            <div class="col-md-4">
+                <label for="search_course" class="form-label">Course</label>
+                <input type="text" class="form-control" id="search_course" name="search_course"
+                    placeholder="Course Name or Code">
+            </div>
+            <div class="col-md-4">
+                <label for="search_term" class="form-label">Term</label>
+                <select class="form-select" id="search_term" name="search_term">
+                    <option value="">All Terms</option>
+                </select>
+            </div>
+            <div class="w-100"></div>
+            <button class="btn btn-outline-secondary mt-2" id="clearAvailableCourseFiltersBtn" type="button">
+                <i class="bx bx-x"></i> Clear
             </button>
-            <button type="submit" class="btn btn-success" id="importAvailableCoursesSubmitBtn" form="importAvailableCoursesForm">
-                Import
-            </button>
-        </x-slot>
-    </x-ui.modal>
-    @endcan
-</div>
+        </x-ui.advanced-search>
+
+        <!-- Data Table -->
+        <x-ui.datatable.table :headers="['Course', 'Term', 'Eligibilities', 'Schedules', 'Enrollments', 'Actions']"
+            :columns="[
+            ['data' => 'course', 'name' => 'course'],
+            ['data' => 'term', 'name' => 'term'],
+            ['data' => 'eligibilities', 'name' => 'eligibilities'],
+            ['data' => 'schedules', 'name' => 'schedules'],
+            ['data' => 'enrollments', 'name' => 'enrollments'],
+            ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
+        ]" :ajax-url="route('available_courses.datatable')" :table-id="'available-courses-table'"
+            :filter-fields="['search_course', 'search_term']" />
+
+        <!-- Modals -->
+        @can('available_course.import')
+            <!-- Import Modal -->
+            <x-ui.modal id="importModal" :title="'Import Available Courses'" scrollable="true" class="import-modal">
+                <x-slot name="slot">
+                    <form id="importForm" enctype="multipart/form-data" novalidate>
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="d-flex align-items-center p-3 bg-light rounded">
+                                    <div class="flex-shrink-0">
+                                        <i class="bx bx-info-circle fs-2 text-primary"></i>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-1 text-primary">Import Information</h6>
+                                        <p class="mb-0 text-muted small">
+                                            Upload an Excel file to import available courses.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-4">
+                            <div class="col-lg-12">
+                                <!-- File Upload -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Excel File <span class="text-danger">*</span></label>
+                                    <input type="file" class="form-control" id="import_file" name="file" accept=".xlsx,.xls"
+                                        required>
+                                    <small class="text-muted">Required: Select an Excel file (.xlsx or .xls)</small>
+                                    <div class="invalid-feedback d-block"></div>
+                                </div>
+                                <!-- Template Download -->
+                                <div class="mb-3">
+                                    <button type="button" class="btn btn-outline-primary" id="downloadTemplateBtn">
+                                        <i class="bx bx-download me-1"></i>Download Template
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </x-slot>
+                <x-slot name="footer">
+                    <div class="d-flex justify-content-between w-100">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="bx bx-x me-1"></i>Cancel
+                        </button>
+                        <button type="button" class="btn btn-success" id="submitImportBtn">
+                            <i class="bx bx-upload me-1"></i>Start Import
+                        </button>
+                    </div>
+                </x-slot>
+            </x-ui.modal>
+        @endcan
+
+        <!-- Progress Modal -->
+        <x-progress-modal modalId="importProgressModal" modalTitle="Importing Available Courses" />
+
+        <!-- Eligibility Modal -->
+        <x-ui.modal id="eligibilityModal" :title="'Eligibilities'" size="xl" :scrollable="false">
+            <x-slot name="slot">
+                <div id="eligibilityContent"><!-- Filled by JS --></div>
+            </x-slot>
+            <x-slot name="footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </x-slot>
+        </x-ui.modal>
+
+        <!-- Schedules Modal -->
+        <x-ui.modal id="schedulesModal" :title="'Course Schedules'" size="xl" :scrollable="true">
+            <x-slot name="slot">
+                <div id="schedulesContent"><!-- Filled by JS --></div>
+            </x-slot>
+            <x-slot name="footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </x-slot>
+        </x-ui.modal>
+    </div>
 @endsection
 
 @push('scripts')
-<script>
-// ===========================
-// CONSTANTS AND CONFIGURATION
-// ===========================
-const ROUTES = {
-  availableCourses: {
-    stats: '{{ route('available_courses.stats') }}',
-    datatable: '{{ route('available_courses.datatable') }}',
-    import: '{{ route('available_courses.import') }}',
-    template: '{{ route('available_courses.template') }}',
-    destroy: '{{ route('available_courses.destroy', ':id') }}',
-    terms: "{{ route('terms.all') }}",
-    schedules: "{{ route('available_courses.schedules', ':id') }}",
-    eligibilities: "{{ route('available_courses.eligibilities', ':id') }}"
-  }
-};
-const SELECTORS = {
-  datatable: '#available-courses-table',
-  importForm: '#importAvailableCoursesForm',
-  importModal: '#importAvailableCoursesModal',
-  importSubmitBtn: '#importAvailableCoursesSubmitBtn',
-  downloadTemplateBtn: '#downloadAvailableCourseTemplateBtn',
-  clearFiltersBtn: '#clearAvailableCourseFiltersBtn',
-  searchCourse: '#search_course',
-  searchTerm: '#search_term',
-};
-// ===========================
-// UTILITY FUNCTIONS
-// ===========================
-const Utils = {
-  showSuccess(message, useToast = true) {
-    if (useToast) {
-      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: message, showConfirmButton: false, timer: 2500, timerProgressBar: true });
-    } else {
-      Swal.fire({ title: 'Success', text: message, icon: 'success' });
-    }
-  },
-  showError(message) {
-    Swal.fire({ title: 'Error', html: message, icon: 'error' });
-  },
-  toggleLoadingState(elementId, isLoading) {
-    const $value = $(`#${elementId}-value`);
-    const $loader = $(`#${elementId}-loader`);
-    const $updated = $(`#${elementId}-last-updated`);
-    const $updatedLoader = $(`#${elementId}-last-updated-loader`);
-    if (isLoading) {
-      $value.addClass('d-none');
-      $loader.removeClass('d-none');
-      $updated.addClass('d-none');
-      $updatedLoader.removeClass('d-none');
-    } else {
-      $value.removeClass('d-none');
-      $loader.addClass('d-none');
-      $updated.removeClass('d-none');
-      $updatedLoader.addClass('d-none');
-    }
-  },
-  replaceRouteId(route, id) {
-    return route.replace(':id', id);
-  },/**
-     * Hide the page loader overlay.
-     */
-    hidePageLoader() {
-      const loader = document.getElementById('pageLoader');
-      if (loader) {
-        loader.classList.add('fade-out');
-        // Restore scrollbars when loader is hidden
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
-      }
-    }
-};
-// ===========================
-// API SERVICE LAYER
-// ===========================
-const ApiService = {
-  request(options) { return $.ajax(options); },
-  fetchStats() { return this.request({ url: ROUTES.availableCourses.stats, method: 'GET' }); },
-  deleteAvailableCourse(id) { return this.request({ url: Utils.replaceRouteId(ROUTES.availableCourses.destroy, id), method: 'DELETE' }); },
-  importAvailableCourses(formData) { return this.request({ url: ROUTES.availableCourses.import, method: 'POST', data: formData, processData: false, contentType: false }); },
-  fetchTerms() { return this.request({ url: ROUTES.availableCourses.terms, method: 'GET' }); },
-  downloadTemplate() { return this.request({ url: ROUTES.availableCourses.template, method: 'GET', xhrFields: { responseType: 'blob' } }); },
-  fetchSchedules(availableCourseId) { return this.request({ url: Utils.replaceRouteId(ROUTES.availableCourses.schedules, availableCourseId), method: 'GET' }); },
-  fetchEligibilities(availableCourseId) { return this.request({ url: Utils.replaceRouteId(ROUTES.availableCourses.eligibilities, availableCourseId), method: 'GET' }); }
-};
-// ===========================
-// DROPDOWN MANAGEMENT
-// ===========================
-const DropdownManager = {
-  loadTerms(selector = SELECTORS.searchTerm, selectedId = null) {
-    return ApiService.fetchTerms().done(function(response) {
-      const terms = response.data || [];
-      const $select = $(selector);
-      $select.empty().append('<option value="">Select Term</option>');
-      terms.forEach(function(term) {
-        $select.append($('<option>', { value: term.id, text: term.name }));
-      });
-      if (selectedId) { $select.val(selectedId); }
-      $select.trigger('change');
-    }).fail(function() { Utils.showError('Failed to load terms'); });
-  }
-};
-// ===========================
-// STATS MANAGER
-// ===========================
-const StatsManager = {
-  loadStats() {
-    Utils.toggleLoadingState('available-courses', true);
-    Utils.toggleLoadingState('universal-courses', true);
-    ApiService.fetchStats()
-      .done(function(response) {
-        const data = response.data;
-        $('#available-courses-value').text(data.available_courses.total ?? '--');
-        $('#available-courses-last-updated').text(data.available_courses.lastUpdateTime ?? '--');
-        $('#universal-courses-value').text(data.universal_courses.total ?? '--');
-        $('#universal-courses-last-updated').text(data.universal_courses.lastUpdateTime ?? '--');
-        Utils.toggleLoadingState('available-courses', false);
-        Utils.toggleLoadingState('universal-courses', false);
-      })
-      .fail(function() {
-        $('#available-courses-value, #universal-courses-value').text('N/A');
-        $('#available-courses-last-updated, #universal-courses-last-updated').text('N/A');
-        Utils.toggleLoadingState('available-courses', false);
-        Utils.toggleLoadingState('universal-courses', false);
-        Utils.showError('Failed to load available course statistics');
-      });
-  }
-};
-// ===========================
-// TEMPLATE DOWNLOAD FUNCTIONALITY
-// ===========================
-const TemplateDownloadManager = {
-  handleTemplateDownload() {
-    $(SELECTORS.downloadTemplateBtn).on('click', function () {
-      const $btn = $(SELECTORS.downloadTemplateBtn);
-      const originalText = $btn.html();
-      $btn.prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i>Downloading...');
-      ApiService.downloadTemplate()
-        .done(function(response) {
-          const blob = new Blob([response], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'available_courses_template.xlsx';
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-          Utils.showSuccess('Template downloaded successfully!');
-        })
-        .fail(function(xhr) {
-          const message = xhr.responseJSON?.message || 'Failed to download template.';
-          Utils.showError(message);
-        })
-        .always(function() {
-          $btn.prop('disabled', false).html(originalText);
-        });
-    });
-  }
-};
-// ===========================
-// IMPORT FUNCTIONALITY
-// ===========================
-const ImportManager = {
-  handleImportForm() {
-    $(SELECTORS.importForm).on('submit', function(e) {
-      e.preventDefault();
-      const formData = new FormData(this);
-      const $submitBtn = $(SELECTORS.importSubmitBtn);
-      $submitBtn.prop('disabled', true).text('Importing...');
-      ApiService.importAvailableCourses(formData)
-        .done(function(response) {
-          $(SELECTORS.importModal).modal('hide');
-          $(SELECTORS.datatable).DataTable().ajax.reload(null, false);
-          Utils.showSuccess(response.message);
-          if (response.data && response.data.errors && response.data.errors.length > 0) {
-            ImportManager.showImportErrors(response.data.errors, response.data.imported_count);
-          }
-          StatsManager.loadStats();
-        })
-        .fail(function(xhr) {
-          $(SELECTORS.importModal).modal('hide');
-          const response = xhr.responseJSON;
-          if (response && response.errors && Object.keys(response.errors).length > 0) {
-            const errorMessages = [];
-            Object.keys(response.errors).forEach(field => {
-              if (Array.isArray(response.errors[field])) {
-                errorMessages.push(...response.errors[field]);
-              } else {
-                errorMessages.push(response.errors[field]);
-              }
-            });
-            Utils.showError(errorMessages.join('<br>'));
-          } else {
-            const message = response?.message || 'Import failed. Please check your file.';
-            Utils.showError(message);
-          }
-        })
-        .always(function() {
-          $submitBtn.prop('disabled', false).text('Import');
-        });
-    });
-  },
-  showImportErrors(errors, importedCount) {
-    let errorHtml = '<div class="text-start">';
-    errorHtml += `<p class="mb-3"><strong>Successfully processed: ${importedCount} available courses</strong></p>`;
-    errorHtml += '<p class="mb-3"><strong>Failed rows:</strong></p>';
-    errorHtml += '<div class="table-responsive" style="max-height:400px; overflow-y:auto;">';
-    errorHtml += '<table class="table table-sm table-bordered table-striped mb-0">';
-    errorHtml += '<thead><tr><th style="width: 80px;">Row #</th><th style="width: 200px;">Error</th><th>Original Data</th></tr></thead><tbody>';
-    errors.forEach(function(error) {
-      let errorMessages = '';
-      
-      // Handle different error message formats
-      if (error.error) {
-        // Single error message (current format)
-        errorMessages = String(error.error);
-      } else if (Array.isArray(error.errors)) {
-        // Array of error messages
-        errorMessages = error.errors.join('<br>');
-      } else if (typeof error.errors === 'object' && error.errors !== null) {
-        // Object of field errors
-        Object.keys(error.errors).forEach(function(field) {
-          const fieldErrors = error.errors[field];
-          if (Array.isArray(fieldErrors)) {
-            errorMessages += fieldErrors.join('<br>') + '<br>';
-          } else if (typeof fieldErrors === 'string') {
-            errorMessages += fieldErrors + '<br>';
-          } else {
-            errorMessages += String(fieldErrors) + '<br>';
-          }
-        });
-      } else if (typeof error.errors === 'string') {
-        // String error message
-        errorMessages = error.errors;
-      } else {
-        // Fallback
-        errorMessages = 'Unknown error';
-      }
-      
-      let originalDataHtml = '';
-      const dataSource = error.data || error.original_data; // Handle both formats
-      if (dataSource) {
-        originalDataHtml = '<div class="small">';
-        Object.keys(dataSource).forEach(function(key) {
-          const value = dataSource[key];
-          const displayValue = value === null || value === undefined ? '<em class="text-muted">null</em>' : value;
-          originalDataHtml += `<strong>${key}:</strong> ${displayValue}<br>`;
-        });
-        originalDataHtml += '</div>';
-      }
-      
-      const rowNumber = error.row_number || error.row || 'N/A';
-      errorHtml += '<tr>';
-      errorHtml += `<td class="text-center fw-bold">${rowNumber}</td>`;
-      errorHtml += `<td class="text-danger small">${errorMessages}</td>`;
-      errorHtml += `<td class="small">${originalDataHtml}</td>`;
-      errorHtml += '</tr>';
-    });
-    errorHtml += '</tbody></table></div>';
-    Swal.fire({
-      title: 'Import Completed with Errors',
-      html: errorHtml,
-      icon: 'warning',
-      confirmButtonText: 'OK',
-      width: '800px',
-      customClass: { popup: 'swal-wide' }
-    });
-  }
-};
-// ===========================
-// DELETE MANAGER
-// ===========================
-const DeleteManager = {
-  handleDeleteBtn() {
-    $(document).on('click', '.deleteAvailableCourseBtn', function () {
-      const availableCourseId = $(this).data('id');
-      Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!'
-      }).then(result => {
-        if (result.isConfirmed) {
-          ApiService.deleteAvailableCourse(availableCourseId)
-            .done(() => {
-              $(SELECTORS.datatable).DataTable().ajax.reload(null, false);
-              Utils.showSuccess('Available course has been deleted.');
-              StatsManager.loadStats();
-            })
-            .fail(xhr => {
-              const msg = xhr.responseJSON?.message || 'Failed to delete available course.';
-              Utils.showError(msg);
-            });
-        }
-      });
-    });
-  }
-};
-// ===========================
-// SEARCH MANAGER
-// ===========================
-const SearchManager = {
-  initializeAdvancedSearch() {
-    DropdownManager.loadTerms();
-    this.initSearchSelect2();
-    this.bindSearchEvents();
-  },
-  initSearchSelect2() {
-    $(SELECTORS.searchTerm).select2({
-      theme: 'bootstrap-5',
-      placeholder: 'Select Term',
-      allowClear: true,
-      width: '100%',
-      dropdownParent: $('#availableCourseSearchCollapse')
-    });
-  },
-  bindSearchEvents() {
-    $(SELECTORS.clearFiltersBtn).on('click', function() {
-      $(SELECTORS.searchCourse + ',' + SELECTORS.searchTerm).val('').trigger('change');
-      $(SELECTORS.datatable).DataTable().ajax.reload();
-    });
-    $(SELECTORS.searchCourse + ',' + SELECTORS.searchTerm)
-      .on('keyup change', function() {
-        $(SELECTORS.datatable).DataTable().ajax.reload();
-      });
-  }
-};
-// ===========================
-// ELIGIBILITY MODAL MANAGER
-// ===========================
-const EligibilityModalManager = {
-  handleShowEligibilityModal() {
-    $(document).on('click', '.show-eligibility-modal', function () {
-      const availableCourseId = $(this).data('id');
-      // Append course ID to modal title
-      $('#eligibilityModal .modal-title').text(`Eligibility (Program / Level / Group) - Course ID: ${availableCourseId}`);
-      EligibilityModalManager.renderEligibilityLoading();
-      const modal = new bootstrap.Modal(document.getElementById('eligibilityModal'));
-      modal.show();
+    <script src="{{ asset('js/utils.js') }}"></script>
+    <script>
+        'use strict';
 
-      ApiService.fetchEligibilities(availableCourseId)
-        .done(function(response) {
-          EligibilityModalManager.renderEligibilityContent(response.data);
-        })
-        .fail(function(xhr) {
-          let message = 'Failed to load eligibilities.';
-          if (xhr.responseJSON && xhr.responseJSON.message) {
-            message = xhr.responseJSON.message;
-          }
-          EligibilityModalManager.renderEligibilityError(message);
-        });
-    });
-  },
-  renderEligibilityLoading() {
-    const $content = $('#eligibilityContent');
-    $content.html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
-  },
-  renderEligibilityError(message) {
-    const $content = $('#eligibilityContent');
-    $content.html(`<div class="alert alert-danger">${message}</div>`);
-  },
-  renderEligibilityContent(data) {
-    const $content = $('#eligibilityContent');
-    $content.empty();
-    if (data.universal) {
-      $content.append(`<div class="alert alert-primary d-flex align-items-center"><i class="bx bx-globe me-2 fs-5"></i>${data.message}</div>`);
-      return;
-    }
-    const eligibilities = data.eligibilities;
-    if (Array.isArray(eligibilities) && eligibilities.length > 0) {
-      if (eligibilities.length === 1) {
-        $content.append('<div class="mb-2"><strong>Program / Level:</strong></div>');
-        $content.append(`<div class="alert alert-info p-3">
-          <div class="d-flex align-items-center">
-            <i class="bx bx-check-circle text-success me-2 fs-5"></i>
-            <div>
-              <strong>${eligibilities[0].program_name} / ${eligibilities[0].level_name} / ${eligibilities[0].group}</strong>
-            </div>
-          </div>
-        </div>`);
-      } else {
-        $content.append('<div class="mb-3"><strong>Eligible Programs, Levels & Groups:</strong></div>');
-        let table = `<div class="table-responsive">
-          <table class="table table-bordered table-striped table-sm mb-0">
-            <thead class="table-light">
-              <tr>
-                <th style="width: 50px;">#</th>
-                <th style="width: 30%;">Program</th>
-                <th style="width: 30%;">Level</th>
-                <th style="width: 20%;">Group</th>
-              </tr>
-            </thead>
-            <tbody>`;
-        eligibilities.forEach((eligibility, idx) => {
-          table += `<tr>
-            <td class="text-center fw-bold">${idx + 1}</td>
-            <td>${eligibility.program_name}</td>
-            <td>${eligibility.level_name}</td>
-            <td>${eligibility.group}</td>
-          </tr>`;
-        });
-        table += '</tbody></table></div>';
-        $content.append(table);
-      }
-    } else {
-      $content.append('<div class="alert alert-warning d-flex align-items-center"><i class="bx bx-info-circle me-2 fs-5"></i>No eligibility requirements found.</div>');
-    }
-  }
-};
-// ===========================
-// SCHEDULES MODAL MANAGER
-// ===========================
-const SchedulesModalManager = {
-  handleShowSchedulesModal() {
-    $(document).on('click', '.show-schedules-modal', function () {
-      const availableCourseId = $(this).data('id');
-      SchedulesModalManager.renderSchedulesLoading();
-      const modal = new bootstrap.Modal(document.getElementById('schedulesModal'));
-      modal.show();
+        // ===========================
+        // ROUTES CONFIGURATION
+        // ===========================
+        const ROUTES = {
+            availableCourses: {
+                stats: @json(route('available_courses.stats')),
+                template: @json(route('available_courses.template')),
+                import: @json(route('available_courses.import')),
+                importStatus: @json(route('available_courses.import.status', ['uuid' => ':uuid'])),
+                importCancel: @json(route('available_courses.import.cancel', ['uuid' => ':uuid'])),
+                importDownload: @json(route('available_courses.import.download', ['uuid' => ':uuid'])),
+                destroy: @json(route('available_courses.destroy', ':id')),
+                terms: @json(route('terms.all')),
+                schedules: @json(route('available_courses.schedules.all', ':id')),
+                eligibilities: @json(route('available_courses.eligibilities.all', ':id'))
+            }
+        };
 
-      ApiService.fetchSchedules(availableCourseId)
-        .done(function(response) {
-          SchedulesModalManager.renderSchedulesContent(response.data);
-        })
-        .fail(function(xhr) {
-          let message = 'Failed to load schedules.';
-          if (xhr.responseJSON && xhr.responseJSON.message) {
-            message = xhr.responseJSON.message;
-          }
-          SchedulesModalManager.renderSchedulesError(message);
-        });
-    });
-  },
-  renderSchedulesLoading() {
-    const $content = $('#schedulesContent');
-    $content.html('<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
-  },
-  renderSchedulesError(message) {
-    const $content = $('#schedulesContent');
-    $content.html(`<div class="alert alert-danger">${message}</div>`);
-  },
-  renderSchedulesContent(activityGroups) {
-    const $content = $('#schedulesContent');
-    $content.empty();
-    if (!Array.isArray(activityGroups) || activityGroups.length === 0) {
-      $content.append(`
-        <div class="alert alert-warning d-flex align-items-center">
-          <i class="bx bx-info-circle me-2 fs-5"></i>
-          No schedules found for this course.
-        </div>
-      `);
-      return;
-    }
 
-    // Build nav-pills tabs
-    let navTabs = '<ul class="nav nav-pills flex-wrap mb-3" role="tablist">';
-    let tabContent = '<div class="tab-content pt-0">';
-    activityGroups.forEach((group, idx) => {
-      const activityType = group.activity_type ?? 'N/A';
-      const schedules = group.schedules ?? [];
-      const tabId = `activity-type-tab-${idx}`;
-      navTabs += `
-        <li class="nav-item" role="presentation">
-          <button type="button" class="nav-link${idx === 0 ? ' active' : ''}" role="tab" data-bs-toggle="tab" data-bs-target="#${tabId}" aria-controls="${tabId}" aria-selected="${idx === 0 ? 'true' : 'false'}">${activityType.charAt(0).toUpperCase() + activityType.slice(1)}</button>
-        </li>
-      `;
-      // Table for schedules
-      let tableHtml = '';
-      if (schedules.length > 0) {
-        tableHtml += `<div class="table-responsive text-start text-nowrap"><table class="table table-borderless mb-0"><thead><tr><th>No</th><th>Group</th><th>Location</th><th>Day</th><th>Time</th><th>Capacity</th><th>Enrollment</th><th class="w-50">% Full</th></tr></thead><tbody>`;
-        schedules.forEach((schedule, sidx) => {
-          const groupNumber = schedule.group_number ?? 'N/A';
-          const location = schedule.location ?? 'TBA';
-          const dayOfWeek = schedule.day_of_week ?? 'TBA';
-          const startTime = schedule.start_time ?? 'TBA';
-          const endTime = schedule.end_time ?? 'TBA';
-          const minCapacity = schedule.min_capacity ?? '0';
-          const maxCapacity = schedule.max_capacity ?? '0';
-          const enrolledCount = schedule.enrolled_count ?? '0';
-          const enrollmentPercentage = maxCapacity > 0 ? Math.round((enrolledCount / maxCapacity) * 100) : 0;
-          let progressBarClass = 'bg-success';
-          if (enrollmentPercentage >= 90) progressBarClass = 'bg-danger';
-          else if (enrollmentPercentage >= 70) progressBarClass = 'bg-warning';
-          tableHtml += `<tr>
-            <td>${sidx + 1}</td>
-            <td>Group ${groupNumber}</td>
-            <td>${location}</td>
-            <td>${dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1)}</td>
-            <td>${startTime} - ${endTime}</td>
-            <td>${minCapacity} - ${maxCapacity}</td>
-            <td>${enrolledCount} / ${maxCapacity}</td>
-            <td>
-              <div class="d-flex justify-content-between align-items-center gap-4">
-                <div class="progress w-100" style="height:10px;">
-                  <div class="progress-bar ${progressBarClass}" role="progressbar" style="width: ${enrollmentPercentage}%" aria-valuenow="${enrollmentPercentage}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <small class="fw-medium">${enrollmentPercentage}%</small>
-              </div>
-            </td>
-          </tr>`;
-        });
-        tableHtml += '</tbody></table></div>';
-      } else {
-        tableHtml = `<div class="p-3 text-center text-muted"><i class="bx bx-info-circle me-1"></i>No schedules for this activity type</div>`;
-      }
-      tabContent += `<div class="tab-pane fade${idx === 0 ? ' active show' : ''}" id="${tabId}" role="tabpanel">${tableHtml}</div>`;
-    });
-    navTabs += '</ul>';
-    tabContent += '</div>';
-    $content.append(`<div class="col-xxl-12"><div class="card text-center h-100"><div class="card-header nav-align-top">${navTabs}</div>${tabContent}</div></div>`);
-  }
-};
-// ===========================
-// MAIN APPLICATION
-// ===========================
-const AvailableCourseManagementApp = {
-  init() {
-    StatsManager.loadStats();
-    SearchManager.initializeAdvancedSearch();
-    ImportManager.handleImportForm();
-    DeleteManager.handleDeleteBtn();
-    EligibilityModalManager.handleShowEligibilityModal();
-    SchedulesModalManager.handleShowSchedulesModal();
-    TemplateDownloadManager.handleTemplateDownload();
-    Utils.hidePageLoader();
+        // ===========================
+        // API SERVICE
+        // ===========================
+        const ApiService = {
+            fetchStats() {
+                return Utils.get(ROUTES.availableCourses.stats);
+            },
+            fetchTerms() {
+                return Utils.get(ROUTES.availableCourses.terms);
+            },
+            fetchSchedules(id) {
+                return Utils.get(Utils.replaceRouteId(ROUTES.availableCourses.schedules, id));
+            },
+            fetchEligibilities(id) {
+                return Utils.get(Utils.replaceRouteId(ROUTES.availableCourses.eligibilities, id));
+            }
+        };
 
-  }
-};
-// ===========================
-// DOCUMENT READY
-// ===========================
-$(document).ready(function () {
-  AvailableCourseManagementApp.init();
-});
-</script>
-@endpush 
+        // ===========================
+        // MODAL MANAGERS
+        // ===========================
+        const ImportModal = Utils.createModalManager('importModal');
+        const EligibilityModal = Utils.createModalManager('eligibilityModal');
+        const SchedulesModal = Utils.createModalManager('schedulesModal');
+
+        // ===========================
+        // STATS MANAGER
+        // ===========================
+        const StatsManager = Utils.createStatsManager({
+            apiMethod: ApiService.fetchStats,
+            statsKeys: ['available-courses', 'universal-courses']
+        });
+
+        // ===========================
+        // SELECT2 MANAGER
+        // ===========================
+        const Select2Manager = {
+            init() {
+                Utils.initSelect2('#search_term', {
+                    placeholder: 'please select a term',
+                    allowClear: true,
+                    dropdownParent: $('#availableCourseSearchCollapse')
+                });
+            },
+            async loadTerms() {
+                try {
+                    const response = await ApiService.fetchTerms();
+                    if (Utils.isResponseSuccess(response)) {
+                        const terms = Utils.getResponseData(response);
+                        Utils.populateSelect('#search_term', terms, {
+                            valueField: 'id',
+                            textField: 'name',
+                            placeholder: ''
+                        }, true);
+                    }
+                } catch (error) {
+                    Utils.handleError(error);
+                }
+            }
+        };
+
+        // ===========================
+        // TEMPLATE MANAGER
+        // ===========================
+        const TemplateManager = {
+            init() {
+                $('#downloadTemplateBtn').on('click', async () => {
+                    const $btn = $('#downloadTemplateBtn');
+
+                    Utils.setLoadingState($btn, true, { loadingText: 'Downloading...' });
+
+                    try {
+                        const response = await $.ajax({
+                            url: ROUTES.availableCourses.template,
+                            method: 'GET',
+                            xhrFields: { responseType: 'blob' }
+                        });
+
+                        const blob = new Blob([response], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'available_courses_template.xlsx';
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+
+                        Utils.showSuccess('Template downloaded successfully!');
+                    } catch (error) {
+                        Utils.showError('Failed to download template');
+                    } finally {
+                        Utils.setLoadingState($btn, false);
+                    }
+                });
+            }
+        };
+
+        // ===========================
+        // IMPORT TASK MANAGER
+        // ===========================
+        const ImportTaskManager = Utils.createAsyncTaskManager({
+            startRoute: ROUTES.availableCourses.import,
+            checkStatusRoute: ROUTES.availableCourses.importStatus,
+            cancelRoute: ROUTES.availableCourses.importCancel,
+            downloadRoute: ROUTES.availableCourses.importDownload,
+            progressModalId: 'importProgressModal',
+            taskName: 'Available Courses Import',
+            onStart() {
+                ImportModal.hide();
+            },
+            completionFields: [
+                { key: 'processed', label: 'Records Processed', type: 'number' },
+                { key: 'created', label: 'Records Created', type: 'number' },
+                { key: 'updated', label: 'Records Updated', type: 'number' },
+                { key: 'skipped', label: 'Records Skipped', type: 'number' }
+            ],
+            translations: {
+                processing: 'The import is being processed. This may take a few minutes.',
+                taskInitializing: 'The import task is initializing.',
+                taskPreparing: 'The import task is preparing the data.',
+                taskCompleted: 'The import task has completed.',
+                taskFailed: 'The import task has failed.',
+                statusCheckFailed: 'Failed to check the status of the import task.'
+            }
+        });
+
+        // ===========================
+        // IMPORT MANAGER
+        // ===========================
+        const ImportManager = {
+            init() {
+                $('#importBtn').on('click', () => {
+                    $('#importForm')[0].reset();
+                    ImportModal.show();
+                });
+
+                $('#submitImportBtn').on('click', () => {
+                    const fileInput = $('#import_file')[0];
+                    if (!fileInput.files[0]) {
+                        Utils.showValidationError('#import_file', 'Please select a file to import');
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('file', fileInput.files[0]);
+
+                    ImportTaskManager.start(formData, {
+                        button: $('#submitImportBtn')
+                    });
+                });
+            }
+        };
+
+        // ===========================
+        // DELETE MANAGER
+        // ===========================
+        const DeleteManager = {
+            init() {
+                $(document).on('click', '.deleteAvailableCourseBtn', async (e) => {
+                    const id = Utils.getElementData(e.currentTarget, ['id']);
+                    const { isConfirmed } = await Utils.showConfirmDialog({
+                        title: ('Are you sure?'),
+                        text: 'You won\'t be able to revert this!',
+                        confirmButtonText: 'Yes, delete it!'
+                    });
+
+                    if (isConfirmed) {
+                        try {
+                            const response = await Utils.delete(Utils.replaceRouteId(ROUTES.availableCourses.destroy, id));
+                            Utils.reloadDataTable('available-courses-table');
+                            Utils.showSuccess(response.message);
+                            StatsManager.refresh();
+                        } catch (error) {
+                            Utils.handleError(error);
+                        }
+                    }
+                });
+            }
+        };
+
+        // ===========================
+        // ELIGIBILITY MANAGER
+        // ===========================
+
+        const EligibilityManager = {
+            init() {
+                $(document).on('click', '.eligibilitiesAvailableCourseBtn', async (e) => {
+                    const id = Utils.getElementData(e.currentTarget, ['id']);
+                    $('#eligibilityContent').html(Utils.getLoadingHtml());
+                    EligibilityModal.show();
+
+                    try {
+                        const response = await ApiService.fetchEligibilities(id);
+                        if (Utils.isResponseSuccess(response)) {
+                            this.render(Utils.getResponseData(response));
+                        }
+                    } catch (error) {
+                        $('#eligibilityContent').html(`<div class="alert alert-danger">${error.responseJSON?.message}</div>`);
+                    }
+                });
+            },
+
+            render(eligibilities) {
+                const $content = $('#eligibilityContent').empty();
+
+                // Check if eligibilities is empty or not an array
+                if (!Array.isArray(eligibilities) || eligibilities.length === 0) {
+                    $content.append(`
+                                    <div class="alert alert-warning d-flex align-items-center">
+                                        <i class="bx bx-info-circle fs-4 me-3"></i>
+                                        <div>
+                                            <h6 class="mb-1">No Eligibility Requirements</h6>
+                                            <p class="mb-0">This course has no specific eligibility requirements set.</p>
+                                        </div>
+                                    </div>
+                                `);
+                    return;
+                }
+
+                // Group eligibilities by program first
+                const groupedByProgram = eligibilities.reduce((acc, el) => {
+                    const programId = el.program?.id || el.program_id;
+                    const programName = el.program?.name || 'Unknown Program';
+                    const programCode = el.program?.code || 'UNK';
+
+                    if (!acc[programId]) {
+                        acc[programId] = {
+                            program: {
+                                id: programId,
+                                name: programName,
+                                code: programCode
+                            },
+                            levels: {}
+                        };
+                    }
+
+                    const levelId = el.level?.id || el.level_id;
+                    const levelName = el.level?.name || 'Unknown';
+
+                    if (!acc[programId].levels[levelId]) {
+                        acc[programId].levels[levelId] = {
+                            level: { id: levelId, name: levelName },
+                            groups: []
+                        };
+                    }
+
+                    acc[programId].levels[levelId].groups.push(el.group);
+                    return acc;
+                }, {});
+
+                // Build tabbed interface
+                let nav = '<ul class="nav nav-pills mb-4 justify-content-center" role="tablist">';
+                let panes = '<div class="tab-content mt-3">';
+
+                Object.values(groupedByProgram).forEach((programData, idx) => {
+                    const tabId = `eligibility-program-tab-${idx}`;
+                    const active = idx === 0 ? ' active' : '';
+
+                    nav += `
+                                    <li class="nav-item">
+                                        <button class="nav-link${active} px-4 py-2" data-bs-toggle="tab" data-bs-target="#${tabId}">
+                                            <i class="bx bx-graduation me-1"></i>${Utils.escapeHtml(programData.program.name)}
+                                        </button>
+                                    </li>
+                                `;
+
+                    let body = '<div class="row g-3">';
+
+                    // For each level in this program
+                    Object.values(programData.levels).forEach(levelData => {
+                        const groups = levelData.groups.sort((a, b) => a - b);
+                        const groupBadges = groups.map(group =>
+                            `<span class="badge bg-success me-1 mb-1"><i class="bx bx-group me-1"></i>Group ${group}</span>`
+                        ).join('');
+
+                        body += `
+                                        <div class="col-lg-6 col-md-12">
+                                            <div class="card h-100 shadow-sm border-0 bg-light">
+                                                <div class="card-header bg-primary text-white text-center py-2">
+                                                    <h6 class="card-title mb-0 fw-bold text-white">
+                                                        <i class="bx bx-layer me-1"></i>Level ${Utils.escapeHtml(levelData.level.name)}
+                                                    </h6>
+                                                </div>
+                                                <div class="card-body p-3">
+                                                    <div class="mb-2">
+                                                        <small class="text-muted fw-semibold">
+                                                            <i class="bx bx-group me-1"></i>Eligible Groups
+                                                        </small>
+                                                    </div>
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        ${groupBadges}
+                                                    </div>
+                                                    <div class="border-top mt-3 pt-2">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <small class="text-muted fw-semibold">
+                                                                <i class="bx bx-check-circle me-1"></i>Total Groups
+                                                            </small>
+                                                            <span class="badge bg-info">${groups.length}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                    });
+
+                    body += '</div>';
+
+                    panes += `<div class="tab-pane fade${active} show" id="${tabId}">${body}</div>`;
+                });
+
+                nav += '</ul>';
+                panes += '</div>';
+
+                // Add header
+                const headerHtml = `
+                                <div class="mb-3">
+                                    <h5 class="text-center text-primary">
+                                        <i class="bx bx-check-circle me-2"></i>Eligible Programs, Levels & Groups
+                                    </h5>
+                                </div>
+                            `;
+
+                $content.append(headerHtml + nav + panes);
+            }
+        };
+
+        // ===========================
+        // SCHEDULES MANAGER
+        // ===========================
+        const SchedulesManager = {
+            init() {
+                $(document).on('click', '.schedulesAvailableCourseBtn', async (e) => {
+                    const id = Utils.getElementData(e.currentTarget, ['id']);
+                    $('#schedulesContent').html(Utils.getLoadingHtml());
+                    SchedulesModal.show();
+
+                    try {
+                        const response = await ApiService.fetchSchedules(id);
+                        if (Utils.isResponseSuccess(response)) {
+                            this.render(Utils.getResponseData(response));
+                        }
+                    } catch (error) {
+                        $('#schedulesContent').html(`<div class="alert alert-danger">${error.responseJSON?.message || 'Failed to load schedules'}</div>`);
+                    }
+                });
+            },
+            render(schedules) {
+                const $content = $('#schedulesContent').empty();
+
+                if (!Array.isArray(schedules) || schedules.length === 0) {
+                    $content.append(`<div class="alert alert-warning"><i class="bx bx-info-circle me-2"></i>No schedules found for this course.</div>`);
+                    return;
+                }
+
+                // Group schedules by activity_type
+                const groupedByActivity = schedules.reduce((acc, schedule) => {
+                    const type = schedule.activity_type || 'Unknown';
+                    if (!acc[type]) acc[type] = [];
+                    acc[type].push(schedule);
+                    return acc;
+                }, {});
+
+                let nav = '<ul class="nav nav-pills mb-4 justify-content-center" role="tablist">';
+                let panes = '<div class="tab-content mt-3">';
+
+                Object.keys(groupedByActivity).forEach((activityType, idx) => {
+                    const activitySchedules = groupedByActivity[activityType];
+                    const tabId = `schedule-tab-${idx}`;
+                    const active = idx === 0 ? ' active' : '';
+
+                    nav += `<li class="nav-item"><button class="nav-link${active} px-4 py-2" data-bs-toggle="tab" data-bs-target="#${tabId}"><i class="bx bx-calendar me-1"></i>${Utils.escapeHtml(activityType.charAt(0).toUpperCase() + activityType.slice(1))}</button></li>`;
+
+                    let body = '<div class="row g-3">';
+
+                    // Group by group number
+                    const groupedByGroup = activitySchedules.reduce((acc, schedule) => {
+                        const group = schedule.group || 1;
+                        if (!acc[group]) acc[group] = [];
+                        acc[group].push(schedule);
+                        return acc;
+                    }, {});
+
+                    Object.keys(groupedByGroup).sort((a, b) => a - b).forEach(groupNum => {
+                        const groupSchedules = groupedByGroup[groupNum];
+                        const schedule = groupSchedules[0]; // All in group should be similar
+
+                        // Calculate overall time range
+                        let minStart = null, maxEnd = null;
+                        const days = new Set();
+
+                        schedule.schedule_assignments.forEach(assignment => {
+                            const slot = assignment.schedule_slot;
+                            if (slot.start_time && slot.end_time) {
+                                if (!minStart || slot.start_time < minStart) minStart = slot.start_time;
+                                if (!maxEnd || slot.end_time > maxEnd) maxEnd = slot.end_time;
+                            }
+                            if (slot.day_of_week) days.add(slot.day_of_week);
+                        });
+
+                        const timeRange = minStart && maxEnd ? `${minStart} - ${maxEnd}` : 'TBA';
+                        const dayList = Array.from(days).map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(', ') || 'TBA';
+
+                        body += `
+                                        <div class="col-lg-4 col-md-6">
+                                            <div class="card h-100 shadow-sm border-0 bg-light">
+                                                <div class="card-header bg-primary text-white text-center py-2">
+                                                    <h6 class="card-title mb-0 fw-bold text-white">
+                                                        <i class="bx bx-group me-1"></i>Group ${groupNum}
+                                                    </h6>
+                                                </div>
+                                                <div class="card-body p-3">
+                                                    <div class="row g-2 mb-3">
+                                                        <div class="col-12">
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <small class="text-muted fw-semibold"><i class="bx bx-map me-1"></i>Location</small>
+                                                                <span class="badge bg-success">${Utils.escapeHtml(schedule.location || 'TBA')}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-12">
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <small class="text-muted fw-semibold"><i class="bx bx-user-check me-1"></i>Capacity</small>
+                                                                <span class="fw-semibold text-dark">${Utils.escapeHtml(schedule.min_capacity || 0)} - ${Utils.escapeHtml(schedule.max_capacity || 0)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="border-top pt-2">
+                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                            <small class="text-muted fw-semibold"><i class="bx bx-calendar me-1"></i>Days</small>
+                                                            <span class="fw-semibold text-primary">${dayList}</span>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <small class="text-muted fw-semibold"><i class="bx bx-time me-1"></i>Time</small>
+                                                            <span class="fw-semibold text-success">${timeRange}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>`;
+                    });
+
+                    body += '</div>';
+
+                    panes += `<div class="tab-pane fade${active} show" id="${tabId}">${body}</div>`;
+                });
+
+                nav += '</ul>';
+                panes += '</div>';
+
+                $content.append(nav + panes);
+            }
+        };
+
+        // ===========================
+        // SEARCH MANAGER
+        // ===========================
+        const SearchManager = Utils.createSearchManager({
+            searchFields: ['#search_course', '#search_term'],
+            clearButtonId: '#clearAvailableCourseFiltersBtn',
+            tableId: '#available-courses-table',
+            debounceDelay: 500
+        });
+
+        // ===========================
+        // INITIALIZATION
+        // ===========================
+        $(() => {
+            StatsManager.init();
+            Select2Manager.loadTerms().then(() => Select2Manager.init());
+            SearchManager.init();
+            ImportManager.init();
+            TemplateManager.init();
+            DeleteManager.init();
+            EligibilityManager.init();
+            SchedulesManager.init();
+            ImportTaskManager.init();
+            Utils.hidePageLoader();
+        });
+    </script>
+@endpush

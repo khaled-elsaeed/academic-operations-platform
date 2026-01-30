@@ -885,3 +885,57 @@
   font-size: 0.7rem;
   line-height: 1.2;
 }
+
+/* Enrollment Guide Styles */
+.guide-list {
+  font-size: 0.85rem;
+}
+
+.guide-list > div {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.guide-list > div:last-child {
+  border-bottom: none;
+}
+
+.guide-list > div:hover {
+  background-color: rgba(13, 110, 253, 0.05);
+  padding-left: 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.guide-list .badge {
+  font-size: 0.6rem;
+  padding: 0.2em 0.5em;
+  vertical-align: middle;
+}
+
+.guide-list .text-muted.italic {
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+#guidingCard .card-header {
+  border-bottom: none;
+}
+
+#guidingCard .border-end {
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+@media (max-width: 991.98px) {
+  #guidingCard .col-md-6 {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  
+  #guidingCard .col-md-6:nth-last-child(-n+2) {
+    border-bottom: none;
+  }
+  
+  #guidingCard .border-end {
+    border-right: none !important;
+  }
+}

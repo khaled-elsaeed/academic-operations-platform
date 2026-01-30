@@ -8,6 +8,7 @@ use App\Services\StudentService;
 use App\Models\Student;
 use App\Http\Requests\{StoreStudentRequest,UpdateStudentRequest};
 use App\Exceptions\BusinessValidationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Exception;
 
 class StudentController extends Controller
@@ -64,12 +65,22 @@ class StudentController extends Controller
     /**
      * Display the specified student.
      *
-     * @param Student $student
+     * @param string $identifier
      * @return JsonResponse
      */
-    public function show(Student $student): JsonResponse
+    public function show(string $identifier): JsonResponse
     {
-        return response()->json($student);
+        try {
+            $studentData = $this->studentService->getStudent($identifier);
+            return successResponse('Student details fetched successfully.', $studentData);
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], 422);
+        } catch (ModelNotFoundException $e) {
+            return errorResponse('Student not found.', [], 404);
+        } catch (Exception $e) {
+            logError('StudentController@show', $e, ['identifier' => $identifier]);
+            return errorResponse('Internal server error.', [], 500);
+        }
     }
 
     /**

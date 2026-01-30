@@ -46,7 +46,10 @@ require __DIR__.'/web/setting.php';
 // Include Available Courses Routes
 // ====================
 
-require __DIR__.'/web/available_course.php';
+require __DIR__ . '/web/available_course/available_course.php';
+require __DIR__ . '/web/available_course/eligibility.php';
+require __DIR__ . '/web/available_course/schedule.php';
+
 
 // ====================
 // Include Course Routes

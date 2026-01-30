@@ -567,6 +567,7 @@ const EnrollmentSubmissionManager = {
         const formData = new FormData();
         formData.append('student_id', StudentManager.currentStudentId);
         formData.append('enrollment_type', 'without_schedule');
+        formData.append('create_schedule', 'false');
         
         enrollmentData.forEach((item, index) => {
             formData.append(`enrollment_data[${index}][term_id]`, item.term_id);

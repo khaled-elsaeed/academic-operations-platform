@@ -337,9 +337,11 @@ button.list-group-item-primary.active {
   color: var(--bs-primary) !important;
 }
 
-.nav .nav-link:hover, .nav .nav-link:focus {
-  color: #5f61e6;
+.nav .nav-link:hover,
+.nav .nav-link:focus {
+  color: #7a151c;
 }
+
 
 .nav-pills .nav-link.active, .nav-pills .nav-link.active:hover, .nav-pills .nav-link.active:focus {
   background-color: var(--bs-primary);

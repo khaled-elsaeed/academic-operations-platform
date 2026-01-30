@@ -11,6 +11,7 @@ use App\Models\Enrollment;
 use App\Rules\AcademicAdvisorAccessRule;
 use App\Exceptions\BusinessValidationException;
 use Exception;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class EnrollmentController extends Controller
 {
@@ -74,17 +75,16 @@ class EnrollmentController extends Controller
         $request->validate([
             'student_id' => ['required', 'exists:students,id', new AcademicAdvisorAccessRule()],
             'term_id' => 'required|exists:terms,id',
-            'available_course_ids' => 'required|array|min:1',
-            'available_course_ids.*' => 'exists:available_courses,id',
-            'available_course_schedule_ids' => 'array',
-            'available_course_schedule_ids.*' => 'exists:available_course_schedules,id',
-            'course_schedule_mapping' => 'array',
+            'enrollments' => 'required|array',
+            'enrollments.*.available_course_id' => 'required|exists:available_courses,id',
+            'enrollments.*.selected_schedule_ids' => 'required|array',
+            'enrollments.*.selected_schedule_ids.*' => 'exists:available_course_schedules,id',
+            'enrollments.*.create_schedule' => 'required|in:true,false',
         ]);
 
         try {
             $validated = $request->all();
-            // This store endpoint handles the normal (with schedule) enrollment flow only
-            $results = $this->enrollmentService->createEnrollments($validated);
+            $results = $this->enrollmentService->create($validated);
             return successResponse('Enrollments created successfully.', $results);
         } catch (BusinessValidationException $e) {
             return errorResponse($e->getMessage(), [], $e->getCode());
@@ -133,34 +133,7 @@ class EnrollmentController extends Controller
         return view('enrollment.old-enrollment-add');
     }
 
-    /**
-     * Store enrollments for grade-only (without schedule) flow via dedicated endpoint.
-     *
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function storeWithoutSchedule(Request $request): JsonResponse
-    {
-        $request->validate([
-            'student_id' => ['required', 'exists:students,id', new AcademicAdvisorAccessRule()],
-            'enrollment_data' => 'required|array|min:1',
-            'enrollment_data.*.course_id' => 'required|exists:courses,id',
-            'enrollment_data.*.term_id' => 'required|exists:terms,id',
-            'enrollment_data.*.grade' => 'nullable|string|max:5',
-        ]);
-
-        try {
-            $validated = $request->all();
-            $results = $this->enrollmentService->createEnrollmentsWithoutSchedule($validated);
-            return successResponse('Enrollments (grade-only) created successfully.', $results);
-        } catch (BusinessValidationException $e) {
-            return errorResponse($e->getMessage(), [], $e->getCode());
-        } catch (Exception $e) {
-            logError('EnrollmentController@storeWithoutSchedule', $e, ['request' => $request->all()]);
-            return errorResponse('Internal server error.', [], 500);
-        }
-    }
-
+   
     /**
      * Find a student by national or academic ID.
      *
@@ -228,28 +201,75 @@ class EnrollmentController extends Controller
     }
 
     /**
-     * Import enrollments from an uploaded file.
+     * Start an async enrollments import.
      *
      * @param Request $request
      * @return JsonResponse
      */
     public function import(Request $request): JsonResponse
     {
-        $request->validate([
-            'enrollments_file' => 'required|file|mimes:xlsx,xls'
-        ]);
         try {
-            $result = $this->enrollmentService->importEnrollments($request->file('enrollments_file'));
-            return successResponse($result['message'], [
-                'imported_count' => $result['imported_count'],
-                'errors' => $result['errors']
+            $validated = $request->validate([
+                'file' => 'required|file|mimes:xlsx,xls|max:10240', // 10MB max
             ]);
-        } catch (BusinessValidationException $e) {
-            return errorResponse($e->getMessage(), [], 422);
+
+            $result = $this->enrollmentService->import($validated);
+
+            return successResponse(__('Import initiated successfully.'), $result);
         } catch (Exception $e) {
             logError('EnrollmentController@import', $e, ['request' => $request->all()]);
-            return errorResponse('Failed to import enrollments.', [], 500);
+            return errorResponse(__('Failed to initiate import.'), [], 500);
         }
+    }
+
+    /**
+     * Get import status by UUID.
+     *
+     * @param string $uuid
+     * @return JsonResponse
+     */
+    public function importStatus(string $uuid): JsonResponse
+    {
+        try {
+            $status = $this->enrollmentService->getImportStatus($uuid);
+
+            if (!$status) {
+                return errorResponse(__('Import not found.'), [], 404);
+            }
+
+            return successResponse(__('Import status retrieved successfully.'), $status);
+        } catch (Exception $e) {
+            logError('EnrollmentController@importStatus', $e, ['uuid' => $uuid]);
+            return errorResponse(__('Failed to retrieve import status.'), [], 500);
+        }
+    }
+
+    /**
+     * Cancel import task by UUID.
+     *
+     * @param string $uuid
+     * @return JsonResponse
+     */
+    public function importCancel(string $uuid): JsonResponse
+    {
+        try {
+            $result = $this->enrollmentService->cancelImport($uuid);
+            return successResponse(__('Import cancelled successfully.'), $result);
+        } catch (Exception $e) {
+            logError('EnrollmentController@importCancel', $e, ['uuid' => $uuid]);
+            return errorResponse(__('Failed to cancel import.'), [], 500);
+        }
+    }
+
+    /**
+     * Download completed import report by UUID.
+     *
+     * @param string $uuid
+     * @return BinaryFileResponse|JsonResponse
+     */
+    public function importDownload(string $uuid): BinaryFileResponse|JsonResponse
+    {
+        return $this->enrollmentService->downloadImport($uuid);
     }
 
     /**
@@ -268,12 +288,12 @@ class EnrollmentController extends Controller
     }
 
     /**
-     * Export enrollments for a selected academic term.
+     * Start an async enrollments export.
      *
      * @param Request $request
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|JsonResponse
+     * @return JsonResponse
      */
-    public function export(Request $request)
+    public function export(Request $request): JsonResponse
     {
         $request->validate([
             'term_id' => 'nullable|exists:terms,id',
@@ -281,11 +301,65 @@ class EnrollmentController extends Controller
             'level_id' => 'nullable|exists:levels,id',
         ]);
 
-        $termId = $request->input('term_id');
-        $programId = $request->input('program_id');
-        $levelId = $request->input('level_id');
+        try {
+            $validated = $request->all();
+            $result = $this->enrollmentService->exportEnrollments($validated);
 
-        return $this->enrollmentService->exportEnrollments($termId, $programId, $levelId);
+            return successResponse(__('Export initiated successfully.'), $result);
+        } catch (Exception $e) {
+            logError('EnrollmentController@export', $e, ['request' => $request->all()]);
+            return errorResponse(__('Failed to initiate export.'), [], 500);
+        }
+    }
+
+    /**
+     * Get export status by UUID.
+     *
+     * @param string $uuid
+     * @return JsonResponse
+     */
+    public function exportStatus(string $uuid): JsonResponse
+    {
+        try {
+            $status = $this->enrollmentService->getExportStatus($uuid);
+
+            if (!$status) {
+                return errorResponse(__('Export not found.'), [], 404);
+            }
+
+            return successResponse(__('Export status retrieved successfully.'), $status);
+        } catch (Exception $e) {
+            logError('EnrollmentController@exportStatus', $e, ['uuid' => $uuid]);
+            return errorResponse(__('Failed to retrieve export status.'), [], 500);
+        }
+    }
+
+    /**
+     * Cancel export task by UUID.
+     *
+     * @param string $uuid
+     * @return JsonResponse
+     */
+    public function exportCancel(string $uuid): JsonResponse
+    {
+        try {
+            $result = $this->enrollmentService->cancelExport($uuid);
+            return successResponse(__('Export cancelled successfully.'), $result);
+        } catch (Exception $e) {
+            logError('EnrollmentController@exportCancel', $e, ['uuid' => $uuid]);
+            return errorResponse(__('Failed to cancel export.'), [], 500);
+        }
+    }
+
+    /**
+     * Download completed export file by UUID.
+     *
+     * @param string $uuid
+     * @return BinaryFileResponse|JsonResponse
+     */
+    public function exportDownload(string $uuid): BinaryFileResponse|JsonResponse
+    {
+        return $this->enrollmentService->downloadExport($uuid);
     }
 
     /**
@@ -396,22 +470,20 @@ class EnrollmentController extends Controller
         }
     }
 
-    public function getSchedules(Request $request): JsonResponse
+    public function getEnrollmentsByStudent(Request $request): JsonResponse
     {
         $request->validate([
             'student_id' => ['required', 'exists:students,id'],
-            'term_id'    => ['required', 'exists:terms,id'],
         ]);
 
         try {
-            $schedules = $this->enrollmentService->getSchedules(
+            $enrollments = $this->enrollmentService->getEnrollmentsByStudent(
                 $request->student_id,
-                $request->term_id
             );
-            return successResponse('Schedules fetched successfully.', $schedules);
+            return successResponse('Enrollments fetched successfully.', $enrollments);
         } catch (Exception $e) {
-            logError('EnrollmentController@getSchedules', $e);
-            return errorResponse('Failed to get student schedules.', [], 500);
+            logError('EnrollmentController@getEnrollmentsByStudent', $e);
+            return errorResponse('Failed to get student enrollments.', [], 500);
         }
     }
 

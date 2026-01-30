@@ -75,6 +75,15 @@ class StudentService
         $student->delete();
     }
 
+
+    public function getStudent(string $identifier): Student
+    {
+        return Student::with(['program', 'level'])
+            ->where('academic_id', $identifier)
+            ->orWhere('national_id', $identifier)
+            ->firstOrFail();
+    }
+
     /**
      * Get student statistics.
      *

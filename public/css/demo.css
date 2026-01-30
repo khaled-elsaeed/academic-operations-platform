@@ -270,3 +270,7 @@
     text-shadow: 0 0 20px rgba(var(--bs-primary-rgb), 0.6);
   }
 }
+
+div:where(.swal2-container){
+  z-index: 1100 !important;
+}

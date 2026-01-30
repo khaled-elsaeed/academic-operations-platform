@@ -9,7 +9,7 @@ use App\Models\Student;
 use App\Models\Term;
 use App\Models\CreditHoursException;
 
-class EnrollmentCreditHoursLimit implements ValidationRule
+class EnrollmentCreditHoursRule implements ValidationRule
 {
     protected int $studentId;
     protected int $termId;

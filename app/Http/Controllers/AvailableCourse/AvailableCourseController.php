@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\AvailableCourse;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\View\View;
 use App\Services\AvailableCourse\AvailableCourseService;
 use App\Exports\AvailableCoursesTemplateExport;
-use App\Http\Requests\{StoreAvailableCourseRequest, UpdateAvailableCourseRequest};
+use App\Http\Requests\{StoreAvailableCourseRequest};
 use App\Models\AvailableCourse;
 use App\Models\Student;
 use App\Models\Term;
@@ -70,7 +71,7 @@ class AvailableCourseController extends Controller
     {
         try {
             $validated = $request->validated();
-            $availableCourse = $this->availableCourseService->createAvailableCourse($validated);
+            $availableCourse = $this->availableCourseService->create($validated);
             return successResponse('Available course created successfully.', $availableCourse);
         } catch (BusinessValidationException $e) {
             return errorResponse($e->getMessage(), [], $e->getCode());
@@ -81,35 +82,24 @@ class AvailableCourseController extends Controller
     }
 
     /**
-     * Show the form for editing the specified available course.
+     * Get available courses for a student.
      *
-     * @param int $id
-     * @return View
-     */
-    public function edit($id): View
-    {
-        $availableCourse = AvailableCourse::with(['course', 'term', 'eligibilities.program', 'eligibilities.level', 'schedules.scheduleAssignments.scheduleSlot'])
-            ->findOrFail($id);
-        return view('available_course.edit', compact('availableCourse'));
-    }
-
-    /**
-     * Update the specified available course in storage.
-     *
-     * @param UpdateAvailableCourseRequest $request
-     * @param int $id
+     * @param Request $request
      * @return JsonResponse
      */
-    public function update(UpdateAvailableCourseRequest $request, $id): JsonResponse
+    public function availableCoursesByStudent(Request $request): JsonResponse
     {
+        $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'term_id' => 'required|exists:terms,id',
+        ]);
+
         try {
-            $validated = $request->validated();
-            $availableCourse = $this->availableCourseService->updateAvailableCourse($id, $validated);
-            return successResponse('Available course updated successfully.', $availableCourse);
-        } catch (BusinessValidationException $e) {
-            return errorResponse($e->getMessage(), [], $e->getCode());
+            $exception = $request->boolean('exceptionForDifferentLevels', false);
+            $availableCourses = $this->availableCourseService->getAvailableCoursesByStudent($request->student_id, $request->term_id, $exception);
+            return successResponse('Available courses fetched successfully.', $availableCourses);
         } catch (Exception $e) {
-            logError('AvailableCourseController@update', $e, ['id' => $id, 'request' => $request->all()]);
+            logError('AvailableCourseController@availableCoursesByStudent', $e, ['request' => $request->all()]);
             return errorResponse('Internal server error.', [], 500);
         }
     }
@@ -123,7 +113,8 @@ class AvailableCourseController extends Controller
     public function destroy($id): JsonResponse
     {
         try {
-            $this->availableCourseService->deleteAvailableCourse($id);
+            $availableCourse = AvailableCourse::findOrFail($id);
+            $this->availableCourseService->delete($availableCourse);
             return successResponse('Available course deleted successfully.');
         } catch (BusinessValidationException $e) {
             return errorResponse($e->getMessage(), [], $e->getCode());
@@ -132,6 +123,20 @@ class AvailableCourseController extends Controller
             return errorResponse('Internal server error.', [], 500);
         }
     }
+
+        /**
+     * Show the form for editing the specified available course.
+     *
+     * @param int $id
+     * @return View
+     */
+    public function edit($id): View
+    {
+        $availableCourse = AvailableCourse::with(['course', 'term', 'eligibilities.program', 'eligibilities.level', 'schedules.scheduleAssignments.scheduleSlot'])
+            ->findOrFail($id);
+        return view('available_course.edit', compact('availableCourse'));
+    }
+
 
     /**
      * Display the specified available course.
@@ -149,31 +154,6 @@ class AvailableCourseController extends Controller
         } catch (Exception $e) {
             logError('AvailableCourseController@show', $e, ['id' => $id]);
             return errorResponse('Internal server error.', [], 500);
-        }
-    }
-
-    /**
-     * Import available courses from an Excel file.
-     *
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function import(Request $request): JsonResponse
-    {
-        $request->validate([
-            'courses_file' => 'required|file|mimes:xlsx,xls',
-        ]);
-
-        try {
-            $result = $this->availableCourseService->importAvailableCoursesFromFile($request->file('courses_file'));
-            $importedCount = ($result['summary']['total_created'] ?? 0) + ($result['summary']['total_updated'] ?? 0);
-            return successResponse($result['message'], [
-                'imported_count' => $importedCount,
-                'errors' => $result['errors'] ?? [],
-            ]);
-        } catch (Exception $e) {
-            logError('AvailableCourseController@import', $e, ['request' => $request->all()]);
-            return errorResponse('Import failed. Please check your file.', [], 500);
         }
     }
 
@@ -339,201 +319,134 @@ class AvailableCourseController extends Controller
         }
     }
 
-
     /**
-     * Get eligibility datatable for edit page.
-     *
-     * @param int $id
-     * @return JsonResponse
-     */
-    public function eligibilityDatatable($id): JsonResponse
-    {
-        try {
-            return $this->availableCourseService->getEligibilityDatatable($id);
-        } catch (Exception $e) {
-            logError('AvailableCourseController@eligibilityDatatable', $e);
-            return errorResponse('Internal server error.', [], 500);
-        }
-    }
-
-    /**
-     * Store new eligibility for available course.
+     * Update basic information of available course.
      *
      * @param Request $request
      * @param int $id
      * @return JsonResponse
      */
-    public function storeEligibility(Request $request, $id): JsonResponse
+    public function updateBasic(Request $request, $id): JsonResponse
     {
         $request->validate([
-            'program_id' => 'required|exists:programs,id',
-            'level_id' => 'required|exists:levels,id',
-            'group_numbers' => 'required|array|min:1',
-            'group_numbers.*' => 'integer|min:1|max:30',
+            'course_id' => 'required|exists:courses,id',
+            'term_id' => 'required|exists:terms,id',
         ]);
 
         try {
-            $eligibility = $this->availableCourseService->storeEligibility($id, $request->all());
-            return successResponse('Eligibility added successfully.', $eligibility);
+            $availableCourse = $this->availableCourseService->updateAvailableCourse($id, $request->only(['course_id', 'term_id']));
+            return successResponse('Available course updated successfully.', $availableCourse);
         } catch (BusinessValidationException $e) {
             return errorResponse($e->getMessage(), [], $e->getCode());
         } catch (Exception $e) {
-            logError('AvailableCourseController@storeEligibility', $e, ['id' => $id, 'request' => $request->all()]);
+            logError('AvailableCourseController@updateBasic', $e, ['id' => $id, 'request' => $request->all()]);
             return errorResponse('Internal server error.', [], 500);
         }
     }
 
     /**
-     * Delete eligibility for available course.
-     *
-     * @param int $availableCourseId
-     * @param int $eligibilityId
-     * @return JsonResponse
-     */
-    public function deleteEligibility($availableCourseId, $eligibilityId): JsonResponse
-    {
-        try {
-            $this->availableCourseService->deleteEligibility($eligibilityId);
-            return successResponse('Eligibility deleted successfully.');
-        } catch (BusinessValidationException $e) {
-            return errorResponse($e->getMessage(), [], $e->getCode());
-        } catch (Exception $e) {
-            logError('AvailableCourseController@deleteEligibility', $e, ['availableCourseId' => $availableCourseId, 'eligibilityId' => $eligibilityId]);
-            return errorResponse('Internal server error.', [], 500);
-        }
-    }
-
-    /**
-     * Get schedules datatable for edit page.
+     * Get programs for a specific available course.
      *
      * @param int $id
      * @return JsonResponse
      */
-    public function schedulesDatatable($id): JsonResponse
+    public function programs($id): JsonResponse
     {
         try {
-            return $this->availableCourseService->getSchedulesDatatable($id);
+            $programs = $this->availableCourseService->getPrograms($id);
+            return successResponse('Programs fetched successfully.', $programs);
         } catch (Exception $e) {
-            logError('AvailableCourseController@schedulesDatatable', $e);
-            return errorResponse('Internal server error.', [], 500);
+            logError('AvailableCourseController@programs', $e, ['id' => $id]);
+            return errorResponse('Failed to fetch programs.', [], 500);
         }
     }
 
     /**
-     * Show schedule for editing.
+     * Get levels for a specific available course.
      *
-     * @param int $availableCourseId
-     * @param int $scheduleId
-     * @return JsonResponse
-     */
-    public function showSchedule($availableCourseId, $scheduleId): JsonResponse
-    {
-        try {
-            $schedule = $this->availableCourseService->getSchedule($scheduleId);
-            return successResponse('Schedule retrieved successfully.', $schedule);
-        } catch (BusinessValidationException $e) {
-            return errorResponse($e->getMessage(), [], $e->getCode());
-        } catch (Exception $e) {
-            logError('AvailableCourseController@showSchedule', $e, ['availableCourseId' => $availableCourseId, 'scheduleId' => $scheduleId]);
-            return errorResponse('Internal server error.', [], 500);
-        }
-    }
-
-    /**
-     * Store new schedule for available course.
-     *
-     * @param Request $request
      * @param int $id
      * @return JsonResponse
      */
-    public function storeSchedule(Request $request, $id): JsonResponse
+    public function levels($id): JsonResponse
     {
-        $request->validate([
-            'schedule_template_id' => 'nullable|integer|exists:schedules,id',
-            'activity_type' => 'required|in:lecture,tutorial,lab',
-            'group_numbers' => 'required|array|min:1',
-            'group_numbers.*' => 'integer|min:1|max:30',
-            'location' => 'nullable|string|max:255',
-            'program_id' => 'nullable|exists:programs,id',
-            'level_id' => 'nullable|exists:levels,id',
-            'min_capacity' => 'nullable|integer|min:0',
-            'max_capacity' => 'nullable|integer|min:0',
-            'schedule_slot_ids' => 'nullable|array',
-            'schedule_slot_ids.*' => 'integer|exists:schedule_slots,id',
-            'title' => 'nullable|string|max:255',
-            'description' => 'nullable|string',
-            'resources' => 'nullable|array',
-            'status' => 'nullable|in:scheduled,confirmed,cancelled,completed',
-            'notes' => 'nullable|string',
-        ]);
-
         try {
-            $schedule = $this->availableCourseService->storeSchedule($id, $request->all());
-            return successResponse('Schedule added successfully.', $schedule);
-        } catch (BusinessValidationException $e) {
-            return errorResponse($e->getMessage(), [], $e->getCode());
+            $levels = $this->availableCourseService->getLevels($id);
+            return successResponse('Levels fetched successfully.', $levels);
         } catch (Exception $e) {
-            logError('AvailableCourseController@storeSchedule', $e, ['id' => $id, 'request' => $request->all()]);
-            return errorResponse('Internal server error.', [], 500);
+            logError('AvailableCourseController@levels', $e, ['id' => $id]);
+            return errorResponse('Failed to fetch levels.', [], 500);
         }
     }
 
     /**
-     * Update schedule for available course.
+     * Start an async available course import.
      *
      * @param Request $request
-     * @param int $availableCourseId
-     * @param int $scheduleId
      * @return JsonResponse
      */
-    public function updateSchedule(Request $request, $availableCourseId, $scheduleId): JsonResponse
+    public function import(Request $request): JsonResponse
     {
-        $request->validate([
-            'schedule_template_id' => 'nullable|integer|exists:schedules,id',
-            'activity_type' => 'required|in:lecture,tutorial,lab',
-            'group_number' => 'required|integer|min:1|max:30', // Single group number for updates
-            'location' => 'nullable|string|max:255',
-            'program_id' => 'nullable|exists:programs,id',
-            'level_id' => 'nullable|exists:levels,id',
-            'min_capacity' => 'nullable|integer|min:0',
-            'max_capacity' => 'nullable|integer|min:0',
-            'schedule_slot_ids' => 'nullable|array',
-            'schedule_slot_ids.*' => 'integer|exists:schedule_slots,id',
-            'title' => 'nullable|string|max:255',
-            'description' => 'nullable|string',
-            'resources' => 'nullable|array',
-            'status' => 'nullable|in:scheduled,confirmed,cancelled,completed',
-            'notes' => 'nullable|string',
-        ]);
-
         try {
-            $schedule = $this->availableCourseService->updateSchedule($scheduleId, $request->all());
-            return successResponse('Schedule updated successfully.', $schedule);
-        } catch (BusinessValidationException $e) {
-            return errorResponse($e->getMessage(), [], $e->getCode());
+            $validated = $request->validate([
+                'file' => 'required|file|mimes:xlsx,xls|max:10240', // 10MB max
+            ]);
+
+            $result = $this->availableCourseService->import($validated);
+
+            return successResponse(__('Import initiated successfully.'), $result);
         } catch (Exception $e) {
-            logError('AvailableCourseController@updateSchedule', $e, ['availableCourseId' => $availableCourseId, 'scheduleId' => $scheduleId, 'request' => $request->all()]);
-            return errorResponse('Internal server error.', [], 500);
+            logError('AvailableCourseController@import', $e, ['request' => $request->all()]);
+            return errorResponse(__('Failed to initiate import.'), [], 500);
         }
     }
 
     /**
-     * Delete schedule for available course.
+     * Get import status by UUID.
      *
-     * @param int $availableCourseId
-     * @param int $scheduleId
+     * @param string $uuid
      * @return JsonResponse
      */
-    public function deleteSchedule($availableCourseId, $scheduleId): JsonResponse
+    public function importStatus(string $uuid): JsonResponse
     {
         try {
-            $this->availableCourseService->deleteSchedule($scheduleId);
-            return successResponse('Schedule deleted successfully.');
-        } catch (BusinessValidationException $e) {
-            return errorResponse($e->getMessage(), [], $e->getCode());
+            $status = $this->availableCourseService->getImportStatus($uuid);
+
+            if (!$status) {
+                return errorResponse(__('Import not found.'), [], 404);
+            }
+
+            return successResponse(__('Import status retrieved successfully.'), $status);
         } catch (Exception $e) {
-            logError('AvailableCourseController@deleteSchedule', $e, ['availableCourseId' => $availableCourseId, 'scheduleId' => $scheduleId]);
-            return errorResponse('Internal server error.', [], 500);
+            logError('AvailableCourseController@importStatus', $e, ['uuid' => $uuid]);
+            return errorResponse(__('Failed to retrieve import status.'), [], 500);
         }
     }
-} 
+
+    /**
+     * Cancel import task by UUID.
+     *
+     * @param string $uuid
+     * @return JsonResponse
+     */
+    public function importCancel(string $uuid): JsonResponse
+    {
+        try {
+            $result = $this->availableCourseService->cancelImport($uuid);
+            return successResponse(__('Import cancelled successfully.'), $result);
+        } catch (Exception $e) {
+            logError('AvailableCourseController@importCancel', $e, ['uuid' => $uuid]);
+            return errorResponse(__('Failed to cancel import.'), [], 500);
+        }
+    }
+
+    /**
+     * Download completed import report by UUID.
+     *
+     * @param string $uuid
+     * @return BinaryFileResponse|JsonResponse
+     */
+    public function importDownload(string $uuid): BinaryFileResponse|JsonResponse
+    {
+        return $this->availableCourseService->downloadImport($uuid);
+    }
+}

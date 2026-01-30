@@ -71,4 +71,12 @@ class Enrollment extends Model
     {
         return $this->hasMany(EnrollmentSchedule::class);
     }
+
+    /**
+     * Get the schedules through enrollment schedules.
+     */
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(EnrollmentSchedule::class)->with('availableCourseSchedule.scheduleAssignments.scheduleSlot');
+    }
 }

@@ -43,9 +43,9 @@ class ProcessImportService
 
     private const MAX_CAPACITY_LAB = 30;
 
-    private const MAX_CAPACITY_LECTURE = 200;
+    private const MAX_CAPACITY_LECTURE = 30;
 
-    private const MAX_CAPACITY_TUTORIAL = 150;
+    private const MAX_CAPACITY_TUTORIAL = 30;
 
     protected array $results = [
         'summary' => [

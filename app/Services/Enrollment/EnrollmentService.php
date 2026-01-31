@@ -351,7 +351,7 @@ class EnrollmentService
      */
     public function getStudentEnrollments(int $studentId): Collection
     {
-        return Enrollment::with(['course', 'term'])
+        return Enrollment::with(['course', 'term', 'schedules'])
             ->where('student_id', $studentId)
             ->orderByDesc('created_at')
             ->get();

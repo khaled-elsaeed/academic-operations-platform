@@ -204,7 +204,7 @@ class ScheduleService
      */
     public function getAvailableCourseSchedules(int $availableCourseId): array
     {
-        $schedules = AvailableCourseSchedule::with(['scheduleAssignments.scheduleSlot', 'enrollments'])
+        $schedules = AvailableCourseSchedule::with(['scheduleAssignments.scheduleSlot', 'enrollments','program','level'])
             ->where('available_course_id', $availableCourseId)
             ->get();
 
@@ -220,7 +220,7 @@ class ScheduleService
      */
     public function getSchedule(int $scheduleId): array
     {
-        $schedule = AvailableCourseSchedule::with(['scheduleAssignments.scheduleSlot', 'enrollments'])->find($scheduleId);
+        $schedule = AvailableCourseSchedule::with(['scheduleAssignments.scheduleSlot', 'enrollments','program','level'])->find($scheduleId);
 
         if (!$schedule) {
             throw new BusinessValidationException('Schedule not found.');
@@ -247,6 +247,8 @@ class ScheduleService
             'day_of_week' => $firstSlot?->day_of_week,
             'level_id' => $schedule->level_id,
             'program_id' => $schedule->program_id,
+            'program_name' => $schedule->program->name,
+            'level_name' => $schedule->level->name,
             'slot_ids' => $slotIds,
         ];
     }

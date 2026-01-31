@@ -26,4 +26,9 @@ class StudyPlan extends Model
     {
         return $this->belongsTo(ElectiveCourse::class);
     }
+
+    public function universityRequirement()
+    {
+        return $this->belongsTo(UniversityRequirement::class);
+    }
 }

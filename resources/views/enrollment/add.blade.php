@@ -513,15 +513,84 @@
                 this.enrollments.current.forEach(enrollment => {
                     if (enrollment.schedules && Array.isArray(enrollment.schedules)) {
                         enrollment.schedules.forEach(schedule => {
-                            this.schedules.enrolled.push({
-                                course: enrollment.course,
-                                activity: schedule.activity,
-                                group: schedule.group_number,
-                                source: 'enrolled'
-                            });
+                            // schedule is an EnrollmentSchedule object.
+                            // We need to extract the available_course_schedule and transform it.
+                            const acs = schedule.available_course_schedule;
+                            if (acs) {
+                                const activity = this.processAvailableCourseSchedule(acs);
+                                if (activity) {
+                                    this.schedules.enrolled.push({
+                                        course: enrollment.course,
+                                        activity: activity,
+                                        group: acs.group, // Use group from ACS
+                                        source: 'enrolled'
+                                    });
+                                }
+                            }
                         });
                     }
                 });
+            },
+
+            processAvailableCourseSchedule(acs) {
+                if (!acs || !acs.schedule_assignments) return null;
+
+                const slotsByDay = {};
+                
+                acs.schedule_assignments.forEach(assignment => {
+                    if (assignment.schedule_slot) {
+                        const slot = assignment.schedule_slot;
+                        const day = slot.day_of_week || 'TBA';
+                        if (!slotsByDay[day]) slotsByDay[day] = [];
+                        slotsByDay[day].push({
+                            start_time: slot.start_time,
+                            end_time: slot.end_time,
+                            day_of_week: day
+                        });
+                    }
+                });
+
+                const consolidatedSlots = [];
+                Object.keys(slotsByDay).forEach(day => {
+                    const daySlots = slotsByDay[day];
+                    daySlots.sort((a, b) => (Utils.parseTime(a.start_time) || 0) - (Utils.parseTime(b.start_time) || 0));
+                    
+                    let start = daySlots[0].start_time;
+                    let end = daySlots[0].end_time;
+                    
+                    daySlots.forEach(s => {
+                        const sStart = Utils.parseTime(s.start_time);
+                        const sEnd = Utils.parseTime(s.end_time);
+                        const cStart = Utils.parseTime(start);
+                        const cEnd = Utils.parseTime(end);
+                        if (sStart < cStart) start = s.start_time;
+                        if (sEnd > cEnd) end = s.end_time;
+                    });
+                    
+                    consolidatedSlots.push({
+                        day_of_week: day,
+                        start_time: start,
+                        end_time: end,
+                        all_slots: daySlots
+                    });
+                });
+                
+                const primary = consolidatedSlots[0] || { day_of_week: 'TBA', start_time: '', end_time: '' };
+                
+                return {
+                    id: acs.id,
+                    activity_type: acs.activity_type,
+                    group_number: acs.group,
+                    start_time: primary.start_time,
+                    end_time: primary.end_time,
+                    day_of_week: primary.day_of_week,
+                    location: acs.location || '',
+                    program: acs.program?.code || '',
+                    level: acs.level?.name || '',
+                    max_capacity: acs.max_capacity || acs.capacity || 0,
+                    all_day_slots: consolidatedSlots,
+                    all_individual_slots: Object.values(slotsByDay).flat()
+                };
             },
 
             getAllSchedules() {
@@ -634,6 +703,10 @@
                         const response = await ApiService.findStudent(identifier);
                         if (Utils.isResponseSuccess(response)) {
                             const student = Utils.getResponseData(response);
+                            
+                            AppState.reset();
+                            $('#term_id').val(null).trigger('change'); 
+                            
                             AppState.setStudent(student);
                             this.display(student);
                             $('#student_id').val(student.id);
@@ -642,7 +715,6 @@
                             if (Utils.isResponseSuccess(enrollmentsResponse)) {
                                 AppState.setEnrollmentHistory(Utils.getResponseData(enrollmentsResponse) || []);
                                 EnrollmentHistoryManager.load();
-                                EnrollmentApp.resetCourseRelated();
                             }
                         }
                     } catch (error) {
@@ -854,7 +926,6 @@
                 $(document).off('change', '.course-checkbox').on('change', '.course-checkbox', function () {
                     const courseId = $(this).val();
                     if ($(this).is(':checked')) {
-                        // Temporarily uncheck until activity selection is confirmed
                         $(this).prop('checked', false);
                         ActivitySelectionManager.show(courseId);
                     } else {
@@ -1026,6 +1097,8 @@
                             end_time: primarySlot.end_time,
                             day_of_week: primarySlot.day_of_week,
                             location: schedule.location || '',
+                            program: schedule.program?.code || '',
+                            level: schedule.level?.name || '',
                             enrolled_count: totalEnrolled,
                             max_capacity: schedule.max_capacity || schedule.capacity || 0,
                             min_capacity: schedule.min_capacity || 0,
@@ -1098,6 +1171,8 @@
                                                             <div class="small text-muted">
                                                                 ${timeDisplay}
                                                                 ${s.location ? `<div><i class="bx bx-map me-1"></i>${Utils.escapeHtml(s.location)}</div>` : ''}
+                                                                ${s.program ? `<div><i class="bx bx-book me-1"></i>${Utils.escapeHtml(s.program)}</div>` : ''}
+                                                                ${s.level ? `<div><i class="bx bx-layer me-1"></i>${Utils.escapeHtml(s.level)}</div>` : ''} 
                                                                 ${conflict ? '<div class="text-danger"><i class="bx bx-error-circle me-1"></i>Conflicts with current schedule</div>' : ''}
                                                             </div>
                                                         </div>
@@ -1242,12 +1317,6 @@
                 if (activity.all_individual_slots && Array.isArray(activity.all_individual_slots) && activity.all_individual_slots.length > 0) {
                     return activity.all_individual_slots;
                 }
-                // Fallback: use the activity itself as a single slot
-                return [{ 
-                    day_of_week: activity.day_of_week, 
-                    start_time: activity.start_time, 
-                    end_time: activity.end_time 
-                }];
             },
 
             checkActivity(activity) {
@@ -1258,7 +1327,6 @@
                     const existingActivity = item.activity || item;
                     const existingSlots = this.getIndividualSlots(existingActivity);
                     
-                    // Check each new slot against each existing slot
                     for (const newSlot of newSlots) {
                         for (const existingSlot of existingSlots) {
                             if (this.hasConflict(existingSlot, newSlot)) {
@@ -1273,7 +1341,6 @@
             checkConflicts(newCourseData, currentCourseId) {
                 const conflicts = [];
                 
-                // Helper to check if two activities have any conflicting slots
                 const hasActivityConflict = (act1, act2) => {
                     const slots1 = this.getIndividualSlots(act1);
                     const slots2 = this.getIndividualSlots(act2);
@@ -1319,7 +1386,6 @@
             },
 
             showWarning(conflicts, onConfirm) {
-                // Helper to format activity time display
                 const formatActivityTime = (activity) => {
                     if (activity.all_day_slots && activity.all_day_slots.length > 0) {
                         return activity.all_day_slots.map(s => 
@@ -1365,18 +1431,22 @@
                     return;
                 }
 
+                // Update current enrollments for the selected term
                 AppState.updateCurrentEnrollments();
+                
                 if (AppState.schedules.enrolled.length > 0) {
                     this.render();
                     $('#weeklyScheduleCard').show();
                     $('#downloadTimetableBtn').show();
                 } else {
+                    // No enrolled schedules for this term yet
                     $('#weeklyScheduleCard').hide();
                     $('#downloadTimetableBtn').hide();
                 }
             },
 
             update() {
+                // Clear and rebuild selected schedules from checked courses
                 AppState.schedules.selected = [];
                 AppState.selections.courseGroups.forEach((data, courseId) => {
                     if ($(`#course_${courseId}`).is(':checked')) {
@@ -1391,13 +1461,16 @@
                     }
                 });
 
+                // Get all schedules (enrolled + selected)
                 const allSchedules = AppState.getAllSchedules();
+                
                 if (allSchedules.length === 0) {
                     $('#weeklyScheduleCard').hide();
                     $('#downloadTimetableBtn').hide();
                     return;
                 }
 
+                // Render and show the timetable
                 this.render();
                 $('#weeklyScheduleCard').show();
                 $('#downloadTimetableBtn').show();
@@ -1410,7 +1483,6 @@
                     '9:00-9:50', '9:50-10:40', '10:40-11:30', '11:30-12:20',
                     '12:20-13:10', '13:10-14:00', '14:00-14:50', '14:50-15:40'
                 ];
-
 
                 const scheduleEl = document.getElementById('weeklySchedule');
                 if (scheduleEl && scheduleEl.style) {
@@ -1433,19 +1505,28 @@
 
                         activities.forEach(item => {
                             const activity = item.activity || item;
-                            if (activity.day_of_week?.toLowerCase() === day.toLowerCase() && this.isActivityInTimeSlot(slot, activity.start_time, activity.end_time)) {
+                            
+                            // Check if activity matches this day and time slot
+                            if (activity.day_of_week?.toLowerCase() === day.toLowerCase() && 
+                                this.isActivityInTimeSlot(slot, activity.start_time, activity.end_time)) {
+                                
                                 hasClass = true;
                                 const courseName = Utils.escapeHtml(item.course?.name || 'Unknown Course');
                                 const activityType = Utils.escapeHtml(activity.activity_type || 'Unknown');
                                 const groupNumber = activity.group_number || 'N/A';
                                 const location = activity.location ? ` at ${Utils.escapeHtml(activity.location)}` : '';
+                                
+                                // Differentiate between enrolled and selected courses visually
+                                const sourceClass = item.source === 'enrolled' ? 'enrolled-activity' : 'selected-activity';
+                                const borderStyle = item.source === 'selected' ? 'border: 2px dashed #fff;' : '';
 
-                                cellContent += `<div class="activity-block" style="background-color: ${this.getActivityColor(activity.activity_type)};">
+                                cellContent += `<div class="activity-block ${sourceClass}" style="background-color: ${this.getActivityColor(activity.activity_type)}; ${borderStyle}">
                                         <strong>${courseName}</strong><br>
                                         <small>${activityType} G${groupNumber}${location}</small>
                                     </div>`;
 
-                                tooltipContent += `${courseName} (${activityType} G${groupNumber}) ${activity.start_time}-${activity.end_time}${location}\n`;
+                                const sourceLabel = item.source === 'enrolled' ? 'Enrolled' : 'Selected';
+                                tooltipContent += `${courseName} (${activityType} G${groupNumber}) ${activity.start_time}-${activity.end_time}${location} [${sourceLabel}]\n`;
                             }
                         });
 
@@ -1458,6 +1539,7 @@
 
                 $('#weeklySchedule').html(html);
 
+                // Reinitialize tooltips
                 $('[data-bs-toggle="tooltip"]').tooltip('dispose');
                 $('[data-bs-toggle="tooltip"]').tooltip({
                     placement: 'top',
@@ -1490,7 +1572,7 @@
                     'tutorial': '#ffc107',
                     'seminar': '#dc3545'
                 };
-                return colors[activityType] || '#6c757d';
+                return colors[activityType?.toLowerCase()] || '#6c757d';
             }
         };
 
@@ -1628,13 +1710,19 @@
                 const failedCount = (history.failed_courses || []).length + (history.incomplete_courses || []).length;
                 const studyPlanCoreCount = (studyPlan.courses || []).length;
                 const electiveCount = studyPlan.elective_info?.count || 0;
+                const urCount = studyPlan.university_req_info?.count || 0;
                 const missingCoreCount = (missing.core || []).length;
                 const missingElectiveCount = missing.electives?.count || 0;
+                const missingUrCount = missing.university_reqs?.count || 0;
 
                 $('#passedCount').text(passedCount);
                 $('#failedCount').text(failedCount);
-                $('#studyPlanCount').text(studyPlanCoreCount + (electiveCount > 0 ? '+' + electiveCount : ''));
-                $('#missingCount').text(missingCoreCount + (missingElectiveCount > 0 ? '+' + missingElectiveCount : ''));
+                
+                const currentTotal = studyPlanCoreCount + electiveCount + urCount;
+                const missingTotal = missingCoreCount + missingElectiveCount + missingUrCount;
+
+                $('#studyPlanCount').text(currentTotal);
+                $('#missingCount').text(missingTotal);
 
                 $('#guideSummaryStats').html(`
                         <div class="text-center">
@@ -1643,11 +1731,11 @@
                         </div>
                         <div class="text-center">
                             <small class="text-muted d-block">Current</small>
-                            <span class="fw-bold text-primary">${studyPlanCoreCount + electiveCount}</span>
+                            <span class="fw-bold text-primary">${currentTotal}</span>
                         </div>
                         <div class="text-center">
                             <small class="text-muted d-block">Missing</small>
-                            <span class="fw-bold text-warning">${missingCoreCount + missingElectiveCount}</span>
+                            <span class="fw-bold text-warning">${missingTotal}</span>
                         </div>
                     `);
 
@@ -1678,6 +1766,17 @@
                     this.renderElectivePool(studyPlan.elective_info.pool, electiveHtml, '#studyPlanCoursesList');
                 }
 
+                if (studyPlan.university_req_info && studyPlan.university_req_info.count > 0) {
+                    const slotCodes = (studyPlan.university_req_info.codes || []).join(', ');
+                    const codesDisplay = slotCodes ? ` (${slotCodes})` : '';
+                    let urHtml = `<div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="text-primary">University Requirements${codesDisplay}: Choose ${studyPlan.university_req_info.count}</strong>
+                            </div>
+                            <div class="ms-1">`;
+                    this.renderElectivePool(studyPlan.university_req_info.pool, urHtml, '#studyPlanCoursesList');
+                }
+
                 this.renderList('#missingCoursesList', missing.core || [], 'course', true);
 
                 if (missing.electives && missing.electives.count > 0) {
@@ -1689,6 +1788,17 @@
                             </div>
                             <div class="ms-1">`;
                     this.renderElectivePool(missing.electives.pool, electiveHtml, '#missingCoursesList');
+                }
+
+                if (missing.university_reqs && missing.university_reqs.count > 0) {
+                    const slotCodes = (missing.university_reqs.codes || []).join(', ');
+                    const codesDisplay = slotCodes ? ` (${slotCodes})` : '';
+                    let urHtml = `<div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="text-warning">Missing University Reqs${codesDisplay}: Need ${missing.university_reqs.count}</strong>
+                            </div>
+                            <div class="ms-1">`;
+                    this.renderElectivePool(missing.university_reqs.pool, urHtml, '#missingCoursesList');
                 }
             },
             renderElectivePool(pool, containerHtml, targetSelector) {
@@ -1808,10 +1918,10 @@
                         const enrollmentsResponse = await ApiService.fetchStudentEnrollments(AppState.student.id);
                         if (Utils.isResponseSuccess(enrollmentsResponse)) {
                             AppState.setEnrollmentHistory(Utils.getResponseData(enrollmentsResponse) || []);
+                            AppState.updateCurrentEnrollments(); // Update current term enrollments
                             EnrollmentHistoryManager.load();
                         }
                         
-                        // Reset selections and reload UI
                         AppState.resetSelections();
                         ScheduleManager.initialize();
                         AvailableCoursesManager.load();

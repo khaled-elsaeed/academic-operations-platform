@@ -108,7 +108,7 @@
                                     <div class="flex-grow-1 ms-3">
                                         <h6 class="mb-1 text-primary">Import Information</h6>
                                         <p class="mb-0 text-muted small">
-                                            Upload an Excel file to import enrollments. Use the template for correct formatting.
+                                            Upload an Excel file to import enrollments. Use the system template or SIS template for correct formatting.
                                         </p>
                                     </div>
                                 </div>
@@ -116,6 +116,17 @@
                         </div>
                         <div class="row g-4">
                             <div class="col-lg-12">
+                                <!-- Template Selection -->
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Template <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="template_select" name="template_select" required>
+                                        <option value="">Select a template</option>
+                                        <option value="system">System Template</option>
+                                        <option value="sis">SIS Template</option>
+                                    </select>
+                                    <small class="text-muted">Required: Select a template</small>
+                                    <div class="invalid-feedback d-block"></div>
+                                </div>
                                 <!-- File Upload -->
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold">Excel File <span class="text-danger">*</span></label>
@@ -417,7 +428,7 @@
 
                     const formData = new FormData();
                     formData.append('file', fileInput.files[0]);
-
+                    formData.append('template_select', $('#template_select').val());
                     ImportTaskManager.start(formData, {
                         button: $('#submitImportBtn')
                     });
@@ -432,8 +443,6 @@
             init() {
                 $('#exportBtn').on('click', () => {
                     ExportModal.show();
-                    // Load options if not loaded? Or assume loaded by init.
-                    // Better to load if empty or just rely on Page init.
                 });
 
                 $('#submitExportBtn').on('click', () => {

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use App\Models\ImportStaging;
 use App\Services\GenericExcelImporter;
-use App\Services\Enrollment\Operations\ProcessImportService;
+use App\Services\Enrollment\Operations\{ProcessImportService,ProcessSisImportService};
 use Throwable;
 
 class ImportEnrollmentsJob implements ShouldQueue
@@ -118,18 +118,18 @@ class ImportEnrollmentsJob implements ShouldQueue
                 }
 
                 $params = $this->task->parameters;
+                $template = $params['template'] ?? 'system';
 
-                $service = new ProcessImportService(
-                    $buffer
-                );
+                if ($template === 'sis') {
+                   $service = new ProcessSisImportService($buffer);
+                } else {
+                   $service = new ProcessImportService($buffer);
+                }
 
-                // Process and get results
                 $chunkResults = $service->process();
 
-                // Merge results and increment counter in ONE transaction
                 $this->mergeChunkResultsAndIncrement($chunkResults);
 
-                // Update progress
                 $this->task->refresh();
                 $currentProgress = self::PROGRESS_STAGING_END +
                     (($this->task->result['chunks_completed'] ?? 0) * $progressPerChunk);

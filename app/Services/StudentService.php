@@ -27,40 +27,69 @@ use App\Jobs\Student\ExportStudentsJob;
 
 class StudentService
 {
-    use Progressable, Importable, Exportable;
+    use Progressable;
+    use Importable {
+        import as traitImport;
+        getImportStatus as traitGetImportStatus;
+        downloadImport as traitDownloadImport;
+    }
+    use Exportable {
+        export as traitExport;
+        getExportStatus as traitGetExportStatus;
+        downloadExport as traitDownloadExport;
+    } 
 
     /**
-     * Configure import for students.
+     * Import students data async.
+     *
+     * @param array $data Must contain 'file' key with UploadedFile
+     * @return array{task_id:int,uuid:string}
      */
-    protected function getImportConfig(): array
+    public function import(array $data): array
     {
-        return [
-            'job' => ImportStudentsJob::class,
-            'subtype' => 'student',
-            'download_route' => 'students.import.download',
-            'filename_prefix' => 'students_import_results',
-        ];
+        return $this->traitImport(
+            file: $data['file'],
+            jobClass: ImportStudentsJob::class,
+            subtype: 'student'
+        );
+    }
+
+    public function getImportStatus(string $uuid): ?array
+    {
+        return $this->traitGetImportStatus($uuid, 'students.import.download');
+    }
+
+    public function downloadImport(string $uuid): \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\JsonResponse
+    {
+        return $this->traitDownloadImport($uuid, 'students_import_results');
     }
 
     /**
-     * Configure export for students.
+     * Export students async.
      */
-    protected function getExportConfig(): array
+    public function exportStudentsAsync(array $data = []): array
     {
-        return [
-            'job' => ExportStudentsJob::class,
-            'subtype' => 'student',
-            'download_route' => 'students.export.download',
-        ];
+        return $this->traitExport(
+            jobClass: ExportStudentsJob::class,
+            subtype: 'student',
+            parameters: $data
+        );
+    }
+
+    public function getExportStatus(string $uuid): ?array
+    {
+        return $this->traitGetExportStatus($uuid, 'students.export.download');
+    }
+
+    public function downloadExport(string $uuid): \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\JsonResponse
+    {
+        return $this->traitDownloadExport($uuid);
     }
 
     /**
      * Export students (wrapper for the trait method).
      */
-    public function exportStudentsAsync(array $data = []): array
-    {
-        return $this->export($data);
-    }
+
     /**
      * StudentService constructor.
      *

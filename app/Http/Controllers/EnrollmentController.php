@@ -210,7 +210,8 @@ class EnrollmentController extends Controller
     {
         try {
             $validated = $request->validate([
-                'file' => 'required|file|mimes:xlsx,xls|max:10240', // 10MB max
+                'file' => 'required|file|mimes:xlsx,xls|max:51200',
+                'template_select' => 'required|in:system,sis',
             ]);
 
             $result = $this->enrollmentService->import($validated);

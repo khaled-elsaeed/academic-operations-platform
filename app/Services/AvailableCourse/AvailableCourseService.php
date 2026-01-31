@@ -24,7 +24,12 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class AvailableCourseService
 {
-    use Progressable, Importable;
+    use Progressable;
+    use Importable {
+        import as traitImport;
+        getImportStatus as traitGetImportStatus;
+        downloadImport as traitDownloadImport;
+    }
 
     /**
      * Create a new class instance.
@@ -34,16 +39,28 @@ class AvailableCourseService
     ){}
 
     /**
-     * Configure import for available courses.
+     * Import available courses data.
+     *
+     * @param array $data Must contain 'file' key with UploadedFile
+     * @return array{task_id:int,uuid:string}
      */
-    protected function getImportConfig(): array
+    public function import(array $data): array
     {
-        return [
-            'job' => ImportAvailableCoursesJob::class,
-            'subtype' => 'available_course',
-            'download_route' => 'available_courses.import.download',
-            'filename_prefix' => 'available_courses_import_results',
-        ];
+        return $this->traitImport(
+            file: $data['file'],
+            jobClass: ImportAvailableCoursesJob::class,
+            subtype: 'available_course'
+        );
+    }
+
+    public function getImportStatus(string $uuid): ?array
+    {
+        return $this->traitGetImportStatus($uuid, 'available_courses.import.download');
+    }
+
+    public function downloadImport(string $uuid): \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\JsonResponse
+    {
+        return $this->traitDownloadImport($uuid, 'available_courses_import_results');
     }
 
      /**

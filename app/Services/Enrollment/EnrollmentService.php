@@ -7,15 +7,14 @@ namespace App\Services\Enrollment;
 use App\Exceptions\BusinessValidationException;
 use App\Jobs\Enrollment\ExportEnrollmentsJob;
 use App\Jobs\Enrollment\ImportEnrollmentsJob;
+use App\Jobs\Enrollment\ImportSisEnrollmentsJob;
 use App\Models\Enrollment;
 use App\Models\User;
 use App\Policies\FeatureAvailabilityPolicy;
 use App\Services\CreditHoursExceptionService;
 use App\Services\Enrollment\Operations\CreateEnrollmentService;
 use App\Services\Enrollment\Operations\RemainingCreditHoursService;
-use App\Traits\Exportable;
-use App\Traits\Importable;
-use App\Traits\Progressable;
+use App\Traits\{Exportable, Importable, Progressable};
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -27,8 +26,16 @@ use Illuminate\Support\Facades\Cache;
 class EnrollmentService
 {
     use Progressable;
-    use Importable;
-    use Exportable;
+    use Importable {
+        import as traitImport;
+        getImportStatus as traitGetImportStatus;
+        downloadImport as traitDownloadImport;
+    }
+    use Exportable {
+        export as traitExport;
+        getExportStatus as traitGetExportStatus;
+        downloadExport as traitDownloadExport;
+    }
 
     /**
      * @var CreditHoursExceptionService Service for managing credit hours exceptions
@@ -71,51 +78,54 @@ class EnrollmentService
     }
 
     /**
-     * Configure import settings for enrollments.
+     * Import data from file.
      *
-     * This method is used by the Importable trait to define
-     * import-specific configuration.
-     *
-     * @return array<string, mixed> Import configuration
+     * @param array $data Must contain 'file' key with UploadedFile
+     * @return array{task_id:int,uuid:string}
      */
-    protected function getImportConfig(): array
+    public function import(array $data): array
     {
-        return [
-            'job' => ImportEnrollmentsJob::class,
-            'subtype' => 'enrollment',
-            'download_route' => 'enrollments.import.download',
-            'filename_prefix' => 'enrollments_import_results',
-        ];
+        return $this->traitImport(
+            file: $data['file'],
+            jobClass: ImportEnrollmentsJob::class,
+            subtype: 'enrollment',
+            additionalParams: ['template' => $data['template_select'] ?? 'system']
+        );
     }
 
-    /**
-     * Configure export settings for enrollments.
-     *
-     * This method is used by the Exportable trait to define
-     * export-specific configuration.
-     *
-     * @return array<string, mixed> Export configuration
-     */
-    protected function getExportConfig(): array
+    public function getImportStatus(string $uuid): ?array
     {
-        return [
-            'job' => ExportEnrollmentsJob::class,
-            'subtype' => 'enrollment',
-            'download_route' => 'enrollments.export.download',
-        ];
+        return $this->traitGetImportStatus($uuid, 'enrollments.import.download');
+    }
+
+    public function downloadImport(string $uuid): \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\JsonResponse
+    {
+        return $this->traitDownloadImport($uuid, 'enrollments_import_results');
     }
 
     /**
      * Export enrollments to file.
-     *
-     * Wrapper method for the Exportable trait's export functionality.
      *
      * @param array<string, mixed> $data Optional filters and export parameters
      * @return array<string, mixed> Export task information
      */
     public function exportEnrollments(array $data = []): array
     {
-        return $this->export($data);
+        return $this->traitExport(
+            jobClass: ExportEnrollmentsJob::class,
+            subtype: 'enrollment',
+            parameters: $data
+        );
+    }
+
+     public function getExportStatus(string $uuid): ?array
+    {
+        return $this->traitGetExportStatus($uuid, 'enrollments.export.download');
+    }
+
+    public function downloadExport(string $uuid): \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\JsonResponse
+    {
+        return $this->traitDownloadExport($uuid);
     }
 
     /**

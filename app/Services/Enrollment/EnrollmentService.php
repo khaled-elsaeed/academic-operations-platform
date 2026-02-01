@@ -7,7 +7,9 @@ namespace App\Services\Enrollment;
 use App\Exceptions\BusinessValidationException;
 use App\Jobs\Enrollment\ExportEnrollmentsJob;
 use App\Jobs\Enrollment\ImportEnrollmentsJob;
+use App\Models\AvailableCourseSchedule;
 use App\Models\Enrollment;
+use App\Models\Schedule\ScheduleAssignment;
 use App\Models\User;
 use App\Policies\FeatureAvailabilityPolicy;
 use App\Services\CreditHoursExceptionService;
@@ -177,6 +179,7 @@ class EnrollmentService
      * Delete an enrollment.
      *
      * Checks feature availability before performing deletion.
+     * Also decrements capacity for associated schedules.
      *
      * @param Enrollment $enrollment The enrollment to delete
      * @return void
@@ -185,7 +188,35 @@ class EnrollmentService
     public function deleteEnrollment(Enrollment $enrollment): void
     {
         $this->featureAvailabilityPolicy->checkAvailable('enrollment', 'delete');
+
+        // Decrement capacity for associated schedules
+        $this->decrementScheduleCapacities($enrollment);
+
         $enrollment->delete();
+    }
+
+    /**
+     * Decrement capacity counters for schedules associated with an enrollment.
+     *
+     * @param Enrollment $enrollment The enrollment being deleted
+     * @return void
+     */
+    private function decrementScheduleCapacities(Enrollment $enrollment): void
+    {
+        // Get all schedule IDs associated with this enrollment
+        $scheduleIds = $enrollment->schedules->pluck('available_course_schedule_id')->toArray();
+
+        if (empty($scheduleIds)) {
+            return;
+        }
+
+        // Decrement current_capacity for each schedule
+        foreach ($scheduleIds as $scheduleId) {
+            AvailableCourseSchedule::where('id', $scheduleId)->decrement('current_capacity');
+
+            // Also decrement enrolled count on schedule assignments
+            ScheduleAssignment::where('available_course_schedule_id', $scheduleId)->decrement('enrolled');
+        }
     }
 
     /**

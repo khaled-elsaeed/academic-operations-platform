@@ -7,13 +7,13 @@ namespace App\Services\Enrollment;
 use App\Exceptions\BusinessValidationException;
 use App\Jobs\Enrollment\ExportEnrollmentsJob;
 use App\Jobs\Enrollment\ImportEnrollmentsJob;
-use App\Jobs\Enrollment\ImportSisEnrollmentsJob;
 use App\Models\Enrollment;
 use App\Models\User;
 use App\Policies\FeatureAvailabilityPolicy;
 use App\Services\CreditHoursExceptionService;
 use App\Services\Enrollment\Operations\CreateEnrollmentService;
 use App\Services\Enrollment\Operations\RemainingCreditHoursService;
+use App\Services\EnrollmentDocumentService;
 use App\Traits\{Exportable, Importable, Progressable};
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Yajra\DataTables\DataTables;
 use Illuminate\Support\Facades\Cache;
+use App\Models\Student;
 
 
 class EnrollmentService
@@ -58,23 +59,31 @@ class EnrollmentService
     protected RemainingCreditHoursService $remainingCreditHoursService;
 
     /**
+     * @var EnrollmentDocumentService Service for generating enrollment documents
+     */
+    protected EnrollmentDocumentService $enrollmentDocumentService;
+
+    /**
      * EnrollmentService constructor.
      *
      * @param CreditHoursExceptionService $creditHoursExceptionService
      * @param FeatureAvailabilityPolicy $featureAvailabilityPolicy
      * @param CreateEnrollmentService $createService
      * @param RemainingCreditHoursService $remainingCreditHoursService
+     * @param EnrollmentDocumentService $enrollmentDocumentService
      */
     public function __construct(
         CreditHoursExceptionService $creditHoursExceptionService,
         FeatureAvailabilityPolicy $featureAvailabilityPolicy,
         CreateEnrollmentService $createService,
-        RemainingCreditHoursService $remainingCreditHoursService
+        RemainingCreditHoursService $remainingCreditHoursService,
+        EnrollmentDocumentService $enrollmentDocumentService
     ) {
         $this->creditHoursExceptionService = $creditHoursExceptionService;
         $this->featureAvailabilityPolicy = $featureAvailabilityPolicy;
         $this->createService = $createService;
         $this->remainingCreditHoursService = $remainingCreditHoursService;
+        $this->enrollmentDocumentService = $enrollmentDocumentService;
     }
 
     /**
@@ -140,11 +149,28 @@ class EnrollmentService
      */
     public function create(array $data): array
     {
-        return $this->createService->create(
+        $this->featureAvailabilityPolicy->checkAvailable('enrollment', 'create');
+        $result = $this->createService->create(
             (int) $data['student_id'],
             (int) $data['term_id'],
             $data['enrollments']
         )->toArray();
+
+        try {
+            $student = Student::find($data['student_id']);
+            if ($student) {
+                $document = $this->enrollmentDocumentService->generatePdf($student, (int) $data['term_id']);
+                $result['document_url'] = $document['url'];
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to generate enrollment document', [
+                'student_id' => $data['student_id'],
+                'term_id' => $data['term_id'],
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        return $result;
     }
 
     /**

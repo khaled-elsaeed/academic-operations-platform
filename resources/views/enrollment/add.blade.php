@@ -449,17 +449,17 @@
             student: null,
             term: { id: null, name: null },
             enrollments: {
-                history: [],  
-                current: [],  
-                selected: []  
+                history: [],
+                current: [],
+                selected: []
             },
             courses: {
                 available: [],
                 filtered: []
             },
             schedules: {
-                enrolled: [], 
-                selected: [], 
+                enrolled: [],
+                selected: [],
                 raw: new Map()
             },
             selections: {
@@ -536,7 +536,7 @@
                 if (!acs || !acs.schedule_assignments) return null;
 
                 const slotsByDay = {};
-                
+
                 acs.schedule_assignments.forEach(assignment => {
                     if (assignment.schedule_slot) {
                         const slot = assignment.schedule_slot;
@@ -554,10 +554,10 @@
                 Object.keys(slotsByDay).forEach(day => {
                     const daySlots = slotsByDay[day];
                     daySlots.sort((a, b) => (Utils.parseTime(a.start_time) || 0) - (Utils.parseTime(b.start_time) || 0));
-                    
+
                     let start = daySlots[0].start_time;
                     let end = daySlots[0].end_time;
-                    
+
                     daySlots.forEach(s => {
                         const sStart = Utils.parseTime(s.start_time);
                         const sEnd = Utils.parseTime(s.end_time);
@@ -566,7 +566,7 @@
                         if (sStart < cStart) start = s.start_time;
                         if (sEnd > cEnd) end = s.end_time;
                     });
-                    
+
                     consolidatedSlots.push({
                         day_of_week: day,
                         start_time: start,
@@ -574,9 +574,9 @@
                         all_slots: daySlots
                     });
                 });
-                
+
                 const primary = consolidatedSlots[0] || { day_of_week: 'TBA', start_time: '', end_time: '' };
-                
+
                 return {
                     id: acs.id,
                     activity_type: acs.activity_type,
@@ -703,10 +703,10 @@
                         const response = await ApiService.findStudent(identifier);
                         if (Utils.isResponseSuccess(response)) {
                             const student = Utils.getResponseData(response);
-                            
+
                             AppState.reset();
-                            $('#term_id').val(null).trigger('change'); 
-                            
+                            $('#term_id').val(null).trigger('change');
+
                             AppState.setStudent(student);
                             this.display(student);
                             $('#student_id').val(student.id);
@@ -727,23 +727,23 @@
             },
             display(student) {
                 const html = `
-                        <div class="col-12 col-md-4 mb-3 mb-md-0">
-                            <div class="student-info-item"><small class="text-muted">Full Name (English)</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.name_en)}</h6></div>
-                            <div class="student-info-item"><small class="text-muted">Full Name (Arabic)</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.name_ar || 'N/A')}</h6></div>
-                            <div class="student-info-item"><small class="text-muted">Academic Email</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.academic_email)}</h6></div>
-                            <div class="student-info-item"><small class="text-muted">Program</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.program?.name || 'Not Assigned')}</h6></div>
-                        </div>
-                        <div class="col-12 col-md-4 mb-3 mb-md-0">
-                            <div class="student-info-item"><small class="text-muted">Academic ID</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.academic_id)}</h6></div>
-                            <div class="student-info-item"><small class="text-muted">National ID</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.national_id)}</h6></div>
-                            <div class="student-info-item"><small class="text-muted">Level</small><h6 class="mb-0 text-dark">Level ${Utils.escapeHtml(student.level?.name || 'N/A')}</h6></div>
-                            <div class="student-info-item"><small class="text-muted">CGPA</small><h6 class="mb-0 text-dark">${student.cgpa || 'N/A'}</h6></div>
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <div class="student-info-item"><small class="text-muted">Total Units Taken</small><h6 class="mb-0 text-dark">${student.taken_hours || 0} Units</h6></div>
-                            <div class="student-info-item"><small class="text-muted">Remaining Hours</small><h6 class="mb-0 text-dark">Unknown</h6></div>
-                        </div>
-                    `;
+                            <div class="col-12 col-md-4 mb-3 mb-md-0">
+                                <div class="student-info-item"><small class="text-muted">Full Name (English)</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.name_en)}</h6></div>
+                                <div class="student-info-item"><small class="text-muted">Full Name (Arabic)</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.name_ar || 'N/A')}</h6></div>
+                                <div class="student-info-item"><small class="text-muted">Academic Email</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.academic_email)}</h6></div>
+                                <div class="student-info-item"><small class="text-muted">Program</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.program?.name || 'Not Assigned')}</h6></div>
+                            </div>
+                            <div class="col-12 col-md-4 mb-3 mb-md-0">
+                                <div class="student-info-item"><small class="text-muted">Academic ID</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.academic_id)}</h6></div>
+                                <div class="student-info-item"><small class="text-muted">National ID</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.national_id)}</h6></div>
+                                <div class="student-info-item"><small class="text-muted">Level</small><h6 class="mb-0 text-dark">Level ${Utils.escapeHtml(student.level?.name || 'N/A')}</h6></div>
+                                <div class="student-info-item"><small class="text-muted">CGPA</small><h6 class="mb-0 text-dark">${student.cgpa || 'N/A'}</h6></div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="student-info-item"><small class="text-muted">Total Units Taken</small><h6 class="mb-0 text-dark">${student.taken_hours || 0} Units</h6></div>
+                                <div class="student-info-item"><small class="text-muted">Remaining Hours</small><h6 class="mb-0 text-dark">Unknown</h6></div>
+                            </div>
+                        `;
                 $('#studentInfo').html(html);
                 $('#studentDetails').show();
             }
@@ -790,17 +790,17 @@
                         : '<span class="badge bg-secondary text-white"><i class="bx bx-time me-1"></i>No Grade Yet</span>';
 
                     html += `
-                            <div class="history-item">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="mb-1 text-dark">${courseName}</h6>
-                                        <p class="text-muted mb-1"><i class="bx bx-calendar me-1"></i><strong>${termName}</strong></p>
-                                        <div class="mt-1">${gradeBadge}</div>
+                                <div class="history-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1 text-dark">${courseName}</h6>
+                                            <p class="text-muted mb-1"><i class="bx bx-calendar me-1"></i><strong>${termName}</strong></p>
+                                            <div class="mt-1">${gradeBadge}</div>
+                                        </div>
+                                        <span class="badge bg-success text-white">Enrolled</span>
                                     </div>
-                                    <span class="badge bg-success text-white">Enrolled</span>
                                 </div>
-                            </div>
-                        `;
+                            `;
                 });
                 $('#enrollmentHistoryBox').html(html);
             },
@@ -874,31 +874,31 @@
                     const disabled = !canEnroll ? 'disabled' : '';
 
                     html += `
-                            <div class="course-item ${!canEnroll ? 'disabled' : ''}" data-course-id="${course.available_course_id}">
-                                <div class="form-check">
-                                    <input class="form-check-input course-checkbox" type="checkbox" name="available_course_ids[]"
-                                           value="${course.available_course_id}" data-credit-hours="${course.credit_hours}"
-                                           id="course_${course.available_course_id}" ${disabled}>
-                                    <label class="form-check-label w-100" for="course_${course.available_course_id}">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div style="flex:1;">
-                                                <h6 class="mb-1 text-dark">${Utils.escapeHtml(course.name)}</h6>
-                                                <p class="text-muted mb-0 small">
-                                                    <i class="bx bx-book me-1"></i><strong>${Utils.escapeHtml(course.code || 'N/A')}</strong>
-                                                    <span class="ms-2"><i class="bx bx-timer me-1"></i><strong class="text-primary">${course.credit_hours}</strong> CH</span>
-                                                </p>
-                                                ${this.renderPrerequisites(coursePrereqs)}
-                                                <div class="selected-group-info" id="groupInfo_${course.available_course_id}" style="display:none;"></div>
+                                <div class="course-item ${!canEnroll ? 'disabled' : ''}" data-course-id="${course.available_course_id}">
+                                    <div class="form-check">
+                                        <input class="form-check-input course-checkbox" type="checkbox" name="available_course_ids[]"
+                                               value="${course.available_course_id}" data-credit-hours="${course.credit_hours}"
+                                               id="course_${course.available_course_id}" ${disabled}>
+                                        <label class="form-check-label w-100" for="course_${course.available_course_id}">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div style="flex:1;">
+                                                    <h6 class="mb-1 text-dark">${Utils.escapeHtml(course.name)}</h6>
+                                                    <p class="text-muted mb-0 small">
+                                                        <i class="bx bx-book me-1"></i><strong>${Utils.escapeHtml(course.code || 'N/A')}</strong>
+                                                        <span class="ms-2"><i class="bx bx-timer me-1"></i><strong class="text-primary">${course.credit_hours}</strong> CH</span>
+                                                    </p>
+                                                    ${this.renderPrerequisites(coursePrereqs)}
+                                                    <div class="selected-group-info" id="groupInfo_${course.available_course_id}" style="display:none;"></div>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="badge bg-${capacityClass} mb-2">${remainingText}</span>
+                                                    ${hasUnfulfilled ? '<div><span class="badge bg-danger"><i class="bx bx-lock me-1"></i>Prerequisites Required</span></div>' : ''}
+                                                </div>
                                             </div>
-                                            <div class="text-end">
-                                                <span class="badge bg-${capacityClass} mb-2">${remainingText}</span>
-                                                ${hasUnfulfilled ? '<div><span class="badge bg-danger"><i class="bx bx-lock me-1"></i>Prerequisites Required</span></div>' : ''}
-                                            </div>
-                                        </div>
-                                    </label>
+                                        </label>
+                                    </div>
                                 </div>
-                            </div>
-                        `;
+                            `;
                 });
                 $('#coursesBox').html(html);
                 this.bindCheckboxes();
@@ -916,9 +916,9 @@
                     const text = p.is_enrolled ? 'Completed' : 'Missing';
                     const onclick = !p.is_enrolled ? `PrerequisiteManager.showMissing([${JSON.stringify(p).replace(/"/g, '&quot;')}])` : '';
                     html += `<div class="small ${statusClass}" style="cursor:${!p.is_enrolled ? 'pointer' : 'default'}" ${onclick ? 'onclick="' + onclick + '"' : ''}>
-                            <i class="bx ${icon} me-1"></i>${Utils.escapeHtml(p.course_name)} (${Utils.escapeHtml(p.course_code)})
-                            <span class="badge ${badge} ms-1">${text}</span>
-                        </div>`;
+                                <i class="bx ${icon} me-1"></i>${Utils.escapeHtml(p.course_name)} (${Utils.escapeHtml(p.course_code)})
+                                <span class="badge ${badge} ms-1">${text}</span>
+                            </div>`;
                 });
                 return html;
             },
@@ -967,12 +967,12 @@
                 let html = '';
                 prereqs.forEach(p => {
                     html += `
-                            <div class="alert alert-danger mb-2">
-                                <i class="bx bx-x-circle me-2"></i>
-                                <strong>${Utils.escapeHtml(p.course_name)}</strong> (${Utils.escapeHtml(p.course_code || 'N/A')})
-                                <small class="d-block">${p.credit_hours || 'N/A'} CH</small>
-                            </div>
-                        `;
+                                <div class="alert alert-danger mb-2">
+                                    <i class="bx bx-x-circle me-2"></i>
+                                    <strong>${Utils.escapeHtml(p.course_name)}</strong> (${Utils.escapeHtml(p.course_code || 'N/A')})
+                                    <small class="d-block">${p.credit_hours || 'N/A'} CH</small>
+                                </div>
+                            `;
                 });
                 $('#missingPrerequisitesList').html(html);
                 PrerequisiteModal.show();
@@ -992,11 +992,11 @@
                 }
 
                 $('#courseActivityInfo').html(`
-                        <div class="alert alert-info">
-                            <h6>${Utils.escapeHtml(course.name)}</h6>
-                            <small>Code: <strong>${Utils.escapeHtml(course.code || 'N/A')}</strong> | CH: <strong>${course.credit_hours}</strong></small>
-                        </div>
-                    `);
+                            <div class="alert alert-info">
+                                <h6>${Utils.escapeHtml(course.name)}</h6>
+                                <small>Code: <strong>${Utils.escapeHtml(course.code || 'N/A')}</strong> | CH: <strong>${course.credit_hours}</strong></small>
+                            </div>
+                        `);
 
                 Utils.showLoading('#activitiesList', 'Loading schedules...');
                 this.currentCourseId = courseId;
@@ -1030,12 +1030,12 @@
                         // Collect all slots for this schedule, grouped by day
                         const slotsByDay = {};
                         let totalEnrolled = 0;
-                        
+
                         schedule.schedule_assignments.forEach(assignment => {
                             if (assignment.schedule_slot) {
                                 const slot = assignment.schedule_slot;
                                 const day = slot.day_of_week || 'TBA';
-                                
+
                                 if (!slotsByDay[day]) {
                                     slotsByDay[day] = [];
                                 }
@@ -1058,17 +1058,17 @@
                                 const timeB = Utils.parseTime(b.start_time) || 0;
                                 return timeA - timeB;
                             });
-                            
+
                             // Find earliest start and latest end
                             let earliestStart = daySlots[0].start_time;
                             let latestEnd = daySlots[0].end_time;
-                            
+
                             daySlots.forEach(slot => {
                                 const slotStart = Utils.parseTime(slot.start_time);
                                 const slotEnd = Utils.parseTime(slot.end_time);
                                 const currentStart = Utils.parseTime(earliestStart);
                                 const currentEnd = Utils.parseTime(latestEnd);
-                                
+
                                 if (slotStart && currentStart && slotStart < currentStart) {
                                     earliestStart = slot.start_time;
                                 }
@@ -1076,7 +1076,7 @@
                                     latestEnd = slot.end_time;
                                 }
                             });
-                            
+
                             consolidatedSlots.push({
                                 day_of_week: day,
                                 start_time: earliestStart,
@@ -1088,7 +1088,7 @@
                         // Create schedule entry with consolidated info
                         // Use first consolidated slot for primary display, but store all for complete info
                         const primarySlot = consolidatedSlots[0] || { day_of_week: 'TBA', start_time: '', end_time: '' };
-                        
+
                         groupedByType[type].push({
                             id: schedule.id,
                             activity_type: schedule.activity_type,
@@ -1125,17 +1125,17 @@
 
                     const icon = type === 'lecture' ? 'bx-book-open' : type === 'lab' ? 'bx-flask' : 'bx-edit';
                     html += `
-                            <div class="activity-type-section mb-4" data-activity-type="${type}">
-                                <div class="activity-type-header bg-light p-3 rounded-top border">
-                                    <h5 class="mb-0 text-dark">
-                                        <i class="bx ${icon} me-2"></i>
-                                        ${Utils.escapeHtml(type.charAt(0).toUpperCase() + type.slice(1))}
-                                        <span class="badge bg-primary ms-2">${schedules.length}</span>
-                                        <span class="badge bg-danger ms-1 text-white" style="font-size:0.75em;">* Required</span>
-                                    </h5>
-                                </div>
-                                <div class="activity-options border border-top-0 rounded-bottom p-3">
-                        `;
+                                <div class="activity-type-section mb-4" data-activity-type="${type}">
+                                    <div class="activity-type-header bg-light p-3 rounded-top border">
+                                        <h5 class="mb-0 text-dark">
+                                            <i class="bx ${icon} me-2"></i>
+                                            ${Utils.escapeHtml(type.charAt(0).toUpperCase() + type.slice(1))}
+                                            <span class="badge bg-primary ms-2">${schedules.length}</span>
+                                            <span class="badge bg-danger ms-1 text-white" style="font-size:0.75em;">* Required</span>
+                                        </h5>
+                                    </div>
+                                    <div class="activity-options border border-top-0 rounded-bottom p-3">
+                            `;
 
                     schedules.forEach(s => {
                         const conflict = TimeConflictManager.checkActivity(s);
@@ -1146,46 +1146,46 @@
                         let timeDisplay = '';
                         if (s.all_day_slots && s.all_day_slots.length > 0) {
                             // Display each day's consolidated time range
-                            timeDisplay = s.all_day_slots.map(daySlot => 
+                            timeDisplay = s.all_day_slots.map(daySlot =>
                                 `<div><i class="bx bx-calendar me-1"></i>${Utils.escapeHtml(daySlot.day_of_week)}: ${Utils.formatTimeRange(daySlot.start_time, daySlot.end_time)}</div>`
                             ).join('');
                         } else {
                             // Fallback to primary slot display
                             timeDisplay = `
-                                <div><i class="bx bx-time me-1"></i>${Utils.formatTimeRange(s.start_time, s.end_time)}</div>
-                                <div><i class="bx bx-calendar me-1"></i>${Utils.escapeHtml(s.day_of_week || 'TBA')}</div>
-                            `;
+                                    <div><i class="bx bx-time me-1"></i>${Utils.formatTimeRange(s.start_time, s.end_time)}</div>
+                                    <div><i class="bx bx-calendar me-1"></i>${Utils.escapeHtml(s.day_of_week || 'TBA')}</div>
+                                `;
                         }
 
                         html += `
-                                <div class="activity-option mb-2 ${conflict ? 'activity-disabled' : ''}" data-activity-id="${s.id}" data-activity-type="${type}">
-                                    <div class="card ${conflictClass}">
-                                        <div class="card-body p-3">
-                                            <div class="form-check">
-                                                <input class="form-check-input activity-radio" type="radio" name="activity_${type}"
-                                                       value="${s.id}" data-activity='${JSON.stringify(s).replace(/'/g, "&#39;")}' ${disabled}>
-                                                <label class="form-check-label w-100">
-                                                    <div class="d-flex justify-content-between align-items-start">
-                                                        <div class="flex-grow-1">
-                                                            <h6 class="mb-1 text-dark">Group ${s.group_number} ${conflict ? '<span class="badge bg-danger ms-2">CONFLICT</span>' : ''}</h6>
-                                                            <div class="small text-muted">
-                                                                ${timeDisplay}
-                                                                ${s.location ? `<div><i class="bx bx-map me-1"></i>${Utils.escapeHtml(s.location)}</div>` : ''}
-                                                                ${s.program ? `<div><i class="bx bx-book me-1"></i>${Utils.escapeHtml(s.program)}</div>` : ''}
-                                                                ${s.level ? `<div><i class="bx bx-layer me-1"></i>${Utils.escapeHtml(s.level)}</div>` : ''} 
-                                                                ${conflict ? '<div class="text-danger"><i class="bx bx-error-circle me-1"></i>Conflicts with current schedule</div>' : ''}
+                                    <div class="activity-option mb-2 ${conflict ? 'activity-disabled' : ''}" data-activity-id="${s.id}" data-activity-type="${type}">
+                                        <div class="card ${conflictClass}">
+                                            <div class="card-body p-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input activity-radio" type="radio" name="activity_${type}"
+                                                           value="${s.id}" data-activity='${JSON.stringify(s).replace(/'/g, "&#39;")}' ${disabled}>
+                                                    <label class="form-check-label w-100">
+                                                        <div class="d-flex justify-content-between align-items-start">
+                                                            <div class="flex-grow-1">
+                                                                <h6 class="mb-1 text-dark">Group ${s.group_number} ${conflict ? '<span class="badge bg-danger ms-2">CONFLICT</span>' : ''}</h6>
+                                                                <div class="small text-muted">
+                                                                    ${timeDisplay}
+                                                                    ${s.location ? `<div><i class="bx bx-map me-1"></i>${Utils.escapeHtml(s.location)}</div>` : ''}
+                                                                    ${s.program ? `<div><i class="bx bx-book me-1"></i>${Utils.escapeHtml(s.program)}</div>` : ''}
+                                                                    ${s.level ? `<div><i class="bx bx-layer me-1"></i>${Utils.escapeHtml(s.level)}</div>` : ''} 
+                                                                    ${conflict ? '<div class="text-danger"><i class="bx bx-error-circle me-1"></i>Conflicts with current schedule</div>' : ''}
+                                                                </div>
+                                                            </div>
+                                                            <div class="text-end">
+                                                                <span class="badge bg-info">${s.enrolled_count || 0}/${s.max_capacity}</span>
                                                             </div>
                                                         </div>
-                                                        <div class="text-end">
-                                                            <span class="badge bg-info">${s.enrolled_count || 0}/${s.max_capacity}</span>
-                                                        </div>
-                                                    </div>
-                                                </label>
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            `;
+                                `;
                     });
 
                     html += `</div></div>`;
@@ -1284,8 +1284,8 @@
                 ).join('');
 
                 $(`#groupInfo_${courseId}`).html(`
-                        <small class="text-primary fw-semibold"><i class="bx bx-chalkboard me-1"></i>Selected: ${summary}</small>
-                    `).show();
+                            <small class="text-primary fw-semibold"><i class="bx bx-chalkboard me-1"></i>Selected: ${summary}</small>
+                        `).show();
 
                 $(`#course_${courseId}`).prop('checked', true);
                 $(`.course-item[data-course-id="${courseId}"]`).addClass('selected');
@@ -1322,11 +1322,11 @@
             checkActivity(activity) {
                 const allSchedules = AppState.getAllSchedules();
                 const newSlots = this.getIndividualSlots(activity);
-                
+
                 for (const item of allSchedules) {
                     const existingActivity = item.activity || item;
                     const existingSlots = this.getIndividualSlots(existingActivity);
-                    
+
                     for (const newSlot of newSlots) {
                         for (const existingSlot of existingSlots) {
                             if (this.hasConflict(existingSlot, newSlot)) {
@@ -1340,7 +1340,7 @@
 
             checkConflicts(newCourseData, currentCourseId) {
                 const conflicts = [];
-                
+
                 const hasActivityConflict = (act1, act2) => {
                     const slots1 = this.getIndividualSlots(act1);
                     const slots2 = this.getIndividualSlots(act2);
@@ -1353,7 +1353,7 @@
                     }
                     return false;
                 };
-                
+
                 AppState.selections.courseGroups.forEach((data, id) => {
                     if (id != currentCourseId && data.group_activities) {
                         data.group_activities.forEach(act => {
@@ -1388,25 +1388,25 @@
             showWarning(conflicts, onConfirm) {
                 const formatActivityTime = (activity) => {
                     if (activity.all_day_slots && activity.all_day_slots.length > 0) {
-                        return activity.all_day_slots.map(s => 
+                        return activity.all_day_slots.map(s =>
                             `${s.day_of_week}: ${s.start_time}-${s.end_time}`
                         ).join(', ');
                     }
                     return `${activity.day_of_week || 'TBA'} ${activity.start_time}-${activity.end_time}`;
                 };
-                
+
                 let html = '';
                 conflicts.forEach((c, i) => {
                     const typeLabel = c.type === 'enrolled' ? 'Already Enrolled' : c.type === 'intra' ? 'Same Course' : 'Selected Course';
                     html += `
-                            <div class="alert alert-warning mb-2">
-                                <strong>Conflict ${i + 1}: ${Utils.escapeHtml(c.course)}</strong> <span class="badge bg-warning">${typeLabel}</span>
-                                <div class="small">
-                                    Existing: ${formatActivityTime(c.existing)} (${c.existing.activity_type || 'N/A'})
-                                    <br>New: ${formatActivityTime(c.new)} (${c.new.activity_type || 'N/A'})
+                                <div class="alert alert-warning mb-2">
+                                    <strong>Conflict ${i + 1}: ${Utils.escapeHtml(c.course)}</strong> <span class="badge bg-warning">${typeLabel}</span>
+                                    <div class="small">
+                                        Existing: ${formatActivityTime(c.existing)} (${c.existing.activity_type || 'N/A'})
+                                        <br>New: ${formatActivityTime(c.new)} (${c.new.activity_type || 'N/A'})
+                                    </div>
                                 </div>
-                            </div>
-                        `;
+                            `;
                 });
 
                 Utils.showConfirmDialog({
@@ -1433,7 +1433,7 @@
 
                 // Update current enrollments for the selected term
                 AppState.updateCurrentEnrollments();
-                
+
                 if (AppState.schedules.enrolled.length > 0) {
                     this.render();
                     $('#weeklyScheduleCard').show();
@@ -1463,7 +1463,7 @@
 
                 // Get all schedules (enrolled + selected)
                 const allSchedules = AppState.getAllSchedules();
-                
+
                 if (allSchedules.length === 0) {
                     $('#weeklyScheduleCard').hide();
                     $('#downloadTimetableBtn').hide();
@@ -1505,25 +1505,25 @@
 
                         activities.forEach(item => {
                             const activity = item.activity || item;
-                            
+
                             // Check if activity matches this day and time slot
-                            if (activity.day_of_week?.toLowerCase() === day.toLowerCase() && 
+                            if (activity.day_of_week?.toLowerCase() === day.toLowerCase() &&
                                 this.isActivityInTimeSlot(slot, activity.start_time, activity.end_time)) {
-                                
+
                                 hasClass = true;
                                 const courseName = Utils.escapeHtml(item.course?.name || 'Unknown Course');
                                 const activityType = Utils.escapeHtml(activity.activity_type || 'Unknown');
                                 const groupNumber = activity.group_number || 'N/A';
                                 const location = activity.location ? ` at ${Utils.escapeHtml(activity.location)}` : '';
-                                
+
                                 // Differentiate between enrolled and selected courses visually
                                 const sourceClass = item.source === 'enrolled' ? 'enrolled-activity' : 'selected-activity';
                                 const borderStyle = item.source === 'selected' ? 'border: 2px dashed #fff;' : '';
 
                                 cellContent += `<div class="activity-block ${sourceClass}" style="background-color: ${this.getActivityColor(activity.activity_type)}; ${borderStyle}">
-                                        <strong>${courseName}</strong><br>
-                                        <small>${activityType} G${groupNumber}${location}</small>
-                                    </div>`;
+                                            <strong>${courseName}</strong><br>
+                                            <small>${activityType} G${groupNumber}${location}</small>
+                                        </div>`;
 
                                 const sourceLabel = item.source === 'enrolled' ? 'Enrolled' : 'Selected';
                                 tooltipContent += `${courseName} (${activityType} G${groupNumber}) ${activity.start_time}-${activity.end_time}${location} [${sourceLabel}]\n`;
@@ -1621,11 +1621,11 @@
             showException(hours) {
                 if (hours > 0) {
                     $('#exceptionAlert').html(`
-                            <div class="alert alert-warning mt-2">
-                                <i class="bx bx-shield-check me-2"></i>
-                                <strong>Admin Exception:</strong> +${hours} additional credit hours granted
-                            </div>
-                        `).show();
+                                <div class="alert alert-warning mt-2">
+                                    <i class="bx bx-shield-check me-2"></i>
+                                    <strong>Admin Exception:</strong> +${hours} additional credit hours granted
+                                </div>
+                            `).show();
                 } else {
                     $('#exceptionAlert').hide();
                 }
@@ -1717,7 +1717,7 @@
 
                 $('#passedCount').text(passedCount);
                 $('#failedCount').text(failedCount);
-                
+
                 const currentTotal = studyPlanCoreCount + electiveCount + urCount;
                 const missingTotal = missingCoreCount + missingElectiveCount + missingUrCount;
 
@@ -1725,19 +1725,19 @@
                 $('#missingCount').text(missingTotal);
 
                 $('#guideSummaryStats').html(`
-                        <div class="text-center">
-                            <small class="text-muted d-block">Completed</small>
-                            <span class="fw-bold text-success">${passedCount}</span>
-                        </div>
-                        <div class="text-center">
-                            <small class="text-muted d-block">Current</small>
-                            <span class="fw-bold text-primary">${currentTotal}</span>
-                        </div>
-                        <div class="text-center">
-                            <small class="text-muted d-block">Missing</small>
-                            <span class="fw-bold text-warning">${missingTotal}</span>
-                        </div>
-                    `);
+                            <div class="text-center">
+                                <small class="text-muted d-block">Completed</small>
+                                <span class="fw-bold text-success">${passedCount}</span>
+                            </div>
+                            <div class="text-center">
+                                <small class="text-muted d-block">Current</small>
+                                <span class="fw-bold text-primary">${currentTotal}</span>
+                            </div>
+                            <div class="text-center">
+                                <small class="text-muted d-block">Missing</small>
+                                <span class="fw-bold text-warning">${missingTotal}</span>
+                            </div>
+                        `);
 
                 this.renderList('#passedCoursesList', history.passed_courses || [], 'course');
 
@@ -1759,10 +1759,10 @@
                     const slotCodes = (studyPlan.elective_info.codes || []).join(', ');
                     const codesDisplay = slotCodes ? ` (${slotCodes})` : '';
                     let electiveHtml = `<div class="mt-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <strong class="text-primary">Elective Courses${codesDisplay}: Choose ${studyPlan.elective_info.count}</strong>
-                            </div>
-                            <div class="ms-1">`;
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong class="text-primary">Elective Courses${codesDisplay}: Choose ${studyPlan.elective_info.count}</strong>
+                                </div>
+                                <div class="ms-1">`;
                     this.renderElectivePool(studyPlan.elective_info.pool, electiveHtml, '#studyPlanCoursesList');
                 }
 
@@ -1770,10 +1770,10 @@
                     const slotCodes = (studyPlan.university_req_info.codes || []).join(', ');
                     const codesDisplay = slotCodes ? ` (${slotCodes})` : '';
                     let urHtml = `<div class="mt-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <strong class="text-primary">University Requirements${codesDisplay}: Choose ${studyPlan.university_req_info.count}</strong>
-                            </div>
-                            <div class="ms-1">`;
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong class="text-primary">University Requirements${codesDisplay}: Choose ${studyPlan.university_req_info.count}</strong>
+                                </div>
+                                <div class="ms-1">`;
                     this.renderElectivePool(studyPlan.university_req_info.pool, urHtml, '#studyPlanCoursesList');
                 }
 
@@ -1783,10 +1783,10 @@
                     const slotCodes = (missing.electives.codes || []).join(', ');
                     const codesDisplay = slotCodes ? ` (${slotCodes})` : '';
                     let electiveHtml = `<div class="mt-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <strong class="text-warning">Missing Electives${codesDisplay}: Need ${missing.electives.count}</strong>
-                            </div>
-                            <div class="ms-1">`;
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong class="text-warning">Missing Electives${codesDisplay}: Need ${missing.electives.count}</strong>
+                                </div>
+                                <div class="ms-1">`;
                     this.renderElectivePool(missing.electives.pool, electiveHtml, '#missingCoursesList');
                 }
 
@@ -1794,10 +1794,10 @@
                     const slotCodes = (missing.university_reqs.codes || []).join(', ');
                     const codesDisplay = slotCodes ? ` (${slotCodes})` : '';
                     let urHtml = `<div class="mt-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <strong class="text-warning">Missing University Reqs${codesDisplay}: Need ${missing.university_reqs.count}</strong>
-                            </div>
-                            <div class="ms-1">`;
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong class="text-warning">Missing University Reqs${codesDisplay}: Need ${missing.university_reqs.count}</strong>
+                                </div>
+                                <div class="ms-1">`;
                     this.renderElectivePool(missing.university_reqs.pool, urHtml, '#missingCoursesList');
                 }
             },
@@ -1829,10 +1829,10 @@
                         }
 
                         html += `<div class="ps-3 mb-1 small ${itemColorClass} d-flex align-items-center">
-                                <i class="bx ${statusIcon} me-1"></i>
-                                <span>${courseName}</span>
-                                ${statusBadge}
-                            </div>`;
+                                    <i class="bx ${statusIcon} me-1"></i>
+                                    <span>${courseName}</span>
+                                    ${statusBadge}
+                                </div>`;
                     });
                 }
                 html += `</div></div>`;
@@ -1912,30 +1912,52 @@
                 try {
                     const response = await ApiService.submitEnrollment(formData);
                     if (Utils.isResponseSuccess(response)) {
-                        Utils.showSuccess('Enrollment successful!');
-                        
-                        // Refresh enrollment history
-                        const enrollmentsResponse = await ApiService.fetchStudentEnrollments(AppState.student.id);
-                        if (Utils.isResponseSuccess(enrollmentsResponse)) {
-                            AppState.setEnrollmentHistory(Utils.getResponseData(enrollmentsResponse) || []);
-                            AppState.updateCurrentEnrollments(); // Update current term enrollments
-                            EnrollmentHistoryManager.load();
-                        }
-                        
-                        AppState.resetSelections();
-                        ScheduleManager.initialize();
-                        AvailableCoursesManager.load();
-                        UI.updateEnrollButton();
-                        CreditHoursManager.load();
-                        GuidingManager.load();
+                        const responseData = Utils.getResponseData(response);
+                        const documentUrl = responseData?.document_url;
+
+                        // Show success modal with PDF option
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Enrollment Successful!',
+                            text: 'Your enrollment has been completed successfully.',
+                            showCancelButton: true,
+                            confirmButtonText: documentUrl ? 'View PDF' : 'Continue',
+                            cancelButtonText: 'Continue',
+                            allowOutsideClick: false
+                        }).then(async (result) => {
+                            if (result.isConfirmed && documentUrl) {
+                                window.open(documentUrl, '_blank');
+                            }
+                            
+                            // Continue with the rest of the success handling
+                            Utils.showSuccess('Enrollment successful!');
+                            
+                            // Refresh enrollment history
+                            const enrollmentsResponse = await ApiService.fetchStudentEnrollments(AppState.student.id);
+                            if (Utils.isResponseSuccess(enrollmentsResponse)) {
+                                AppState.setEnrollmentHistory(Utils.getResponseData(enrollmentsResponse) || []);
+                                AppState.updateCurrentEnrollments(); // Update current term enrollments
+                                EnrollmentHistoryManager.load();
+                            }
+
+                            AppState.resetSelections();
+                            ScheduleManager.initialize();
+                            AvailableCoursesManager.load();
+                            UI.updateEnrollButton();
+                            CreditHoursManager.load();
+                            GuidingManager.load();
+
+                            Utils.setLoadingState($btn, false);
+                        });
+
+                        return; // Exit early since the rest is handled in the then callback
                     }
                 } catch (error) {
                     Utils.handleError(error);
-                } finally {
                     Utils.setLoadingState($btn, false);
                 }
-            }
-        };
+        }
+            };
 
         const UI = {
             updateEnrollButton() {

@@ -316,7 +316,7 @@ class StudentController extends Controller
             $termId = request()->query('term_id');
             $serviceResponse = $this->studentService->downloadEnrollmentDocument($student, $termId,'pdf');
             $data = $serviceResponse;
-            return response()->json(['url' => $data['url'] ?? null]);
+            return response()->json(['success' => true, 'url' => $data['url'] ?? null]);
         } catch (BusinessValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -340,7 +340,7 @@ class StudentController extends Controller
             $termId = request()->query('term_id');
             $serviceResponse = $this->studentService->downloadEnrollmentDocument($student, $termId,'word');
             $data = $serviceResponse;
-            return response()->json(['url' => $data['url'] ?? null]);
+            return response()->json(['success' => true, 'url' => $data['url'] ?? null]);
         } catch (BusinessValidationException $e) {
             return response()->json([
                 'success' => false,

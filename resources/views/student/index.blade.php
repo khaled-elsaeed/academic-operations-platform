@@ -10,8 +10,7 @@
                 <x-ui.card.stat2 color="primary" icon="bx bx-group" :label="'Total Students'" id="students" />
             </div>
             <div class="col-12 col-sm-6 col-lg-4">
-                <x-ui.card.stat2 color="danger" icon="bx bx-user-plus" :label="'Total Male Students'"
-                    id="male-students" />
+                <x-ui.card.stat2 color="danger" icon="bx bx-user-plus" :label="'Total Male Students'" id="male-students" />
             </div>
             <div class="col-12 col-sm-6 col-lg-4">
                 <x-ui.card.stat2 color="success" icon="bx bx-user-check" :label="'Total Female Students'"
@@ -20,8 +19,7 @@
         </div>
 
         <!-- Page Header -->
-        <x-ui.page-header :title="'Students'"
-            :description="'Manage all student records, add new students, or import/export in bulk using the options on the right.'" icon="bx bx-group">
+        <x-ui.page-header :title="'Students'" :description="'Manage all student records, add new students, or import/export in bulk using the options on the right.'" icon="bx bx-group">
             <div class="d-flex flex-wrap gap-2">
                 @can('student.create')
                     <button class="btn btn-primary" id="addStudentBtn">
@@ -111,14 +109,15 @@
             ['data' => 'gender', 'name' => 'gender'],
             ['data' => 'program', 'name' => 'program', 'orderable' => false, 'searchable' => false],
             ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
-        ]" :ajax-url="route('students.datatable')" :table-id="'students-table'" :filter-fields="[
-            'search_name',
-            'search_national_id',
-            'search_academic_id',
-            'search_gender',
-            'search_program',
-            'search_level',
-        ]" />
+        ]" :ajax-url="route('students.datatable')"
+            :table-id="'students-table'" :filter-fields="[
+                'search_name',
+                'search_national_id',
+                'search_academic_id',
+                'search_gender',
+                'search_program',
+                'search_level',
+            ]" />
 
         <!-- Modals -->
         @can('student.create')
@@ -131,14 +130,12 @@
                         <div class="row g-3">
                             <!-- Name Fields -->
                             <div class="col-md-6">
-                                <label for="name_en" class="form-label">Name (EN) <span
-                                        class="text-danger">*</span></label>
+                                <label for="name_en" class="form-label">Name (EN) <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="name_en" name="name_en" required>
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="col-md-6">
-                                <label for="name_ar" class="form-label">Name (AR) <span
-                                        class="text-danger">*</span></label>
+                                <label for="name_ar" class="form-label">Name (AR) <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="name_ar" name="name_ar" required>
                                 <div class="invalid-feedback"></div>
                             </div>
@@ -161,8 +158,7 @@
                             <div class="col-md-6">
                                 <label for="academic_email" class="form-label">Academic Email <span
                                         class="text-danger">*</span></label>
-                                <input type="email" class="form-control" id="academic_email" name="academic_email"
-                                    required>
+                                <input type="email" class="form-control" id="academic_email" name="academic_email" required>
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="col-md-6">
@@ -176,8 +172,7 @@
                             <!-- CGPA and Gender -->
                             <div class="col-md-6">
                                 <label for="cgpa" class="form-label">CGPA <span class="text-danger">*</span></label>
-                                <input type="number" step="0.001" class="form-control" id="cgpa" name="cgpa"
-                                    required>
+                                <input type="number" step="0.001" class="form-control" id="cgpa" name="cgpa" required>
                                 <div class="invalid-feedback"></div>
                             </div>
                             <div class="col-md-6">
@@ -192,8 +187,7 @@
 
                             <!-- Program -->
                             <div class="col-md-6">
-                                <label for="program_id" class="form-label">Program <span
-                                        class="text-danger">*</span></label>
+                                <label for="program_id" class="form-label">Program <span class="text-danger">*</span></label>
                                 <select class="form-select" id="program_id" name="program_id" required>
                                     <option value="">Select Program</option>
                                 </select>
@@ -239,10 +233,9 @@
                             <div class="col-lg-12">
                                 <!-- File Upload -->
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold">Excel File <span
-                                            class="text-danger">*</span></label>
-                                    <input type="file" class="form-control" id="import_file" name="file"
-                                        accept=".xlsx,.xls" required>
+                                    <label class="form-label fw-semibold">Excel File <span class="text-danger">*</span></label>
+                                    <input type="file" class="form-control" id="import_file" name="file" accept=".xlsx,.xls"
+                                        required>
                                     <small class="text-muted">Required: Select an Excel file (.xlsx or .xls)</small>
                                     <div class="invalid-feedback d-block"></div>
                                 </div>
@@ -450,7 +443,7 @@
             init() {
                 // Search filters
                 Utils.initSelect2('#search_gender, #search_program, #search_level', {
-                    placeholder: function() {
+                    placeholder: function () {
                         const id = $(this).attr('id');
                         if (id === 'search_gender') return 'All Genders';
                         if (id === 'search_program') return 'All Programs';
@@ -463,7 +456,7 @@
 
                 // Student modal
                 Utils.initSelect2('#studentModal select', {
-                    placeholder: function() {
+                    placeholder: function () {
                         const id = $(this).attr('id');
                         if (id === 'level_id') return 'Select Level';
                         if (id === 'gender') return 'Select Gender';
@@ -483,7 +476,7 @@
 
                 // Export modal
                 Utils.initSelect2('#exportModal select', {
-                    placeholder: function() {
+                    placeholder: function () {
                         const id = $(this).attr('id');
                         if (id === 'export_program_id') return 'All Programs';
                         if (id === 'export_level_id') return 'All Levels';
@@ -613,25 +606,25 @@
                 StatsManager.refresh();
             },
             completionFields: [{
-                    key: 'processed',
-                    label: 'Records Processed',
-                    type: 'number'
-                },
-                {
-                    key: 'created',
-                    label: 'Records Created',
-                    type: 'number'
-                },
-                {
-                    key: 'updated',
-                    label: 'Records Updated',
-                    type: 'number'
-                },
-                {
-                    key: 'skipped',
-                    label: 'Records Skipped',
-                    type: 'number'
-                }
+                key: 'processed',
+                label: 'Records Processed',
+                type: 'number'
+            },
+            {
+                key: 'created',
+                label: 'Records Created',
+                type: 'number'
+            },
+            {
+                key: 'updated',
+                label: 'Records Updated',
+                type: 'number'
+            },
+            {
+                key: 'skipped',
+                label: 'Records Skipped',
+                type: 'number'
+            }
             ],
             translations: {
                 processing: 'The import is being processed. This may take a few minutes.',
@@ -849,14 +842,14 @@
             },
 
             handleDownloadEnrollment() {
-                $(document).on('click', '.downloadEnrollmentBtn', function() {
+                $(document).on('click', '.downloadEnrollmentBtn', function () {
                     const studentId = $(this).data('id');
                     DownloadManager.setupDownloadModal(studentId, 'legacy', 'Download Enrollment Document');
                 });
             },
 
             handleDownloadPdf() {
-                $(document).on('click', '.downloadPdfBtn', function(e) {
+                $(document).on('click', '.downloadPdfBtn', function (e) {
                     e.preventDefault();
                     const studentId = $(this).data('id');
                     DownloadManager.setupDownloadModal(studentId, 'pdf', 'Download Enrollment as PDF');
@@ -864,7 +857,7 @@
             },
 
             handleDownloadWord() {
-                $(document).on('click', '.downloadWordBtn', function(e) {
+                $(document).on('click', '.downloadWordBtn', function (e) {
                     e.preventDefault();
                     const studentId = $(this).data('id');
                     DownloadManager.setupDownloadModal(studentId, 'word', 'Download Enrollment as Word');
@@ -921,7 +914,9 @@
 
                         const response = await Utils.get(url);
 
-                        if (response.url) {
+                        if (response && response.success === false) {
+                            Utils.showError(response.message || 'Failed to generate document');
+                        } else if (response && response.url) {
                             window.open(response.url, '_blank');
                             Swal.close();
                         } else {

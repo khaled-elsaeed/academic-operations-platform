@@ -111,6 +111,13 @@ class ProcessImportService
         $term = $this->findTerm((string)($row[self::TERM_CODE_COLUMN] ?? ''));
         $group = (string)($row[self::GROUP_CODE] ?? '');
 
+        if (Enrollment::where('student_id', $student->id)
+            ->where('course_id', $course->id)
+            ->where('term_id', $term->id)
+            ->exists()) {
+            return;
+        }
+
         $availableCourse = $this->findAvailableCourse($student, $course, $term);
 
         $availableCourseSchedules = $this->findAvailableCourseSchedules($availableCourse, $group);
@@ -199,7 +206,7 @@ class ProcessImportService
         $studentId = $student->id;
         $levelId = $student->level_id;
 
-        $availableCourse = AvailableCourse::available($programId, $levelId, $term->id)
+        $availableCourse = AvailableCourse::available($programId, $levelId, $term->id,true)
             ->where('course_id', $course->id)
             ->first();
 
@@ -295,10 +302,10 @@ class ProcessImportService
      */
     private function getCurrentEnrollmentHours(int $studentId, int $termId): int
     {
-        return Enrollment::where('student_id', $studentId)
+        return (int) (Enrollment::where('student_id', $studentId)
             ->where('term_id', $termId)
             ->join('courses', 'enrollments.course_id', '=', 'courses.id')
-            ->sum('courses.credit_hours') ?? 0;
+            ->sum('courses.credit_hours') ?? 0);
     }
 
     /**

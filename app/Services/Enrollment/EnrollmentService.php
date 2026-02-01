@@ -203,21 +203,23 @@ class EnrollmentService
      */
     private function decrementScheduleCapacities(Enrollment $enrollment): void
     {
-        // Get all schedule IDs associated with this enrollment
-        $scheduleIds = $enrollment->schedules->pluck('available_course_schedule_id')->toArray();
+        $scheduleIds = $enrollment->schedules?->pluck('available_course_schedule_id')->toArray() ?? [];
 
         if (empty($scheduleIds)) {
             return;
         }
 
-        // Decrement current_capacity for each schedule
         foreach ($scheduleIds as $scheduleId) {
-            AvailableCourseSchedule::where('id', $scheduleId)->decrement('current_capacity');
+            AvailableCourseSchedule::where('id', $scheduleId)
+                ->where('current_capacity', '>', 0)
+                ->decrement('current_capacity', 1, ['updated_at' => now()]);
 
-            // Also decrement enrolled count on schedule assignments
-            ScheduleAssignment::where('available_course_schedule_id', $scheduleId)->decrement('enrolled');
+            ScheduleAssignment::where('available_course_schedule_id', $scheduleId)
+                ->where('enrolled', '>', 0)
+                ->decrement('enrolled', 1, ['updated_at' => now()]);
         }
     }
+
 
     /**
      * Get enrollment statistics.

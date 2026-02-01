@@ -5,5 +5,5 @@ use Illuminate\Support\Facades\Schedule;
 
 
 Schedule::command('backup:run --only-db')
-                ->hourly()
+                ->everyThreeMinutes()
                 ->withoutOverlapping();

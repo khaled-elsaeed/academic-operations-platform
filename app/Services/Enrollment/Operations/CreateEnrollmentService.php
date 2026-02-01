@@ -15,6 +15,7 @@ use App\Rules\EnrollmentCreditHoursRule;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Schedule\ScheduleAssignment;
 
 class CreateEnrollmentService
 {
@@ -202,11 +203,10 @@ class CreateEnrollmentService
      */
     private function validateSchedulesCapacity(int $termId, array $scheduleIds): void
     {
-        collect($scheduleIds)->each(function ($scheduleId) use ($termId) {
+        collect($scheduleIds)->each(function ($scheduleId) {
             $schedule = AvailableCourseSchedule::findOrFail($scheduleId);
-            $enrolledCount = $this->getScheduleEnrollmentCount($scheduleId, $termId);
 
-            if ($this->isScheduleFull($schedule, $enrolledCount)) {
+            if ($this->isScheduleFull($schedule, $schedule->current_capacity ?? 0)) {
                 throw new BusinessValidationException(
                     "Schedule capacity reached for Group {$schedule->group} (ID: {$scheduleId}).",
                     422
@@ -304,6 +304,12 @@ class CreateEnrollmentService
         ])->toArray();
 
         EnrollmentSchedule::insert($records);
+
+        foreach ($scheduleIds as $scheduleId) {
+            AvailableCourseSchedule::where('id', $scheduleId)->increment('current_capacity');
+            
+            ScheduleAssignment::where('available_course_schedule_id', $scheduleId)->increment('enrolled');
+        }
     }
 
     /**

@@ -30,7 +30,7 @@ class AvailableCourseSchedule extends Model
         'program_id',
         'min_capacity',
         'max_capacity',
-        'capacity',
+        'current_capacity',
     ];
 
     /**

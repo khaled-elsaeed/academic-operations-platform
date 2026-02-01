@@ -11,6 +11,7 @@ use App\Models\Enrollment;
 use App\Models\EnrollmentSchedule;
 use App\Models\Student;
 use App\Models\Term;
+use App\Models\Schedule\ScheduleAssignment;
 use App\Exceptions\BusinessValidationException;
 use App\Rules\EnrollmentCreditHoursRule;
 use Illuminate\Support\Facades\DB;
@@ -305,6 +306,10 @@ class ProcessImportService
                     'available_course_schedule_id' => $availableCourseSchedule->id,
                     'status' => self::STATUS_ACTIVE,
                 ]);
+
+                // Increment capacities
+                $availableCourseSchedule->increment('current_capacity');
+                ScheduleAssignment::where('available_course_schedule_id', $availableCourseSchedule->id)->increment('enrolled');
             }
         }
     }
@@ -315,9 +320,7 @@ class ProcessImportService
     private function validateScheduleCapacity(AvailableCourseSchedule $schedule): void
     {
         if ($schedule->max_capacity !== null) {
-            $enrolledCount = EnrollmentSchedule::where('available_course_schedule_id', $schedule->id)->count();
-
-            if ($enrolledCount >= $schedule->max_capacity) {
+            if ($schedule->current_capacity >= $schedule->max_capacity) {
                 throw new BusinessValidationException("Schedule capacity exceeded for schedule ID {$schedule->id}.");
             }
         }

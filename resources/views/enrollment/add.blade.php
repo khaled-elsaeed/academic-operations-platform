@@ -455,7 +455,8 @@
             },
             courses: {
                 available: [],
-                filtered: []
+                filtered: [],
+                prerequisites: []
             },
             schedules: {
                 enrolled: [],
@@ -472,7 +473,7 @@
                 this.student = null;
                 this.term = { id: null, name: null };
                 this.enrollments = { history: [], current: [], selected: [] };
-                this.courses = { available: [], filtered: [] };
+                this.courses = { available: [], filtered: [], prerequisites: [] };
                 this.schedules = { enrolled: [], selected: [], raw: new Map() };
                 this.selections = { courses: new Set(), courseGroups: new Map(), activityTypes: new Map() };
             },
@@ -513,8 +514,6 @@
                 this.enrollments.current.forEach(enrollment => {
                     if (enrollment.schedules && Array.isArray(enrollment.schedules)) {
                         enrollment.schedules.forEach(schedule => {
-                            // schedule is an EnrollmentSchedule object.
-                            // We need to extract the available_course_schedule and transform it.
                             const acs = schedule.available_course_schedule;
                             if (acs) {
                                 const activity = this.processAvailableCourseSchedule(acs);
@@ -856,8 +855,10 @@
                 try {
                     const response = await ApiService.fetchPrerequisites(AppState.student.id, courseIds);
                     const prereqs = Utils.isResponseSuccess(response) ? Utils.getResponseData(response) : [];
+                    AppState.courses.prerequisites = prereqs;
                     this.render(courses, prereqs);
                 } catch {
+                    AppState.courses.prerequisites = [];
                     this.render(courses, []);
                 }
             },
@@ -955,7 +956,7 @@
                 });
                 AppState.courses.filtered = filtered;
                 if (filtered.length > 0) {
-                    this.render(filtered, []);
+                    this.render(filtered, AppState.courses.prerequisites || []);
                 } else {
                     Utils.showEmptyState('#coursesBox', 'bx-search-alt', 'No courses match your search');
                 }
@@ -1674,9 +1675,6 @@
                 }
             }
         };
-
-        // Guiding Manager, Submission Manager, UI, Search, Download (keeping existing code)
-        // ... (remaining managers continue with the pattern, using AppState)
 
         const GuidingManager = {
             async load() {

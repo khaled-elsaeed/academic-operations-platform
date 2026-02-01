@@ -377,4 +377,34 @@ class AvailableCourse extends Model
     {
         $this->eligibilities()->whereIn('level_id', $levelIds)->delete();
     }
+
+    /**
+     * Get all required activity types for this available course.
+     */
+    public function getRequiredActivityTypes(): \Illuminate\Support\Collection
+    {
+        return $this->schedules()->distinct()->pluck('activity_type');
+    }
+
+    /**
+     * Get one schedule for each activity type matching the given group.
+     */
+    public function getSchedulesForGroup(string $group): \Illuminate\Support\Collection
+    {
+        $requiredTypes = $this->getRequiredActivityTypes();
+        $schedules = collect();
+
+        foreach ($requiredTypes as $type) {
+            $schedule = $this->schedules()
+                ->where('activity_type', $type)
+                ->where('group', $group)
+                ->first();
+
+            if ($schedule) {
+                $schedules->push($schedule);
+            }
+        }
+
+        return $schedules;
+    }
 }

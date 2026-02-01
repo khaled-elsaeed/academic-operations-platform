@@ -201,7 +201,7 @@ class CourseService
             ->map(function($prereq) use ($studentId, $courseIds) {
                 $isEnrolled = Enrollment::where('student_id', $studentId)
                     ->where('course_id', $prereq->prerequisite_id)
-                    ->whereIn('grade', ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'P'])
+                    ->whereIn('grade', Enrollment::PASSING_GRADES)
                     ->exists();
 
                 $availableCourseId = \DB::table('available_courses')

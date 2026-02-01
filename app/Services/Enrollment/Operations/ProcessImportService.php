@@ -26,7 +26,7 @@ class ProcessImportService
     private const ACADEMIC_ID_COLUMN = 0;
     private const COURSE_CODE_COLUMN = 1;
     private const TERM_CODE_COLUMN = 2;
-    private const GRADE_COLUMN = 3;
+    private const GROUP_CODE = 3;
 
     private const PASSING_GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'P'];
 
@@ -104,15 +104,19 @@ class ProcessImportService
      */
     private function processSingleRow(array $row, int $rowNum): void
     {
-        $this->validateRow($row, $rowNum);
+        // $this->validateRow($row, $rowNum);
 
-        $student = $this->findStudent($row[self::ACADEMIC_ID_COLUMN] ?? '');
-        $course = $this->findCourse($row[self::COURSE_CODE_COLUMN] ?? '');
-        $term = $this->findTerm($row[self::TERM_CODE_COLUMN] ?? '');
+        $student = $this->findStudent((string)($row[self::ACADEMIC_ID_COLUMN] ?? ''));
+        $course = $this->findCourse((string)($row[self::COURSE_CODE_COLUMN] ?? ''));
+        $term = $this->findTerm((string)($row[self::TERM_CODE_COLUMN] ?? ''));
+        $group = (string)($row[self::GROUP_CODE] ?? '');
 
-        $availableCourseSchedules = $this->findAvailableCourseSchedules($student, $course, $term);
+        $availableCourse = $this->findAvailableCourse($student, $course, $term);
+
+        $availableCourseSchedules = $this->findAvailableCourseSchedules($availableCourse, $group);
 
         $this->validateTotalCreditHours($student->id, $term->id, $course);
+
         $this->validatePrerequisites($student, $course);
 
         $enrollment = $this->createOrUpdateEnrollment($row, $student, $course, $term);
@@ -136,7 +140,7 @@ class ProcessImportService
             self::ACADEMIC_ID_COLUMN => 'required|string',
             self::COURSE_CODE_COLUMN => 'required|string',
             self::TERM_CODE_COLUMN => 'required|string',
-            self::GRADE_COLUMN => 'nullable|string|max:5',
+            self::GROUP_CODE => 'required|string|max:10',
         ]);
 
         if ($validator->fails()) {
@@ -187,20 +191,49 @@ class ProcessImportService
     }
 
     /**
-     * Find available course schedules for the enrollment
+     * Find available course for the enrollment
      */
-    private function findAvailableCourseSchedules(Student $student, Course $course, Term $term): \Illuminate\Support\Collection
+    private function findAvailableCourse(Student $student, Course $course, Term $term): AvailableCourse
     {
-        $availableCourse = AvailableCourse::where('course_id', $course->id)
-            ->where('term_id', $term->id)
+        $programId = $student->program_id;
+        $studentId = $student->id;
+        $levelId = $student->level_id;
+
+        $availableCourse = AvailableCourse::available($programId, $levelId, $term->id)
+            ->where('course_id', $course->id)
             ->first();
 
         if (!$availableCourse) {
             throw new BusinessValidationException("No available course found for course '{$course->code}' in term '{$term->code}'.");
         }
 
-        return $availableCourse->schedules;
+        return $availableCourse;
     }
+
+    /**
+     * Find available course schedules for all required activity types in the given group.
+     */
+    private function findAvailableCourseSchedules(AvailableCourse $availableCourse, string $group): \Illuminate\Support\Collection
+    {
+        $schedules = $availableCourse->getSchedulesForGroup($group);
+
+        if ($schedules->isEmpty()) {
+            throw new BusinessValidationException("No schedules found for Group '{$group}' in course '{$availableCourse->course->code}'.");
+        }
+
+        $requiredTypes = $availableCourse->getRequiredActivityTypes();
+        $foundTypes = $schedules->pluck('activity_type')->unique();
+
+        $missingTypes = $requiredTypes->diff($foundTypes);
+
+        if ($missingTypes->isNotEmpty()) {
+            $missing = $missingTypes->implode(', ');
+            throw new BusinessValidationException("Missing required activity types ({$missing}) for Group '{$group}' in course '{$availableCourse->course->code}'.");
+        }
+
+        return $schedules;
+    }
+
 
     /**
      * Validate course prerequisites are met.
@@ -283,7 +316,6 @@ class ProcessImportService
                 'student_id' => $student->id,
                 'course_id' => $course->id,
                 'term_id' => $term->id,
-                'grade' => $row[self::GRADE_COLUMN] ?? null,
             ]
         );
     }

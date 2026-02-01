@@ -41,6 +41,11 @@ class Enrollment extends Model
     ];
 
     /**
+     * List of grades considered as passing.
+     */
+    public const PASSING_GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'P'];
+
+    /**
      * Get the student that owns the enrollment.
      */
     public function student(): BelongsTo

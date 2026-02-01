@@ -307,14 +307,14 @@ class StudentController extends Controller
     /**
      * Download enrollment document as PDF.
      *
-     * @param Student $student
+     * @param int $studentId
      * @return JsonResponse
      */
-    public function downloadPdf(Student $student): JsonResponse
+    public function downloadPdf(int $studentId): JsonResponse
     {
         try {
             $termId = request()->query('term_id');
-            $serviceResponse = $this->studentService->downloadEnrollmentDocument($student, $termId,'pdf');
+            $serviceResponse = $this->studentService->downloadEnrollmentDocument($studentId, $termId,'pdf');
             $data = $serviceResponse;
             return response()->json(['success' => true, 'url' => $data['url'] ?? null]);
         } catch (BusinessValidationException $e) {
@@ -323,7 +323,7 @@ class StudentController extends Controller
                 'message' => $e->getMessage()
             ], 422);
         } catch (Exception $e) {
-            logError('StudentController@downloadPdf', $e, ['student_id' => $student->id]);
+            logError('StudentController@downloadPdf', $e, ['student_id' => $studentId]);
             return errorResponse('Failed to generate PDF.', [], 500);
         }
     }

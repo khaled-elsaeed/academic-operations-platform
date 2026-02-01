@@ -248,8 +248,13 @@ class StudentService
      * @return array
      * @throws BusinessValidationException
      */
-    public function downloadEnrollmentDocument(Student $student, ?int $termId = null, string $format = 'pdf'): array
+    public function downloadEnrollmentDocument(int $studentId, ?int $termId = null, string $format = 'pdf'): array
     {
+        $student = Student::find($studentId);
+        if (!$student) {
+            throw new BusinessValidationException('Student not found.');
+        }
+
         if ($termId !== null) {
             $term = Term::find($termId);
             if (!$term) {

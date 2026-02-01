@@ -103,9 +103,7 @@ class EnrollmentController extends Controller
     public function destroy(Enrollment $enrollment): JsonResponse
     {
         try {
-            // Load schedules for capacity decrement
             $enrollment->load('schedules');
-
             $this->enrollmentService->deleteEnrollment($enrollment);
             return successResponse('Enrollment deleted successfully.');
         } catch (BusinessValidationException $e) {

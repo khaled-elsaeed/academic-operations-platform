@@ -38,6 +38,9 @@ Route::middleware('auth')
         // Export multiple enrollment documents page & action
         Route::get('export-documents', 'exportDocumentsPage')->name('exportDocuments.page')->middleware('can:enrollment.export');
         Route::post('export-documents', 'exportDocuments')->name('exportDocuments')->middleware('can:enrollment.export');
+        Route::get('/export-documents/status/{uuid}', 'exportDocumentsStatus')->name('exportDocuments.status')->middleware('can:enrollment.export');
+        Route::post('/export-documents/cancel/{uuid}', 'exportDocumentsCancel')->name('exportDocuments.cancel')->middleware('can:enrollment.export');
+        Route::get('/export-documents/download/{uuid}', 'exportDocumentsDownload')->name('exportDocuments.download')->middleware('can:enrollment.export');
         Route::post('remaining-credit-hours', 'getRemainingCreditHours')->name('remainingCreditHours')->middleware('can:enrollment.view');
 
         // ===== CRUD Operations =====

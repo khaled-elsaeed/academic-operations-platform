@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Enrollment;
 
 use App\Exceptions\BusinessValidationException;
+use App\Jobs\Enrollment\ExportEnrollmentDocumentsJob;
 use App\Jobs\Enrollment\ExportEnrollmentsJob;
 use App\Jobs\Enrollment\ImportEnrollmentsJob;
 use App\Models\AvailableCourseSchedule;
@@ -135,6 +136,54 @@ class EnrollmentService
     }
 
     public function downloadExport(string $uuid): \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\JsonResponse
+    {
+        return $this->traitDownloadExport($uuid);
+    }
+
+    /**
+     * Export enrollment documents (PDFs) to ZIP file.
+     *
+     * @param array<string, mixed> $data Filters: term_id, academic_id, national_id, program_id, level_id
+     * @return array<string, mixed> Export task information
+     */
+    public function exportDocuments(array $data = []): array
+    {
+        return $this->traitExport(
+            jobClass: ExportEnrollmentDocumentsJob::class,
+            subtype: 'enrollment_documents',
+            parameters: $data
+        );
+    }
+
+    /**
+     * Get export documents task status by UUID.
+     *
+     * @param string $uuid Task UUID
+     * @return array<string, mixed>|null
+     */
+    public function getExportDocumentsStatus(string $uuid): ?array
+    {
+        return $this->traitGetExportStatus($uuid, 'enrollments.exportDocuments.download');
+    }
+
+    /**
+     * Cancel export documents task by UUID.
+     *
+     * @param string $uuid Task UUID
+     * @return array<string, mixed>
+     */
+    public function cancelExportDocuments(string $uuid): array
+    {
+        return $this->cancelExport($uuid);
+    }
+
+    /**
+     * Download completed export documents file by UUID.
+     *
+     * @param string $uuid Task UUID
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\JsonResponse
+     */
+    public function downloadExportDocuments(string $uuid): \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\JsonResponse
     {
         return $this->traitDownloadExport($uuid);
     }

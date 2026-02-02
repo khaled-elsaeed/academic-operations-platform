@@ -376,15 +376,13 @@ class EnrollmentController extends Controller
 
     /**
      * Export enrollment documents for students matching filters.
-     * Accepts: academic_id, national_id, program_id, level_id
-     * Returns: ZIP file of generated PDFs.
+     * Starts an async job that generates PDFs and zips them.
      *
      * @param Request $request
-     * @return \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
+     * @return JsonResponse
      */
-    public function exportDocuments(Request $request)
+    public function exportDocuments(Request $request): JsonResponse
     {
-        // term_id is required for both individual and group exports
         $request->validate([
             'academic_id' => 'nullable|string',
             'national_id' => 'nullable|string',
@@ -399,52 +397,70 @@ class EnrollmentController extends Controller
             // Determine mode: individual if academic_id or national_id provided; otherwise group
             $isIndividual = !empty($filters['academic_id']) || !empty($filters['national_id']);
 
-            if ($isIndividual) {
-                // ensure at least one identifier provided (already true by $isIndividual), nothing else required
-            } else {
+            if (!$isIndividual) {
                 // group export: require program_id and level_id
                 if (empty($filters['program_id']) || empty($filters['level_id'])) {
-                    return errorResponse('For group export please provide both program_id and level_id along with term_id.', [], 422);
+                    return errorResponse('For group export please provide both program and level along with term.', [], 422);
                 }
             }
 
-            /** @var \App\Services\EnrollmentDocumentService $documentService */
-            $documentService = app(\App\Services\EnrollmentDocumentService::class);
+            $result = $this->enrollmentService->exportDocuments($filters);
 
-            if ($isIndividual) {
-                // Individual: generate a single PDF for the specific student and return it (no ZIP)
-                // Resolve the student via academic_id or national_id
-                $student = null;
-                if (!empty($filters['academic_id'])) {
-                    $student = \App\Models\Student::where('academic_id', $filters['academic_id'])->first();
-                }
-                if (!$student && !empty($filters['national_id'])) {
-                    $student = \App\Models\Student::where('national_id', $filters['national_id'])->first();
-                }
-
-                if (!$student) {
-                    return errorResponse('Student not found with the provided identifier.', [], 404);
-                }
-
-                $pdfResult = $documentService->generatePdf($student, $filters['term_id']);
-                // $pdfResult contains ['url' => '/storage/documents/enrollments/pdf/...', 'filename' => '...']
-                $publicPath = parse_url($pdfResult['url'], PHP_URL_PATH);
-                $storagePath = public_path(ltrim($publicPath, '/'));
-
-                if (!file_exists($storagePath)) {
-                    return errorResponse('Generated PDF not found.', [], 500);
-                }
-
-                return response()->download($storagePath, $pdfResult['filename'])->deleteFileAfterSend(false);
-            }
-
-            // Group: generate PDFs for matching students and return ZIP
-            $result = $documentService->exportDocumentsByFilters($filters);
-            return response()->download($result['temp_zip'], $result['zip_name'])->deleteFileAfterSend(true);
+            return successResponse(__('Export initiated successfully.'), $result);
         } catch (Exception $e) {
             logError('EnrollmentController@exportDocuments', $e, ['request' => $request->all()]);
-            return errorResponse($e->getMessage() ?: 'Internal server error.', [], 500);
+            return errorResponse(__('Failed to initiate export.'), [], 500);
         }
+    }
+
+    /**
+     * Get export documents status by UUID.
+     *
+     * @param string $uuid
+     * @return JsonResponse
+     */
+    public function exportDocumentsStatus(string $uuid): JsonResponse
+    {
+        try {
+            $status = $this->enrollmentService->getExportDocumentsStatus($uuid);
+
+            if (!$status) {
+                return errorResponse(__('Export not found.'), [], 404);
+            }
+
+            return successResponse(__('Export status retrieved successfully.'), $status);
+        } catch (Exception $e) {
+            logError('EnrollmentController@exportDocumentsStatus', $e, ['uuid' => $uuid]);
+            return errorResponse(__('Failed to retrieve export status.'), [], 500);
+        }
+    }
+
+    /**
+     * Cancel export documents task by UUID.
+     *
+     * @param string $uuid
+     * @return JsonResponse
+     */
+    public function exportDocumentsCancel(string $uuid): JsonResponse
+    {
+        try {
+            $result = $this->enrollmentService->cancelExportDocuments($uuid);
+            return successResponse(__('Export cancelled successfully.'), $result);
+        } catch (Exception $e) {
+            logError('EnrollmentController@exportDocumentsCancel', $e, ['uuid' => $uuid]);
+            return errorResponse(__('Failed to cancel export.'), [], 500);
+        }
+    }
+
+    /**
+     * Download completed export documents file by UUID.
+     *
+     * @param string $uuid
+     * @return BinaryFileResponse|JsonResponse
+     */
+    public function exportDocumentsDownload(string $uuid): BinaryFileResponse|JsonResponse
+    {
+        return $this->enrollmentService->downloadExportDocuments($uuid);
     }
 
     /**

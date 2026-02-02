@@ -3,403 +3,328 @@
 @section('title', 'Export Enrollment Documents | AcadOps')
 
 @section('page-content')
-<div class="container-xxl flex-grow-1 container-p-y">
-    <x-ui.page-header
-        title="Export Enrollment Documents"
-        description="Generate enrollment documents (PDF) for students and download as a single ZIP. Search by academic ID, national ID, program, or level."
-        icon="bx bx-file-archive"
-    />
-
-  <div class="card">
-    <div class="card-body">
-      <form id="exportDocumentsForm" method="POST" action="{{ route('enrollments.exportDocuments') }}">
-        @csrf
-
-        <ul class="nav nav-tabs mb-3" id="exportTabs" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="individual-tab" data-bs-toggle="tab" data-bs-target="#individual" type="button" role="tab" aria-controls="individual" aria-selected="true">Individual</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="groups-tab" data-bs-toggle="tab" data-bs-target="#groups" type="button" role="tab" aria-controls="groups" aria-selected="false">Groups</button>
-          </li>
-        </ul>
-
-        <div class="tab-content">
-          <div class="tab-pane fade show active" id="individual" role="tabpanel" aria-labelledby="individual-tab">
-            <div class="row g-3">
-              <div class="col-12">
-                <div class="table-responsive">
-                  <table class="table table-borderless mb-0">
-                    <tbody>
-                      <tr>
-                        <th style="width:200px">Academic ID</th>
-                        <td>
-                          <input type="text" id="academic_id" name="academic_id" class="form-control" placeholder="Search by Academic ID">
-                        </td>
-                      </tr>
-                      <tr>
-                        <th>National ID</th>
-                        <td>
-                          <input type="text" id="national_id" name="national_id" class="form-control" placeholder="Search by National ID">
-                        </td>
-                      </tr>
-                      <tr>
-                        <th>Term (optional)</th>
-                        <td>
-                          <select id="individual_term_id" name="term_id" class="form-control">
-                            <option value="">All Terms</option>
-                          </select>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+    <div class="container-xxl flex-grow-1 container-p-y">
+        <x-ui.page-header title="Export Enrollment Documents"
+            description="Generate enrollment PDF packets by student or by cohort and download them as a single ZIP."
+            icon="bx bx-file-archive">
+            <div class="d-flex gap-2">
+                <a href="{{ route('enrollments.index') }}" class="btn btn-outline-secondary">
+                    <i class="bx bx-arrow-back me-1"></i> Back to Enrollments
+                </a>
             </div>
-          </div>
+        </x-ui.page-header>
 
-          <div class="tab-pane fade" id="groups" role="tabpanel" aria-labelledby="groups-tab">
-            <div class="row g-3">
-              <div class="col-12">
-                <div class="table-responsive">
-                  <table class="table table-borderless mb-0">
-                    <tbody>
-                      <tr>
-                        <th style="width:200px">Program</th>
-                        <td>
-                          <select id="program_id" name="program_id" class="form-control">
-                            <option value="">All Programs</option>
-                          </select>
-                        </td>
-                      </tr>
-                      <tr>
-                        <th>Level</th>
-                        <td>
-                          <select id="level_id" name="level_id" class="form-control">
-                            <option value="">All Levels</option>
-                          </select>
-                        </td>
-                      </tr>
-                      <tr>
-                      </tr>
-                      <tr>
-                        <th>Term (optional)</th>
-                        <td>
-                          <select id="group_term_id" name="term_id" class="form-control">
-                            <option value="">All Terms</option>
-                          </select>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+        <div class="card">
+            <div class="card-body">
+                <div class="alert alert-info d-flex align-items-start" role="alert">
+                    <i class="bx bx-info-circle me-2 fs-4 mt-1"></i>
+                    <div>
+                        Export a single student from the Individual tab or export cohorts by program/level from the Groups
+                        tab. Leave filters blank to export all results for the selected mode.
+                    </div>
                 </div>
-              </div>
+
+                <form id="exportDocumentsForm">
+                    <ul class="nav nav-tabs mb-3" id="exportTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="individual-tab" data-bs-toggle="tab"
+                                data-bs-target="#individual" type="button" role="tab" aria-controls="individual"
+                                aria-selected="true">
+                                Individual
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="groups-tab" data-bs-toggle="tab" data-bs-target="#groups"
+                                type="button" role="tab" aria-controls="groups" aria-selected="false">
+                                Groups
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content pt-1">
+                        <div class="tab-pane fade show active" id="individual" role="tabpanel"
+                            aria-labelledby="individual-tab">
+                            <div class="row g-4">
+                                <div class="col-lg-4 col-md-6">
+                                    <label for="academic_id" class="form-label fw-semibold">Academic ID</label>
+                                    <input type="text" id="academic_id" name="academic_id" class="form-control"
+                                        placeholder="Search by Academic ID">
+                                </div>
+                                <div class="col-lg-4 col-md-6">
+                                    <label for="national_id" class="form-label fw-semibold">National ID</label>
+                                    <input type="text" id="national_id" name="national_id" class="form-control"
+                                        placeholder="Search by National ID">
+                                </div>
+                                <div class="col-lg-4 col-md-6">
+                                    <label for="individual_term_id" class="form-label fw-semibold">Term <span
+                                            class="text-danger">*</span></label>
+                                    <select id="individual_term_id" name="term_id" class="form-select">
+                                        <option value="">Select Term</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="groups" role="tabpanel" aria-labelledby="groups-tab">
+                            <div class="row g-4">
+                                <div class="col-lg-3 col-md-6">
+                                    <label for="program_id" class="form-label fw-semibold">Program <span
+                                            class="text-danger">*</span></label>
+                                    <select id="program_id" name="program_id" class="form-select">
+                                        <option value="">Select Program</option>
+                                    </select>
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label for="level_id" class="form-label fw-semibold">Level <span
+                                            class="text-danger">*</span></label>
+                                    <select id="level_id" name="level_id" class="form-select">
+                                        <option value="">Select Level</option>
+                                    </select>
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label for="group_term_id" class="form-label fw-semibold">Term <span
+                                            class="text-danger">*</span></label>
+                                    <select id="group_term_id" name="term_id" class="form-select">
+                                        <option value="">Select Term</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="submit" id="exportDocsBtn" class="btn btn-success">
+                            <i class="bx bx-download me-1"></i> Export
+                        </button>
+                        <a href="{{ route('enrollments.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
             </div>
-          </div>
         </div>
 
-        <div class="mt-3">
-          <button type="submit" id="exportDocsBtn" class="btn btn-primary">
-            <i class="bx bx-download me-1"></i> Generate & Download ZIP
-          </button>
-          <a href="{{ route('enrollments.index') }}" class="btn btn-outline-secondary">Back</a>
-        </div>
-      </form>
+        <!-- Progress Modal -->
+        <x-progress-modal modalId="exportDocsProgressModal" modalTitle="Exporting Enrollment Documents" />
     </div>
-  </div>
-</div>
 @endsection
 
 @push('scripts')
-<script>
-/**
- * Export Documents page script - modular style to match enrollment index page
- */
+    <script src="{{ asset('js/utils.js') }}"></script>
+    <script>
+        'use strict';
 
-// ===========================
-// ROUTES & SELECTORS
-// ===========================
-const ROUTES = {
-  terms: '{{ route('terms.all.with_inactive') }}',
-  programs: '{{ route('programs.all') }}',
-  levels: '{{ route('levels.all') }}',
-  exportDocuments: '{{ route('enrollments.exportDocuments') }}'
-};
+        // ===========================
+        // ROUTES CONFIGURATION
+        // ===========================
+        const ROUTES = {
+            exportDocuments: {
+                start: @json(route('enrollments.exportDocuments')),
+                status: @json(route('enrollments.exportDocuments.status', ['uuid' => ':uuid'])),
+                cancel: @json(route('enrollments.exportDocuments.cancel', ['uuid' => ':uuid'])),
+                download: @json(route('enrollments.exportDocuments.download', ['uuid' => ':uuid']))
+            },
+            terms: @json(route('terms.all.with_inactive')),
+            programs: @json(route('programs.all')),
+            levels: @json(route('levels.all'))
+        };
 
-const SELECTORS = {
-  form: '#exportDocumentsForm',
-  submitBtn: '#exportDocsBtn',
-  individualTermSelect: '#individual_term_id',
-  groupTermSelect: '#group_term_id',
-  programSelect: '#program_id',
-  levelSelect: '#level_id',
-  academicId: '#academic_id',
-  nationalId: '#national_id'
-};
+        const SELECTORS = {
+            form: '#exportDocumentsForm',
+            submitBtn: '#exportDocsBtn',
+            individualTermSelect: '#individual_term_id',
+            groupTermSelect: '#group_term_id',
+            programSelect: '#program_id',
+            levelSelect: '#level_id'
+        };
 
-// ===========================
-// UTILITIES
-// ===========================
-const UtilsDocs = {
-  showSuccess(message) {
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: message,
-      showConfirmButton: false,
-      timer: 2500,
-      timerProgressBar: true
-    });
-  },
+        // ===========================
+        // API SERVICE
+        // ===========================
+        const ApiService = {
+            fetchTerms() {
+                return Utils.get(ROUTES.terms);
+            },
+            fetchPrograms() {
+                return Utils.get(ROUTES.programs);
+            },
+            fetchLevels() {
+                return Utils.get(ROUTES.levels);
+            },
+            exportDocuments(formData) {
+                return Utils.post(ROUTES.exportDocuments.start, formData);
+            }
+        };
 
-  // showError(title, message) — supports both showError(message) and showError(title, message)
-  showError(titleOrMessage, maybeMessage) {
-    let title = 'Error';
-    let message = '';
-    if (typeof maybeMessage === 'undefined') {
-      message = titleOrMessage || '';
-    } else {
-      title = titleOrMessage || title;
-      message = maybeMessage || '';
-    }
+        // ===========================
+        // SELECT2 MANAGER
+        // ===========================
+        const Select2Manager = {
+            init() {
+                Utils.initSelect2(SELECTORS.individualTermSelect, {
+                    placeholder: 'Select Term'
+                });
+                Utils.initSelect2(SELECTORS.groupTermSelect, {
+                    placeholder: 'Select Term'
+                });
+                Utils.initSelect2(SELECTORS.programSelect, {
+                    placeholder: 'Select Program'
+                });
+                Utils.initSelect2(SELECTORS.levelSelect, {
+                    placeholder: 'Select Level'
+                });
+            },
 
-    Swal.fire({
-      title: title,
-      html: message,
-      icon: 'error'
-    });
-  },
+            async loadOptions() {
+                try {
+                    const [termsRes, programsRes, levelsRes] = await Promise.all([
+                        ApiService.fetchTerms(),
+                        ApiService.fetchPrograms(),
+                        ApiService.fetchLevels()
+                    ]);
 
-  toggleLoadingState(elementId, isLoading) {
-    const $value = $(`#${elementId}-value`);
-    const $loader = $(`#${elementId}-loader`);
-    const $updated = $(`#${elementId}-last-updated`);
-    const $updatedLoader = $(`#${elementId}-last-updated-loader`);
+                    if (Utils.isResponseSuccess(termsRes)) {
+                        const terms = Utils.getResponseData(termsRes, []);
+                        Utils.populateSelect(SELECTORS.individualTermSelect, terms, {
+                            placeholder: 'Select Term'
+                        }, true);
+                        Utils.populateSelect(SELECTORS.groupTermSelect, terms, {
+                            placeholder: 'Select Term'
+                        }, true);
+                    }
 
-    if (isLoading) {
-      $value.addClass('d-none');
-      $loader.removeClass('d-none');
-      $updated.addClass('d-none');
-      $updatedLoader.removeClass('d-none');
-    } else {
-      $value.removeClass('d-none');
-      $loader.addClass('d-none');
-      $updated.removeClass('d-none');
-      $updatedLoader.addClass('d-none');
-    }
-  },
+                    if (Utils.isResponseSuccess(programsRes)) {
+                        Utils.populateSelect(SELECTORS.programSelect, Utils.getResponseData(programsRes, []), {
+                            placeholder: 'Select Program'
+                        }, true);
+                    }
 
-  replaceRouteId(route, id) {
-    return route.replace(':id', id);
-  },
+                    if (Utils.isResponseSuccess(levelsRes)) {
+                        Utils.populateSelect(SELECTORS.levelSelect, Utils.getResponseData(levelsRes, []), {
+                            placeholder: 'Select Level'
+                        }, true);
+                    }
+                } catch (error) {
+                    Utils.handleError(error, 'Failed to load filter options.');
+                }
+            }
+        };
 
-  // Hide the page loader overlay.
-  hidePageLoader() {
-    const loader = document.getElementById('pageLoader');
-    if (loader) {
-      loader.classList.add('fade-out');
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
-    }
-  },
+        // ===========================
+        // EXPORT TASK MANAGER
+        // ===========================
+        const ExportTaskManager = Utils.createAsyncTaskManager({
+            startRoute: ROUTES.exportDocuments.start,
+            checkStatusRoute: ROUTES.exportDocuments.status,
+            cancelRoute: ROUTES.exportDocuments.cancel,
+            downloadRoute: ROUTES.exportDocuments.download,
+            progressModalId: 'exportDocsProgressModal',
+            taskName: 'Enrollment Documents Export',
+            onStart() {
+                // Nothing extra needed
+            },
+            completionFields: [{
+                    key: 'total_students',
+                    label: 'Total Students',
+                    type: 'number'
+                },
+                {
+                    key: 'documents_generated',
+                    label: 'Documents Generated',
+                    type: 'number'
+                },
+                {
+                    key: 'skipped',
+                    label: 'Skipped',
+                    type: 'number'
+                }
+            ],
+            translations: {
+                processing: 'The export is being processed. This may take a few minutes for large cohorts.',
+                taskInitializing: 'The export task is initializing.',
+                taskPreparing: 'The export task is preparing the documents.',
+                taskCompleted: 'The export task has completed.',
+                taskFailed: 'The export task has failed.',
+                statusCheckFailed: 'Failed to check the status of the export task.'
+            }
+        });
 
-  disableButton($btn, text) {
-    $btn.prop('disabled', true).html(text);
-  },
+        // ===========================
+        // EXPORT PAGE MANAGER
+        // ===========================
+        const ExportDocsPage = {
+            init() {
+                this.bindEvents();
+                this.syncActiveTerm();
+            },
 
-  enableButton($btn, html) {
-    $btn.prop('disabled', false).html(html);
-  },
+            bindEvents() {
+                $(SELECTORS.form).on('submit', this.handleSubmit.bind(this));
+                $('button[data-bs-toggle="tab"]').on('shown.bs.tab', () => this.syncActiveTerm());
+            },
 
-  downloadBlob(blob, filename) {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-  }
-};
+            syncActiveTerm() {
+                const isIndividual = $('#individual').hasClass('show active');
+                $(SELECTORS.individualTermSelect).prop('disabled', !isIndividual);
+                $(SELECTORS.groupTermSelect).prop('disabled', isIndividual);
+                $(SELECTORS.programSelect).prop('disabled', isIndividual);
+                $(SELECTORS.levelSelect).prop('disabled', isIndividual);
+            },
 
+            handleSubmit(e) {
+                e.preventDefault();
+                this.syncActiveTerm();
 
-// ===========================
-// API SERVICE
-// ===========================
-const ApiDocs = {
-  request(options) { return $.ajax(options); },
+                const isIndividual = $('#individual').hasClass('show active');
 
-  fetchTerms() { return this.request({ url: ROUTES.terms, method: 'GET' }); },
-  fetchPrograms() { return this.request({ url: ROUTES.programs, method: 'GET' }); },
-  fetchLevels() { return this.request({ url: ROUTES.levels, method: 'GET' }); },
+                // Validate
+                if (isIndividual) {
+                    const termId = $(SELECTORS.individualTermSelect).val();
+                    const academicId = $('#academic_id').val().trim();
+                    const nationalId = $('#national_id').val().trim();
 
-  exportDocuments(formData) {
-    return fetch(ROUTES.exportDocuments, {
-      method: 'POST',
-      headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-      body: formData
-    });
-  }
-};
+                    if (!termId) {
+                        Utils.showError('Please select a term.');
+                        return;
+                    }
+                    if (!academicId && !nationalId) {
+                        Utils.showError('Please enter Academic ID or National ID.');
+                        return;
+                    }
+                } else {
+                    const termId = $(SELECTORS.groupTermSelect).val();
+                    const programId = $(SELECTORS.programSelect).val();
+                    const levelId = $(SELECTORS.levelSelect).val();
 
-// ===========================
-// DROPDOWN MANAGER
-// ===========================
-const DropdownManagerDocs = {
-  loadIndividualTerms() {
-    return ApiDocs.fetchTerms()
-      .done(response => {
-        const terms = response.data || [];
-        const $s = $(SELECTORS.individualTermSelect);
-        $s.empty().append('<option value="">All Terms</option>');
-        terms.forEach(t => $s.append($('<option>', { value: t.id, text: t.name })));
-        $s.trigger('change');
-      })
-      .fail(() => UtilsDocs.showError('Error', 'Failed to load terms'));
-  },
+                    if (!termId) {
+                        Utils.showError('Please select a term.');
+                        return;
+                    }
+                    if (!programId) {
+                        Utils.showError('Please select a program.');
+                        return;
+                    }
+                    if (!levelId) {
+                        Utils.showError('Please select a level.');
+                        return;
+                    }
+                }
 
-  loadGroupTerms() {
-    return ApiDocs.fetchTerms()
-      .done(response => {
-        const terms = response.data || [];
-        const $s = $(SELECTORS.groupTermSelect);
-        $s.empty().append('<option value="">All Terms</option>');
-        terms.forEach(t => $s.append($('<option>', { value: t.id, text: t.name })));
-        $s.trigger('change');
-      })
-      .fail(() => UtilsDocs.showError('Error', 'Failed to load terms'));
-  },
+                const formData = new FormData(document.querySelector(SELECTORS.form));
 
-  loadPrograms(selector = SELECTORS.programSelect) {
-    return ApiDocs.fetchPrograms()
-      .done(response => {
-        const programs = response.data || [];
-        const $s = $(selector);
-        $s.empty().append('<option value="">All Programs</option>');
-        programs.forEach(p => $s.append($('<option>', { value: p.id, text: p.name })));
-        $s.trigger('change');
-      })
-      .fail(() => UtilsDocs.showError('Error', 'Failed to load programs'));
-  },
+                ExportTaskManager.start(formData, {
+                    button: $(SELECTORS.submitBtn)
+                });
+            }
+        };
 
-  loadLevels(selector = SELECTORS.levelSelect) {
-    return ApiDocs.fetchLevels()
-      .done(response => {
-        const levels = response.data || [];
-        const $s = $(selector);
-        $s.empty().append('<option value="">All Levels</option>');
-        levels.forEach(l => $s.append($('<option>', { value: l.id, text: l.name })));
-        $s.trigger('change');
-      })
-      .fail(() => UtilsDocs.showError('Error', 'Failed to load levels'));
-  },
-
-  initializeSelect2() {
-    // Initialize Select2 for all dropdowns
-    $(SELECTORS.individualTermSelect).select2({
-      placeholder: 'Select a term',
-      allowClear: true,
-      width: '100%'
-    });
-
-    $(SELECTORS.groupTermSelect).select2({
-      placeholder: 'Select a term',
-      allowClear: true,
-      width: '100%'
-    });
-
-    $(SELECTORS.programSelect).select2({
-      placeholder: 'Select a program',
-      allowClear: true,
-      width: '100%'
-    });
-
-    $(SELECTORS.levelSelect).select2({
-      placeholder: 'Select a level',
-      allowClear: true,
-      width: '100%'
-    });
-  }
-};
-
-// ===========================
-// EXPORT DOCS MANAGER
-// ===========================
-const ExportDocsManager = {
-  init() {
-    this.bindEvents();
-    // Initialize Select2 first
-    DropdownManagerDocs.initializeSelect2();
-    
-    // Load dropdowns: terms for both individual and groups term selects
-    $.when(
-      DropdownManagerDocs.loadIndividualTerms(),
-      DropdownManagerDocs.loadGroupTerms(),
-      DropdownManagerDocs.loadPrograms(),
-      DropdownManagerDocs.loadLevels()
-    ).done(() => {
-        UtilsDocs.hidePageLoader();
-    });
-  },
-
-  bindEvents() {
-    $(SELECTORS.form).on('submit', this.handleSubmit.bind(this));
-  },
-
-  async handleSubmit(e) {
-    e.preventDefault();
-    const $btn = $(SELECTORS.submitBtn);
-    UtilsDocs.disableButton($btn, '<i class="bx bx-loader-alt bx-spin me-1"></i>Generating...');
-
-    const formEl = document.querySelector(SELECTORS.form);
-    // Disable the term select that's inside the inactive tab so we don't submit duplicate 'term_id' fields.
-    const $individualTab = $('#individual');
-    const $groupsTab = $('#groups');
-    if ($individualTab.hasClass('show active')) {
-      $(SELECTORS.groupTermSelect).prop('disabled', true);
-      $(SELECTORS.individualTermSelect).prop('disabled', false);
-    } else {
-      $(SELECTORS.groupTermSelect).prop('disabled', false);
-      $(SELECTORS.individualTermSelect).prop('disabled', true);
-    }
-
-    const formData = new FormData(formEl);
-
-    try {
-      const res = await ApiDocs.exportDocuments(formData);
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        const message = json.message || 'Export failed. Please check your input.';
-        UtilsDocs.showError('Error', message);
-        UtilsDocs.enableButton($btn, '<i class="bx bx-download me-1"></i> Generate & Download ZIP');
-        return;
-      }
-
-      const blob = await res.blob();
-      const disposition = res.headers.get('Content-Disposition') || '';
-      let filename = 'enrollment_documents.zip';
-      const match = /filename="?([^";]+)"?/.exec(disposition);
-      if (match) filename = match[1];
-
-      UtilsDocs.downloadBlob(blob, filename);
-      UtilsDocs.showSuccess('Download started');
-    } catch (err) {
-      console.error(err);
-      UtilsDocs.showError('Error', 'Failed to export documents');
-    } finally {
-      UtilsDocs.enableButton($btn, '<i class="bx bx-download me-1"></i> Generate & Download ZIP');
-    }
-  }
-};
-
-// ===========================
-// INIT
-// ===========================
-$(document).ready(() => {
-  ExportDocsManager.init();
-});
-</script>
+        // ===========================
+        // INITIALIZATION
+        // ===========================
+        $(async () => {
+            Select2Manager.init();
+            await Select2Manager.loadOptions();
+            ExportDocsPage.init();
+            ExportTaskManager.init();
+            Utils.hidePageLoader();
+        });
+    </script>
 @endpush

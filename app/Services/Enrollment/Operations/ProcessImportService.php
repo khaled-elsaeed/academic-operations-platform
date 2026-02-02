@@ -126,6 +126,8 @@ class ProcessImportService
 
         $this->validatePrerequisites($student, $course);
 
+        $this->validateTimeConflicts($student->id, $term->id, $availableCourseSchedules);
+
         $enrollment = $this->createOrUpdateEnrollment($row, $student, $course, $term);
 
         $this->createEnrollmentSchedules($enrollment, $availableCourseSchedules);
@@ -295,6 +297,48 @@ class ProcessImportService
         $rule->validate('credit_hours', $totalHours, function ($message) {
             throw new BusinessValidationException($message);
         });
+    }
+
+    /**
+     * Validate time conflicts with existing enrollments.
+     */
+    private function validateTimeConflicts(int $studentId, int $termId, \Illuminate\Support\Collection $newSchedules): void
+    {
+        $existingSlots = EnrollmentSchedule::whereHas('enrollment', function ($query) use ($studentId, $termId) {
+                $query->where('student_id', $studentId)->where('term_id', $termId);
+            })
+            ->with('availableCourseSchedule.scheduleAssignments.scheduleSlot')
+            ->get()
+            ->flatMap(fn($es) => $es->availableCourseSchedule->scheduleAssignments ?? collect())
+            ->map(fn($assignment) => $assignment->scheduleSlot)
+            ->filter();
+
+        $newSlots = $newSchedules
+            ->flatMap(fn($schedule) => $schedule->scheduleAssignments ?? collect())
+            ->map(fn($assignment) => $assignment->scheduleSlot)
+            ->filter();
+
+        foreach ($newSlots as $newSlot) {
+            foreach ($existingSlots as $existingSlot) {
+                if ($this->hasTimeConflict($newSlot, $existingSlot)) {
+                    throw new BusinessValidationException(
+                        "Schedule time conflict: {$newSlot->day_of_week} {$newSlot->start_time->format('H:i')} - {$newSlot->end_time->format('H:i')} overlaps with existing enrollment."
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * Check if two schedule slots have a time conflict.
+     */
+    private function hasTimeConflict($slot1, $slot2): bool
+    {
+        if ($slot1->day_of_week !== $slot2->day_of_week) {
+            return false;
+        }
+
+        return $slot1->start_time < $slot2->end_time && $slot1->end_time > $slot2->start_time;
     }
 
     /**

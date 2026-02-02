@@ -136,6 +136,7 @@ class CreateEnrollmentService
         if ($this->shouldAttachSchedules($enrollmentData)) {
             $this->validateScheduleIds($enrollmentData['selected_schedule_ids'] ?? []);
             $this->validateSchedulesCapacity($termId, $enrollmentData['selected_schedule_ids'] ?? []);
+            $this->validateTimeConflicts($studentId, $termId, $enrollmentData['selected_schedule_ids'] ?? []);
         }
     }
 
@@ -231,6 +232,53 @@ class CreateEnrollmentService
     private function isScheduleFull(AvailableCourseSchedule $schedule, int $enrolledCount): bool
     {
         return $schedule->max_capacity !== null && $enrolledCount >= $schedule->max_capacity;
+    }
+
+    /**
+     * Validate time conflicts with existing enrollments.
+     */
+    private function validateTimeConflicts(int $studentId, int $termId, array $scheduleIds): void
+    {
+        $existingSlots = EnrollmentSchedule::whereHas('enrollment', function ($query) use ($studentId, $termId) {
+                $query->where('student_id', $studentId)->where('term_id', $termId);
+            })
+            ->with('availableCourseSchedule.scheduleAssignments.scheduleSlot')
+            ->get()
+            ->flatMap(fn($es) => $es->availableCourseSchedule->scheduleAssignments ?? collect())
+            ->map(fn($assignment) => $assignment->scheduleSlot)
+            ->filter();
+
+        $newSchedules = AvailableCourseSchedule::with('scheduleAssignments.scheduleSlot')
+            ->whereIn('id', $scheduleIds)
+            ->get();
+
+        $newSlots = $newSchedules
+            ->flatMap(fn($schedule) => $schedule->scheduleAssignments ?? collect())
+            ->map(fn($assignment) => $assignment->scheduleSlot)
+            ->filter();
+
+        foreach ($newSlots as $newSlot) {
+            foreach ($existingSlots as $existingSlot) {
+                if ($this->hasTimeConflict($newSlot, $existingSlot)) {
+                    throw new BusinessValidationException(
+                        "Schedule time conflict: {$newSlot->day_of_week} {$newSlot->start_time->format('H:i')} - {$newSlot->end_time->format('H:i')} overlaps with existing enrollment.",
+                        422
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * Check if two schedule slots have a time conflict.
+     */
+    private function hasTimeConflict($slot1, $slot2): bool
+    {
+        if ($slot1->day_of_week !== $slot2->day_of_week) {
+            return false;
+        }
+
+        return $slot1->start_time < $slot2->end_time && $slot1->end_time > $slot2->start_time;
     }
 
     // ==================== Creation Methods ====================

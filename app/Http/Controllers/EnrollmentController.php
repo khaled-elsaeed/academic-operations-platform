@@ -115,6 +115,34 @@ class EnrollmentController extends Controller
     }
 
     /**
+     * Store new enrollments without schedules (grade-only).
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function storeWithoutSchedule(Request $request): JsonResponse
+    {
+        $request->validate([
+            'student_id' => ['required', 'exists:students,id', new AcademicAdvisorAccessRule()],
+            'enrollment_data' => 'required|array|min:1',
+            'enrollment_data.*.term_id' => 'required|exists:terms,id',
+            'enrollment_data.*.course_id' => 'required|exists:courses,id',
+            'enrollment_data.*.grade' => 'nullable|string|max:5',
+        ]);
+
+        try {
+            $validated = $request->all();
+            $results = $this->enrollmentService->createWithoutSchedule($validated);
+            return successResponse('Enrollments created successfully.', $results);
+        } catch (BusinessValidationException $e) {
+            return errorResponse($e->getMessage(), [], $e->getCode());
+        } catch (Exception $e) {
+            logError('EnrollmentController@storeWithoutSchedule', $e, ['request' => $request->all()]);
+            return errorResponse('Internal server error.', [], 500);
+        }
+    }
+
+    /**
      * Show the add enrollment page.
      *
      * @return View

@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Policies\FeatureAvailabilityPolicy;
 use App\Services\CreditHoursExceptionService;
 use App\Services\Enrollment\Operations\CreateEnrollmentService;
+use App\Services\Enrollment\Operations\CreateEnrollmentWithoutScheduleService;
 use App\Services\Enrollment\Operations\RemainingCreditHoursService;
 use App\Services\EnrollmentDocumentService;
 use App\Traits\{Exportable, Importable, Progressable};
@@ -57,6 +58,11 @@ class EnrollmentService
     protected CreateEnrollmentService $createService;
 
     /**
+     * @var CreateEnrollmentWithoutScheduleService Service for creating enrollments without schedules
+     */
+    protected CreateEnrollmentWithoutScheduleService $createWithoutScheduleService;
+
+    /**
      * @var RemainingCreditHoursService Service for calculating remaining credit hours
      */
     protected RemainingCreditHoursService $remainingCreditHoursService;
@@ -72,6 +78,7 @@ class EnrollmentService
      * @param CreditHoursExceptionService $creditHoursExceptionService
      * @param FeatureAvailabilityPolicy $featureAvailabilityPolicy
      * @param CreateEnrollmentService $createService
+     * @param CreateEnrollmentWithoutScheduleService $createWithoutScheduleService
      * @param RemainingCreditHoursService $remainingCreditHoursService
      * @param EnrollmentDocumentService $enrollmentDocumentService
      */
@@ -79,12 +86,14 @@ class EnrollmentService
         CreditHoursExceptionService $creditHoursExceptionService,
         FeatureAvailabilityPolicy $featureAvailabilityPolicy,
         CreateEnrollmentService $createService,
+        CreateEnrollmentWithoutScheduleService $createWithoutScheduleService,
         RemainingCreditHoursService $remainingCreditHoursService,
         EnrollmentDocumentService $enrollmentDocumentService
     ) {
         $this->creditHoursExceptionService = $creditHoursExceptionService;
         $this->featureAvailabilityPolicy = $featureAvailabilityPolicy;
         $this->createService = $createService;
+        $this->createWithoutScheduleService = $createWithoutScheduleService;
         $this->remainingCreditHoursService = $remainingCreditHoursService;
         $this->enrollmentDocumentService = $enrollmentDocumentService;
     }
@@ -222,6 +231,30 @@ class EnrollmentService
         }
 
         return $result;
+    }
+
+    /**
+     * Create new enrollment(s) without schedules (grade-only).
+     *
+     * @param array<string, mixed> $data Enrollment data containing:
+     *                                    - student_id: int
+     *                                    - enrollment_data: array of enrollment items with term_id, course_id, grade
+     * @return array<string, mixed> Created enrollment data
+     * @throws BusinessValidationException If validation fails
+     */
+    public function createWithoutSchedule(array $data): array
+    {
+        $this->featureAvailabilityPolicy->checkAvailable('enrollment', 'create');
+        
+        $results = $this->createWithoutScheduleService->create(
+            (int) $data['student_id'],
+            $data['enrollment_data']
+        )->toArray();
+
+        return [
+            'enrollments' => $results,
+            'count' => count($results),
+        ];
     }
 
     /**

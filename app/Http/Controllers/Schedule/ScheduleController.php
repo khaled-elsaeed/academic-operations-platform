@@ -113,4 +113,54 @@ class ScheduleController extends \App\Http\Controllers\Controller
             return errorResponse('Failed to fetch days and slots.', [], 500);
         }
     }
+
+    /**
+     * Display the weekly teaching schedule view.
+     *
+     * @return View
+     */
+    public function weeklyTeaching(): View
+    {
+        return view('schedule.weekly-teaching');
+    }
+
+    /**
+     * Get weekly teaching schedule data for display.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getWeeklyTeachingData(Request $request): JsonResponse
+    {
+        try {
+            $scheduleId = $request->input('schedule_id');
+            
+            if (!$scheduleId) {
+                return errorResponse('Schedule ID is required to fetch weekly teaching data.', [], 400);
+            }
+            
+            $data = $this->scheduleService->getWeeklyTeachingData($request->all());
+            return successResponse('Weekly teaching data fetched successfully.', $data);
+        } catch (Exception $e) {
+            logError('ScheduleController@getWeeklyTeachingData', $e, ['request' => $request->all()]);
+            return errorResponse('Failed to fetch weekly teaching data.', [], 500);
+        }
+    }
+
+    /**
+     * Get available groups for a given schedule.
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function getAvailableGroups($id): JsonResponse
+    {
+        try {
+            $groups = $this->scheduleService->getAvailableGroups($id);
+            return successResponse('Available groups fetched successfully.', $groups);
+        } catch (Exception $e) {
+            logError('ScheduleController@getAvailableGroups', $e, ['schedule_id' => $id]);
+            return errorResponse('Failed to fetch available groups.', [], 500);
+        }
+    }
 }

@@ -148,6 +148,13 @@ class Sidebar extends Component
                 'active' => $this->isActiveGroup(['schedules', 'schedule-slots']),
                 'children' => [
                     [
+                        'title' => 'Weekly Teaching',
+                        'icon' => 'bx bx-calendar-week',
+                        'route' => route('schedules.weekly-teaching'),
+                        'active' => request()->routeIs('schedules.weekly-teaching'),
+                        'permission' => 'schedule.view',
+                    ],
+                    [
                         'title' => 'Schedules',
                         'icon' => 'bx bx-calendar-alt',
                         'route' => route('schedules.index'),

@@ -111,6 +111,10 @@ class ProcessImportService
         $term = $this->findTerm((string)($row[self::TERM_CODE_COLUMN] ?? ''));
         $group = (string)($row[self::GROUP_CODE] ?? '');
 
+        $studentLevelId = $student->level_id;
+
+        $studentProgramId = $student->program_id;
+
         if (Enrollment::where('student_id', $student->id)
             ->where('course_id', $course->id)
             ->where('term_id', $term->id)
@@ -120,7 +124,7 @@ class ProcessImportService
 
         $availableCourse = $this->findAvailableCourse($student, $course, $term);
 
-        $availableCourseSchedules = $this->findAvailableCourseSchedules($availableCourse, $group);
+        $availableCourseSchedules = $this->findAvailableCourseSchedules($availableCourse, $group,$studentProgramId,$studentLevelId);
 
         $this->validateTotalCreditHours($student->id, $term->id, $course);
 
@@ -132,7 +136,6 @@ class ProcessImportService
 
         $this->createEnrollmentSchedules($enrollment, $availableCourseSchedules);
 
-        // Track success
         if ($enrollment->wasRecentlyCreated) {
             $this->results['summary']['created']++;
         } else {
@@ -222,9 +225,9 @@ class ProcessImportService
     /**
      * Find available course schedules for all required activity types in the given group.
      */
-    private function findAvailableCourseSchedules(AvailableCourse $availableCourse, string $group): \Illuminate\Support\Collection
+    private function findAvailableCourseSchedules(AvailableCourse $availableCourse, string $group, int $program , int $level ): \Illuminate\Support\Collection
     {
-        $schedules = $availableCourse->getSchedulesForGroup($group);
+        $schedules = $availableCourse->getSchedulesForGroup($group,$level,$program);
 
         if ($schedules->isEmpty()) {
             throw new BusinessValidationException("No schedules found for Group '{$group}' in course '{$availableCourse->course->code}'.");

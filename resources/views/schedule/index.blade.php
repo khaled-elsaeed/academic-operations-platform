@@ -24,6 +24,11 @@
         icon="bx bx-calendar"
     >
 
+        {{-- View Weekly Teaching Schedule --}}
+        <a href="{{ route('schedules.weekly-teaching') }}" class="btn btn-info me-2">
+            <i class="bx bx-calendar-week"></i> Weekly Teaching
+        </a>
+
         {{-- Add Schedule Button --}}
         <a href="{{ route('schedules.create') }}" class="btn btn-primary me-2">
             <i class="bx bx-plus"></i> Add Schedule

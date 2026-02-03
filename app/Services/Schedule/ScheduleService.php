@@ -19,11 +19,25 @@ class ScheduleService
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function getAllActive()
+    public function getAllActive(array $filters = [])
     {
-        return Schedule::with(['term', 'scheduleType'])
-            ->orderBy('title')
-            ->get();
+        $query = Schedule::with(['term', 'scheduleType'])
+            ->orderBy('title');
+
+        // Filter by term if provided
+        if (!empty($filters['term_id'])) {
+            $query->where('term_id', $filters['term_id']);
+        }
+
+        // Filter by type (weekly = repetitive weekly schedules)
+        if (!empty($filters['type']) && $filters['type'] === 'weekly') {
+            $query->whereHas('scheduleType', function ($q) {
+                $q->where('is_repetitive', true)
+                  ->where('repetition_pattern', 'weekly');
+            });
+        }
+
+        return $query->get();
     }
 
     /**
@@ -230,5 +244,263 @@ class ScheduleService
             ],
             
         ];
+    }
+
+    /**
+     * Get weekly teaching schedule data for display.
+     *
+     * @param array $filters
+     * @return array
+     */
+    public function getWeeklyTeachingData(array $filters): array
+    {
+        $scheduleId = !empty($filters['schedule_id']) ? $filters['schedule_id'] : null;
+        $programId = !empty($filters['program_id']) ? $filters['program_id'] : null;
+        $levelId = !empty($filters['level_id']) ? $filters['level_id'] : null;
+        $groupFilter = !empty($filters['group']) ? $filters['group'] : null;
+
+
+        if (!$scheduleId) {
+            return [
+                'slots' => [],
+                'assignments' => [],
+                'stats' => [
+                    'total_courses' => 0,
+                    'total_sessions' => 0,
+                    'lectures' => 0,
+                    'tutorials' => 0,
+                    'labs' => 0
+                ]
+            ];
+        }
+
+        // Define the correct day order
+        $dayOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+
+        // Get schedule with slots
+        $schedule = Schedule::with([
+            'slots' => function($query) use ($dayOrder) {
+                $orderExpr = "FIELD(day_of_week, '" . implode("','", $dayOrder) . "')";
+                $query->orderByRaw($orderExpr)->orderBy('slot_order');
+            }
+        ])->findOrFail($scheduleId);
+
+        // Get slots data - keep as Collection for easier searching
+        $slotsCollection = $schedule->slots->map(function ($slot) {
+            return [
+                'id' => $slot->id,
+                'day_of_week' => $slot->day_of_week,
+                'slot_order' => $slot->slot_order,
+                'start_time' => $slot->start_time ? $slot->start_time->format('H:i') : null,
+                'end_time' => $slot->end_time ? $slot->end_time->format('H:i') : null,
+            ];
+        });
+        
+        // Convert to array for frontend consumption
+        $slots = $slotsCollection->toArray();
+
+        $slotIds = $schedule->slots->pluck('id')->toArray();
+
+        // Build query for assignments with course schedule relationships
+        $assignmentsQuery = \App\Models\Schedule\ScheduleAssignment::whereIn('schedule_slot_id', $slotIds)
+            ->with([
+                'availableCourseSchedule.availableCourse.course',
+                'availableCourseSchedule.program',
+                'availableCourseSchedule.level'
+            ]);
+
+        // Get all assignments first
+        $allAssignments = $assignmentsQuery->get();
+
+        // Group assignments by available course schedule to handle multiple slots properly
+        $groupedByCourse = [];
+        $nonCourseAssignments = [];
+        
+        foreach ($allAssignments as $assignment) {
+            $acs = $assignment->availableCourseSchedule;
+            
+            if ($acs) {
+                $course = $acs->availableCourse?->course;
+                
+                // Filter by program if provided
+                if ($programId && $acs->program_id && $acs->program_id != $programId) {
+                    continue;
+                }
+
+                // Filter by level if provided  
+                if ($levelId && $acs->level_id && $acs->level_id != $levelId) {
+                    continue;
+                }
+                
+                // Filter by group if provided
+                if ($groupFilter && $acs->group && $acs->group !== $groupFilter) {
+                    continue;
+                }
+                
+                // Filter by group if provided
+                if ($groupFilter && $acs->group && $acs->group !== $groupFilter) {
+                    continue;
+                }
+
+                // Group by available course schedule ID
+                $courseKey = $acs->id;
+                
+                if (!isset($groupedByCourse[$courseKey])) {
+                    $groupedByCourse[$courseKey] = [
+                        'course_schedule' => $acs,
+                        'course' => $course,
+                        'assignments' => [],
+                        'slot_ids' => [],
+                        'slots_data' => []
+                    ];
+                }
+                
+                $groupedByCourse[$courseKey]['assignments'][] = $assignment;
+                $groupedByCourse[$courseKey]['slot_ids'][] = $assignment->schedule_slot_id;
+                
+                // Find the slot data for time calculation using the Collection
+                $slotData = $slotsCollection->firstWhere('id', $assignment->schedule_slot_id);
+                if ($slotData) {
+                    $groupedByCourse[$courseKey]['slots_data'][] = $slotData;
+                }
+            } else {
+                // Non-course assignments (events, etc.)
+                $nonCourseAssignments[] = $assignment;
+            }
+        }
+
+        // Process grouped course assignments
+        $assignments = [];
+        
+        foreach ($groupedByCourse as $courseKey => $group) {
+            $acs = $group['course_schedule'];
+            $course = $group['course'];
+            $slotsData = $group['slots_data'];
+            
+            // Calculate combined time range from first slot start to last slot end
+            $startTimes = [];
+            $endTimes = [];
+            $days = [];
+            
+            foreach ($slotsData as $slotData) {
+                if ($slotData['start_time']) {
+                    $startTimes[] = $slotData['start_time'];
+                }
+                if ($slotData['end_time']) {
+                    $endTimes[] = $slotData['end_time'];
+                }
+                $days[] = $slotData['day_of_week'];
+            }
+            
+            // Get earliest start time and latest end time
+            $combinedStartTime = !empty($startTimes) ? min($startTimes) : null;
+            $combinedEndTime = !empty($endTimes) ? max($endTimes) : null;
+            $combinedDays = array_unique($days);
+            
+            // Use the first assignment for basic data
+            $firstAssignment = $group['assignments'][0];
+            
+            $assignments[] = [
+                'id' => $firstAssignment->id,
+                'schedule_slot_id' => $firstAssignment->schedule_slot_id, // Keep first slot ID for compatibility
+                'course_code' => $course?->code ?? '-',
+                'course_name' => $course?->name ?? '-',
+                'activity_type' => ucfirst($acs->activity_type ?? 'lecture'),
+                'group' => $acs->group ?? '-',
+                'location' => $acs->location ?? null,
+                'program_id' => $acs->program_id,
+                'program_name' => $acs->program?->name ?? null,
+                'level_id' => $acs->level_id,
+                'level_name' => $acs->level?->name ?? null,
+                'min_capacity' => $acs->min_capacity,
+                'max_capacity' => $acs->max_capacity,
+                'current_capacity' => $acs->current_capacity ?? 0,
+                'status' => $firstAssignment->status,
+                'slot_count' => count($group['slot_ids']),
+                'has_multiple_slots' => count($group['slot_ids']) > 1,
+                'slot_ids' => array_unique($group['slot_ids']),
+                'combined_start_time' => $combinedStartTime,
+                'combined_end_time' => $combinedEndTime,
+                'days' => $combinedDays,
+                'available_course_schedule_id' => $acs->id,
+            ];
+        }
+        
+        // Add non-course assignments
+        foreach ($nonCourseAssignments as $assignment) {
+            $assignments[] = [
+                'id' => $assignment->id,
+                'schedule_slot_id' => $assignment->schedule_slot_id,
+                'course_code' => '-',
+                'course_name' => $assignment->title ?? '-',
+                'activity_type' => ucfirst($assignment->type ?? 'event'),
+                'group' => '-',
+                'location' => null,
+                'program_id' => null,
+                'program_name' => null,
+                'level_id' => null,
+                'level_name' => null,
+                'min_capacity' => null,
+                'max_capacity' => null,
+                'current_capacity' => 0,
+                'status' => $assignment->status,
+                'slot_count' => 1,
+                'has_multiple_slots' => false,
+                'slot_ids' => [$assignment->schedule_slot_id],
+                'combined_start_time' => null,
+                'combined_end_time' => null,
+                'days' => [],
+                'available_course_schedule_id' => null,
+            ];
+        }
+
+        // Calculate stats - now based on unique available course schedules
+        $uniqueCourses = collect($assignments)->whereNotNull('available_course_schedule_id')->unique('available_course_schedule_id')->count();
+        $lectureCount = collect($assignments)->where('activity_type', 'Lecture')->count();
+        $tutorialCount = collect($assignments)->where('activity_type', 'Tutorial')->count();
+        $labCount = collect($assignments)->where('activity_type', 'Lab')->count();
+
+        return [
+            'slots' => $slots,
+            'assignments' => $assignments,
+            'stats' => [
+                'total_courses' => $uniqueCourses,
+                'total_sessions' => count($assignments),
+                'lectures' => $lectureCount,
+                'tutorials' => $tutorialCount,
+                'labs' => $labCount
+            ]
+        ];
+    }
+
+    /**
+     * Get available groups for a given schedule
+     *
+     * @param int $scheduleId
+     * @return array
+     */
+    public function getAvailableGroups(int $scheduleId): array
+    {
+        try {
+            // Get schedule slots first
+            $schedule = Schedule::findOrFail($scheduleId);
+            $slotIds = $schedule->slots->pluck('id')->toArray();
+
+            // Get unique groups from available course schedules that have assignments in this schedule
+            $groups = \App\Models\Schedule\ScheduleAssignment::whereIn('schedule_slot_id', $slotIds)
+                ->with('availableCourseSchedule')
+                ->get()
+                ->pluck('availableCourseSchedule.group')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values()
+                ->toArray();
+
+            return $groups;
+        } catch (\Exception $e) {
+            Log::error('Error getting available groups:', ['error' => $e->getMessage(), 'schedule_id' => $scheduleId]);
+            return [];
+        }
     }
 }

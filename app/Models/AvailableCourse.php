@@ -389,7 +389,7 @@ class AvailableCourse extends Model
     /**
      * Get one schedule for each activity type matching the given group.
      */
-    public function getSchedulesForGroup(string $group): \Illuminate\Support\Collection
+    public function getSchedulesForGroup(string $group,int $level,int $program): \Illuminate\Support\Collection
     {
         $requiredTypes = $this->getRequiredActivityTypes();
         $schedules = collect();
@@ -398,6 +398,8 @@ class AvailableCourse extends Model
             $schedule = $this->schedules()
                 ->where('activity_type', $type)
                 ->where('group', $group)
+                ->where('level_id',$level)
+                ->where('program_id',$program)
                 ->first();
 
             if ($schedule) {

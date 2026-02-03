@@ -393,14 +393,22 @@ class AvailableCourse extends Model
     {
         $requiredTypes = $this->getRequiredActivityTypes();
         $schedules = collect();
+        $isUniversal = $this->mode === self::MODE_UNIVERSAL;
 
         foreach ($requiredTypes as $type) {
+
+            if ($isUniversal) {
+                    $schedule = $this->schedules()
+                    ->where('activity_type', $type)
+                    ->first();
+                } else {
             $schedule = $this->schedules()
                 ->where('activity_type', $type)
                 ->where('group', $group)
                 ->where('level_id',$level)
                 ->where('program_id',$program)
                 ->first();
+            }
 
             if ($schedule) {
                 $schedules->push($schedule);

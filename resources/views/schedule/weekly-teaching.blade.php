@@ -661,7 +661,6 @@
                 $('#modal_course_name').text(assignment.course_name || '-');
                 $('#modal_day').text(capitalizeFirst(day));
                 
-                // Show combined time range for multi-slot courses
                 const displayStartTime = slotInfo?.combined_start_time || slotInfo?.start_time;
                 const displayEndTime = slotInfo?.combined_end_time || slotInfo?.end_time;
                 const timeDisplay = (displayStartTime && displayEndTime) ? 
@@ -675,7 +674,6 @@
                 $('#modal_level').text(assignment.level_name || 'All Levels');
                 $('#modal_capacity').text(assignment.max_capacity ? `${assignment.current_capacity || 0} / ${assignment.max_capacity}` : '-');
 
-                // Show multiple slots information if applicable
                 if (assignment.has_multiple_slots && assignment.slot_count > 1) {
                     const daysList = assignment.days && assignment.days.length > 0 ? 
                         assignment.days.map(d => capitalizeFirst(d)).join(', ') : 'Multiple days';

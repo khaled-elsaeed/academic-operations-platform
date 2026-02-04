@@ -14,7 +14,9 @@ use Yajra\DataTables\DataTables;
 use App\Services\AvailableCourse\Operations\CreateAvailableCourseService;
 use App\Traits\Progressable;
 use App\Traits\Importable;
+use App\Traits\Exportable;
 use App\Jobs\AvailableCourse\ImportAvailableCoursesJob;
+use App\Jobs\AvailableCourse\ExportAvailableCoursesJob;
 use App\Models\Task;
 use Exception;
 use Illuminate\Support\Facades\Storage;
@@ -29,6 +31,11 @@ class AvailableCourseService
         import as traitImport;
         getImportStatus as traitGetImportStatus;
         downloadImport as traitDownloadImport;
+    }
+    use Exportable {
+        export as traitExport;
+        getExportStatus as traitGetExportStatus;
+        downloadExport as traitDownloadExport;
     }
 
     /**
@@ -61,6 +68,31 @@ class AvailableCourseService
     public function downloadImport(string $uuid): \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\JsonResponse
     {
         return $this->traitDownloadImport($uuid, 'available_courses_import_results');
+    }
+
+    /**
+     * Export available courses to file.
+     *
+     * @param array<string, mixed> $data Optional filters and export parameters
+     * @return array<string, mixed> Export task information
+     */
+    public function exportAvailableCourses(array $data = []): array
+    {
+        return $this->traitExport(
+            jobClass: ExportAvailableCoursesJob::class,
+            subtype: 'available_course',
+            parameters: $data
+        );
+    }
+
+    public function getExportStatus(string $uuid): ?array
+    {
+        return $this->traitGetExportStatus($uuid, 'available_courses.export.download');
+    }
+
+    public function downloadExport(string $uuid): \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\JsonResponse
+    {
+        return $this->traitDownloadExport($uuid);
     }
 
      /**
@@ -172,14 +204,13 @@ class AvailableCourseService
     private function applySearchFilters(Builder $query): Builder
     {
         if ($searchTerm = request('search_term')) {
-            $query->whereHas('term', function($q) use($searchTerm) {
-                $q->where('name', 'LIKE', "%{$searchTerm}%");
-            });
+            $query->where('term_id', $searchTerm);
         }
 
         if ($searchCourse = request('search_course')) {
             $query->whereHas('course', function($q) use($searchCourse) {
-                $q->where('title', 'LIKE', "%{$searchCourse}%");
+                $q->where('title', 'LIKE', "%{$searchCourse}%")
+                ->orWhere('code', 'LIKE', "%{$searchCourse}%");
             });
         }
 

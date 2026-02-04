@@ -11,7 +11,8 @@
                 <x-ui.card.stat2 color="primary" icon="bx bx-book-open" :label="'Total Enrollments'" id="enrollments" />
             </div>
             <div class="col-12 col-sm-6 col-lg-3">
-                <x-ui.card.stat2 color="secondary" icon="bx bx-book-open" :label="'Graded Enrollments'" id="graded-enrollments" />
+                <x-ui.card.stat2 color="secondary" icon="bx bx-book-open" :label="'Graded Enrollments'"
+                    id="graded-enrollments" />
             </div>
         </div>
 
@@ -47,14 +48,16 @@
 
             <div class="col-md-3">
                 <label for="search_course" class="form-label">Course</label>
-                <input type="text" class="form-control" id="search_course" name="search_course"
-                    placeholder="Course Name or Code">
+                <select class="form-select" id="search_course" name="search_course">
+                    <option value="">All Courses</option>
+                </select>
             </div>
 
             <div class="col-md-3">
                 <label for="search_term" class="form-label">Term</label>
-                <input type="text" class="form-control" id="search_term" name="search_term"
-                    placeholder="Season, Year, or Code">
+                <select class="form-select" id="search_term" name="search_term">
+                    <option value="">All Terms</option>
+                </select>
             </div>
 
             <div class="col-md-3">
@@ -108,7 +111,8 @@
                                     <div class="flex-grow-1 ms-3">
                                         <h6 class="mb-1 text-primary">Import Information</h6>
                                         <p class="mb-0 text-muted small">
-                                            Upload an Excel file to import enrollments. Use the system template or SIS template for correct formatting.
+                                            Upload an Excel file to import enrollments. Use the system template or SIS template
+                                            for correct formatting.
                                         </p>
                                     </div>
                                 </div>
@@ -233,6 +237,9 @@
             },
             levels: {
                 all: @json(route('levels.all'))
+            },
+            courses: {
+                all: @json(route('courses.all'))
             }
         };
 
@@ -267,6 +274,9 @@
             },
             fetchLevels() {
                 return Utils.get(ROUTES.levels.all);
+            },
+            fetchCourses() {
+                return Utils.get(ROUTES.courses.all);
             }
         };
 
@@ -289,9 +299,57 @@
         // ===========================
         const Select2Manager = {
             init() {
+                // Initialize search field select2
+                Utils.initSelect2('#search_course', {
+                    placeholder: 'Please select a course',
+                    allowClear: true,
+                    dropdownParent: $('#enrollmentSearchCollapse'),
+                    width: '100%'
+                });
+                Utils.initSelect2('#search_term', {
+                    placeholder: 'Please select a term',
+                    allowClear: true,
+                    dropdownParent: $('#enrollmentSearchCollapse'),
+                    width: '100%'
+                });
+
+                // Initialize export modal select2
                 Utils.initSelect2('#export_term_id', { dropdownParent: $('#exportModal') });
                 Utils.initSelect2('#export_program_id', { dropdownParent: $('#exportModal') });
                 Utils.initSelect2('#export_level_id', { dropdownParent: $('#exportModal') });
+            },
+
+            async loadSearchOptions() {
+                try {
+                    const [termsRes, coursesRes] = await Promise.all([
+                        ApiService.fetchTerms(),
+                        ApiService.fetchCourses()
+                    ]);
+
+                    if (Utils.isResponseSuccess(termsRes)) {
+                        Utils.populateSelect('#search_term', Utils.getResponseData(termsRes), {
+                            valueField: 'id', textField: 'name', placeholder: ''
+                        }, true);
+                    }
+                    if (Utils.isResponseSuccess(coursesRes)) {
+                        const coursesData = Utils.getResponseData(coursesRes);
+                        console.log('Courses data:', coursesData); // Debug log
+
+                        const courses = coursesData.map(course => ({
+                            id: course.id,
+                            name: course.title && course.code ? `${course.title} (${course.code})` : (course.name || course.title || `Course ${course.id}`)
+                        }));
+
+                        Utils.populateSelect('#search_course', courses, {
+                            valueField: 'id', textField: 'name', placeholder: ''
+                        }, true);
+
+                        console.log('Mapped courses:', courses); // Debug log
+                    }
+                } catch (error) {
+                    console.error("Failed to load search options", error);
+                    Utils.showError("Failed to load some search options");
+                }
             },
 
             async loadExportOptions() {
@@ -511,8 +569,10 @@
             ExportTaskManager.init();
             TemplateManager.init();
             DeleteManager.init();
-            Select2Manager.init();
+
+            await Select2Manager.loadSearchOptions();
             await Select2Manager.loadExportOptions();
+            Select2Manager.init();
 
             Utils.hidePageLoader();
         });

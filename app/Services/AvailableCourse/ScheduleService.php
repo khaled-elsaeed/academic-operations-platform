@@ -22,6 +22,8 @@ class ScheduleService
         $query = AvailableCourseSchedule::with(['scheduleAssignments.scheduleSlot', 'enrollments'])
             ->where('available_course_id', $availableCourseId);
 
+        $query->orderBy('group', 'asc');
+
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('activity_type', function ($schedule) {
@@ -206,6 +208,7 @@ class ScheduleService
     {
         $schedules = AvailableCourseSchedule::with(['scheduleAssignments.scheduleSlot', 'enrollments','program','level'])
             ->where('available_course_id', $availableCourseId)
+            ->orderBy('group', 'asc')
             ->get();
 
         return $schedules->toArray();
@@ -226,7 +229,6 @@ class ScheduleService
             throw new BusinessValidationException('Schedule not found.');
         }
 
-        // Get slots information
         $slots = $schedule->scheduleAssignments->map(function ($assignment) {
             return $assignment->scheduleSlot;
         })->filter()->sortBy('start_time');
@@ -247,8 +249,8 @@ class ScheduleService
             'day_of_week' => $firstSlot?->day_of_week,
             'level_id' => $schedule->level_id,
             'program_id' => $schedule->program_id,
-            'program_name' => $schedule->program->name,
-            'level_name' => $schedule->level->name,
+            'program_name' => $schedule->program?->name,
+            'level_name' => $schedule->level?->name,
             'slot_ids' => $slotIds,
         ];
     }

@@ -195,6 +195,9 @@
             },
             fetchTerms() {
                 return Utils.get(ROUTES.enrollment.termsWithInactive);
+            },
+            fetchCourses() {
+                return Utils.get(ROUTES.courses.all);
             }
         };
 
@@ -266,10 +269,11 @@
             rowCount: 0,
             termsLoaded: false,
             termsData: [],
+            coursesData: [],
 
             init() {
                 this.bindEvents();
-                this.loadTermsData();
+                this.loadData();
             },
 
             bindEvents() {
@@ -284,12 +288,26 @@
                 });
             },
 
-            async loadTermsData() {
+            async loadData() {
                 try {
-                    const response = await ApiService.fetchTerms();
-                    if (Utils.isResponseSuccess(response)) {
-                        this.termsData = Utils.getResponseData(response);
+                    const [termsRes, coursesRes] = await Promise.all([
+                        ApiService.fetchTerms(),
+                        ApiService.fetchCourses()
+                    ]);
+
+                    if (Utils.isResponseSuccess(termsRes)) {
+                        this.termsData = Utils.getResponseData(termsRes);
                         this.termsLoaded = true;
+                    }
+
+                    if (Utils.isResponseSuccess(coursesRes)) {
+                        const coursesData = Utils.getResponseData(coursesRes);
+                        this.coursesData = coursesData.map(course => ({
+                            id: course.id,
+                            name: course.title && course.code ? 
+                                  `${course.code} - ${course.title} (${course.credit_hours || 0} CH)` : 
+                                  (course.name || course.title || `Course ${course.id}`)
+                        }));
                     }
                 } catch (error) {
                     Utils.handleError(error);
@@ -362,6 +380,9 @@
                 // Populate terms
                 this.populateTerms($termSelect);
 
+                // Populate courses
+                this.populateCourses($courseSelect);
+
                 // Initialize term select with Select2
                 Utils.initSelect2($termSelect, {
                     placeholder: 'Select academic term',
@@ -369,42 +390,11 @@
                     width: '100%'
                 });
 
-                // Initialize course select with Select2 and AJAX
-                $courseSelect.select2({
-                    theme: 'bootstrap-5',
+                // Initialize course select with Select2
+                Utils.initSelect2($courseSelect, {
                     placeholder: 'Select a course',
                     allowClear: true,
-                    width: '100%',
-                    ajax: {
-                        url: ROUTES.courses.all,
-                        dataType: 'json',
-                        delay: 300,
-                        data: function(params) {
-                            return {
-                                student_id: AppState.student?.id,
-                                term_id: $termSelect.val(),
-                                search: params.term
-                            };
-                        },
-                        processResults: function(data) {
-                            const items = Array.isArray(data) ? data : (data.data || data.courses || []);
-                            return {
-                                results: items.map(item => {
-                                    const course = item.course || item;
-                                    return {
-                                        id: course.id || item.available_course_id,
-                                        text: `${course.code || ''} - ${course.name || ''} (${course.credit_hours || 0} CH)`
-                                    };
-                                })
-                            };
-                        },
-                        cache: true
-                    }
-                });
-
-                // Update course options when term changes
-                $termSelect.on('change', function() {
-                    $courseSelect.val(null).trigger('change');
+                    width: '100%'
                 });
             },
 
@@ -412,6 +402,14 @@
                 if (this.termsData.length > 0) {
                     this.termsData.forEach(term => {
                         $select.append(`<option value="${term.id}">${Utils.escapeHtml(term.name)}</option>`);
+                    });
+                }
+            },
+
+            populateCourses($select) {
+                if (this.coursesData.length > 0) {
+                    this.coursesData.forEach(course => {
+                        $select.append(`<option value="${course.id}">${Utils.escapeHtml(course.name)}</option>`);
                     });
                 }
             },

@@ -20,6 +20,8 @@ class EligibilityService
         $query = CourseEligibility::with(['program', 'level'])
             ->where('available_course_id', $availableCourseId);
 
+        $query->orderBy('level_id', 'asc')->orderBy('group', 'asc');
+
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('program', function ($eligibility) {

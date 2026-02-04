@@ -449,4 +449,77 @@ class AvailableCourseController extends Controller
     {
         return $this->availableCourseService->downloadImport($uuid);
     }
+
+    /**
+     * Start an async available courses export.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function export(Request $request): JsonResponse
+    {
+        $request->validate([
+            'term_id' => 'nullable|exists:terms,id',
+        ]);
+
+        try {
+            $validated = $request->all();
+            $result = $this->availableCourseService->exportAvailableCourses($validated);
+
+            return successResponse(__('Export initiated successfully.'), $result);
+        } catch (Exception $e) {
+            logError('AvailableCourseController@export', $e, ['request' => $request->all()]);
+            return errorResponse(__('Failed to initiate export.'), [], 500);
+        }
+    }
+
+    /**
+     * Get export status by UUID.
+     *
+     * @param string $uuid
+     * @return JsonResponse
+     */
+    public function exportStatus(string $uuid): JsonResponse
+    {
+        try {
+            $status = $this->availableCourseService->getExportStatus($uuid);
+
+            if (!$status) {
+                return errorResponse(__('Export not found.'), [], 404);
+            }
+
+            return successResponse(__('Export status retrieved successfully.'), $status);
+        } catch (Exception $e) {
+            logError('AvailableCourseController@exportStatus', $e, ['uuid' => $uuid]);
+            return errorResponse(__('Failed to retrieve export status.'), [], 500);
+        }
+    }
+
+    /**
+     * Cancel export task by UUID.
+     *
+     * @param string $uuid
+     * @return JsonResponse
+     */
+    public function exportCancel(string $uuid): JsonResponse
+    {
+        try {
+            $result = $this->availableCourseService->cancelExport($uuid);
+            return successResponse(__('Export cancelled successfully.'), $result);
+        } catch (Exception $e) {
+            logError('AvailableCourseController@exportCancel', $e, ['uuid' => $uuid]);
+            return errorResponse(__('Failed to cancel export.'), [], 500);
+        }
+    }
+
+    /**
+     * Download completed export file by UUID.
+     *
+     * @param string $uuid
+     * @return BinaryFileResponse|JsonResponse
+     */
+    public function exportDownload(string $uuid): BinaryFileResponse|JsonResponse
+    {
+        return $this->availableCourseService->downloadExport($uuid);
+    }
 }

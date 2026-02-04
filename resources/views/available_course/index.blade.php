@@ -19,6 +19,11 @@
         <x-ui.page-header :title="'Available Courses'" :description="'List of all available courses for enrollment'"
             icon="bx bx-book">
             <div class="d-flex flex-wrap gap-2">
+                @can('available_course.view')
+                    <button class="btn btn-info" id="exportBtn">
+                        <i class="bx bx-download"></i> Export
+                    </button>
+                @endcan
                 @can('available_course.import')
                     <button class="btn btn-success" id="importBtn">
                         <i class="bx bx-upload"></i> Import
@@ -117,9 +122,6 @@
             </x-ui.modal>
         @endcan
 
-        <!-- Progress Modal -->
-        <x-progress-modal modalId="importProgressModal" modalTitle="Importing Available Courses" />
-
         <!-- Eligibility Modal -->
         <x-ui.modal id="eligibilityModal" :title="'Eligibilities'" size="xl" :scrollable="false">
             <x-slot name="slot">
@@ -139,6 +141,36 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </x-slot>
         </x-ui.modal>
+
+        <!-- Export Modal -->
+        @can('available_course.view')
+            <x-ui.modal id="exportModal" :title="'Export Available Courses'" scrollable="false" class="export-modal">
+                <x-slot name="slot">
+                    <form id="exportForm">
+                        <div class="mb-3">
+                            <label for="export_term_id" class="form-label">Term</label>
+                            <select class="form-select" id="export_term_id" name="term_id">
+                                <option value="">All Terms</option>
+                            </select>
+                        </div>
+                    </form>
+                </x-slot>
+                <x-slot name="footer">
+                    <div class="d-flex justify-content-end w-100">
+                        <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+                        <button type="button" class="btn btn-success" id="submitExportBtn">
+                            <i class="bx bx-download me-1"></i>Export
+                        </button>
+                    </div>
+                </x-slot>
+            </x-ui.modal>
+        @endcan
+
+        <!-- Progress Modals -->
+        <x-progress-modal modalId="importProgressModal" modalTitle="Importing Available Courses" />
+        <x-progress-modal modalId="exportProgressModal" modalTitle="Exporting Available Courses" />
     </div>
 @endsection
 
@@ -158,6 +190,10 @@
                 importStatus: @json(route('available_courses.import.status', ['uuid' => ':uuid'])),
                 importCancel: @json(route('available_courses.import.cancel', ['uuid' => ':uuid'])),
                 importDownload: @json(route('available_courses.import.download', ['uuid' => ':uuid'])),
+                export: @json(route('available_courses.export')),
+                exportStatus: @json(route('available_courses.export.status', ['uuid' => ':uuid'])),
+                exportCancel: @json(route('available_courses.export.cancel', ['uuid' => ':uuid'])),
+                exportDownload: @json(route('available_courses.export.download', ['uuid' => ':uuid'])),
                 destroy: @json(route('available_courses.destroy', ':id')),
                 terms: @json(route('terms.all')),
                 schedules: @json(route('available_courses.schedules.all', ':id')),
@@ -190,6 +226,7 @@
         const ImportModal = Utils.createModalManager('importModal');
         const EligibilityModal = Utils.createModalManager('eligibilityModal');
         const SchedulesModal = Utils.createModalManager('schedulesModal');
+        const ExportModal = Utils.createModalManager('exportModal');
 
         // ===========================
         // STATS MANAGER
@@ -209,6 +246,7 @@
                     allowClear: true,
                     dropdownParent: $('#availableCourseSearchCollapse')
                 });
+                Utils.initSelect2('#export_term_id', { dropdownParent: $('#exportModal') });
             },
             async loadTerms() {
                 try {
@@ -220,6 +258,12 @@
                             textField: 'name',
                             placeholder: ''
                         }, true);
+                        // Also populate export modal term select
+                        Utils.populateSelect('#export_term_id', terms, {
+                            valueField: 'id',
+                            textField: 'name',
+                            placeholder: 'All Terms'
+                        });
                     }
                 } catch (error) {
                     Utils.handleError(error);
@@ -260,6 +304,52 @@
                     } finally {
                         Utils.setLoadingState($btn, false);
                     }
+                });
+            }
+        };
+
+        // ===========================
+        // EXPORT TASK MANAGER
+        // ===========================
+        const ExportTaskManager = Utils.createAsyncTaskManager({
+            startRoute: ROUTES.availableCourses.export,
+            checkStatusRoute: ROUTES.availableCourses.exportStatus,
+            cancelRoute: ROUTES.availableCourses.exportCancel,
+            downloadRoute: ROUTES.availableCourses.exportDownload,
+            progressModalId: 'exportProgressModal',
+            taskName: 'Available Courses Export',
+            onStart() {
+                ExportModal.hide();
+            },
+            completionFields: [],
+            translations: {
+                processing: 'The export is being processed. This may take a few minutes.',
+                taskInitializing: 'The export task is initializing.',
+                taskPreparing: 'The export task is preparing the data.',
+                taskCompleted: 'The export task has completed.',
+                taskFailed: 'The export task has failed.',
+                statusCheckFailed: 'Failed to check the status of the export task.'
+            }
+        });
+
+        // ===========================
+        // EXPORT MANAGER
+        // ===========================
+        const ExportManager = {
+            init() {
+                $('#exportBtn').on('click', () => {
+                    ExportModal.show();
+                });
+
+                $('#submitExportBtn').on('click', () => {
+                    const termId = $('#export_term_id').val();
+
+                    const formData = new FormData();
+                    if (termId) formData.append('term_id', termId);
+
+                    ExportTaskManager.start(formData, {
+                        button: $('#submitExportBtn')
+                    });
                 });
             }
         };
@@ -375,14 +465,14 @@
                 // Check if eligibilities is empty or not an array
                 if (!Array.isArray(eligibilities) || eligibilities.length === 0) {
                     $content.append(`
-                                    <div class="alert alert-warning d-flex align-items-center">
-                                        <i class="bx bx-info-circle fs-4 me-3"></i>
-                                        <div>
-                                            <h6 class="mb-1">No Eligibility Requirements</h6>
-                                            <p class="mb-0">This course has no specific eligibility requirements set.</p>
-                                        </div>
-                                    </div>
-                                `);
+                                            <div class="alert alert-warning d-flex align-items-center">
+                                                <i class="bx bx-info-circle fs-4 me-3"></i>
+                                                <div>
+                                                    <h6 class="mb-1">No Eligibility Requirements</h6>
+                                                    <p class="mb-0">This course has no specific eligibility requirements set.</p>
+                                                </div>
+                                            </div>
+                                        `);
                     return;
                 }
 
@@ -426,12 +516,12 @@
                     const active = idx === 0 ? ' active' : '';
 
                     nav += `
-                                    <li class="nav-item">
-                                        <button class="nav-link${active} px-4 py-2" data-bs-toggle="tab" data-bs-target="#${tabId}">
-                                            <i class="bx bx-graduation me-1"></i>${Utils.escapeHtml(programData.program.name)}
-                                        </button>
-                                    </li>
-                                `;
+                                            <li class="nav-item">
+                                                <button class="nav-link${active} px-4 py-2" data-bs-toggle="tab" data-bs-target="#${tabId}">
+                                                    <i class="bx bx-graduation me-1"></i>${Utils.escapeHtml(programData.program.name)}
+                                                </button>
+                                            </li>
+                                        `;
 
                     let body = '<div class="row g-3">';
 
@@ -443,34 +533,34 @@
                         ).join('');
 
                         body += `
-                                        <div class="col-lg-6 col-md-12">
-                                            <div class="card h-100 shadow-sm border-0 bg-light">
-                                                <div class="card-header bg-primary text-white text-center py-2">
-                                                    <h6 class="card-title mb-0 fw-bold text-white">
-                                                        <i class="bx bx-layer me-1"></i>Level ${Utils.escapeHtml(levelData.level.name)}
-                                                    </h6>
-                                                </div>
-                                                <div class="card-body p-3">
-                                                    <div class="mb-2">
-                                                        <small class="text-muted fw-semibold">
-                                                            <i class="bx bx-group me-1"></i>Eligible Groups
-                                                        </small>
-                                                    </div>
-                                                    <div class="d-flex flex-wrap gap-1">
-                                                        ${groupBadges}
-                                                    </div>
-                                                    <div class="border-top mt-3 pt-2">
-                                                        <div class="d-flex justify-content-between align-items-center">
-                                                            <small class="text-muted fw-semibold">
-                                                                <i class="bx bx-check-circle me-1"></i>Total Groups
-                                                            </small>
-                                                            <span class="badge bg-info">${groups.length}</span>
+                                                <div class="col-lg-6 col-md-12">
+                                                    <div class="card h-100 shadow-sm border-0 bg-light">
+                                                        <div class="card-header bg-primary text-white text-center py-2">
+                                                            <h6 class="card-title mb-0 fw-bold text-white">
+                                                                <i class="bx bx-layer me-1"></i>Level ${Utils.escapeHtml(levelData.level.name)}
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body p-3">
+                                                            <div class="mb-2">
+                                                                <small class="text-muted fw-semibold">
+                                                                    <i class="bx bx-group me-1"></i>Eligible Groups
+                                                                </small>
+                                                            </div>
+                                                            <div class="d-flex flex-wrap gap-1">
+                                                                ${groupBadges}
+                                                            </div>
+                                                            <div class="border-top mt-3 pt-2">
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <small class="text-muted fw-semibold">
+                                                                        <i class="bx bx-check-circle me-1"></i>Total Groups
+                                                                    </small>
+                                                                    <span class="badge bg-info">${groups.length}</span>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    `;
+                                            `;
                     });
 
                     body += '</div>';
@@ -483,12 +573,12 @@
 
                 // Add header
                 const headerHtml = `
-                                <div class="mb-3">
-                                    <h5 class="text-center text-primary">
-                                        <i class="bx bx-check-circle me-2"></i>Eligible Programs, Levels & Groups
-                                    </h5>
-                                </div>
-                            `;
+                                        <div class="mb-3">
+                                            <h5 class="text-center text-primary">
+                                                <i class="bx bx-check-circle me-2"></i>Eligible Programs, Levels & Groups
+                                            </h5>
+                                        </div>
+                                    `;
 
                 $content.append(headerHtml + nav + panes);
             }
@@ -571,41 +661,41 @@
                         const dayList = Array.from(days).map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(', ') || 'TBA';
 
                         body += `
-                                        <div class="col-lg-4 col-md-6">
-                                            <div class="card h-100 shadow-sm border-0 bg-light">
-                                                <div class="card-header bg-primary text-white text-center py-2">
-                                                    <h6 class="card-title mb-0 fw-bold text-white">
-                                                        <i class="bx bx-group me-1"></i>Group ${groupNum}
-                                                    </h6>
-                                                </div>
-                                                <div class="card-body p-3">
-                                                    <div class="row g-2 mb-3">
-                                                        <div class="col-12">
-                                                            <div class="d-flex justify-content-between align-items-center">
-                                                                <small class="text-muted fw-semibold"><i class="bx bx-map me-1"></i>Location</small>
-                                                                <span class="badge bg-success">${Utils.escapeHtml(schedule.location || 'TBA')}</span>
-                                                            </div>
+                                                <div class="col-lg-4 col-md-6">
+                                                    <div class="card h-100 shadow-sm border-0 bg-light">
+                                                        <div class="card-header bg-primary text-white text-center py-2">
+                                                            <h6 class="card-title mb-0 fw-bold text-white">
+                                                                <i class="bx bx-group me-1"></i>Group ${groupNum}
+                                                            </h6>
                                                         </div>
-                                                        <div class="col-12">
-                                                            <div class="d-flex justify-content-between align-items-center">
-                                                                <small class="text-muted fw-semibold"><i class="bx bx-user-check me-1"></i>Capacity</small>
-                                                                <span class="fw-semibold text-dark">${Utils.escapeHtml(schedule.min_capacity || 0)} - ${Utils.escapeHtml(schedule.max_capacity || 0)}</span>
+                                                        <div class="card-body p-3">
+                                                            <div class="row g-2 mb-3">
+                                                                <div class="col-12">
+                                                                    <div class="d-flex justify-content-between align-items-center">
+                                                                        <small class="text-muted fw-semibold"><i class="bx bx-map me-1"></i>Location</small>
+                                                                        <span class="badge bg-success">${Utils.escapeHtml(schedule.location || 'TBA')}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-12">
+                                                                    <div class="d-flex justify-content-between align-items-center">
+                                                                        <small class="text-muted fw-semibold"><i class="bx bx-user-check me-1"></i>Capacity</small>
+                                                                        <span class="fw-semibold text-dark">${Utils.escapeHtml(schedule.min_capacity || 0)} - ${Utils.escapeHtml(schedule.max_capacity || 0)}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="border-top pt-2">
+                                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                    <small class="text-muted fw-semibold"><i class="bx bx-calendar me-1"></i>Days</small>
+                                                                    <span class="fw-semibold text-primary">${dayList}</span>
+                                                                </div>
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <small class="text-muted fw-semibold"><i class="bx bx-time me-1"></i>Time</small>
+                                                                    <span class="fw-semibold text-success">${timeRange}</span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div class="border-top pt-2">
-                                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                                            <small class="text-muted fw-semibold"><i class="bx bx-calendar me-1"></i>Days</small>
-                                                            <span class="fw-semibold text-primary">${dayList}</span>
-                                                        </div>
-                                                        <div class="d-flex justify-content-between align-items-center">
-                                                            <small class="text-muted fw-semibold"><i class="bx bx-time me-1"></i>Time</small>
-                                                            <span class="fw-semibold text-success">${timeRange}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>`;
+                                                </div>`;
                     });
 
                     body += '</div>';
@@ -638,11 +728,13 @@
             Select2Manager.loadTerms().then(() => Select2Manager.init());
             SearchManager.init();
             ImportManager.init();
+            ImportTaskManager.init();
+            ExportManager.init();
+            ExportTaskManager.init();
             TemplateManager.init();
             DeleteManager.init();
             EligibilityManager.init();
             SchedulesManager.init();
-            ImportTaskManager.init();
             Utils.hidePageLoader();
         });
     </script>

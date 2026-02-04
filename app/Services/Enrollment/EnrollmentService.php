@@ -378,8 +378,8 @@ class EnrollmentService
      *
      * Filters can be applied for:
      * - Student (name_en or academic_id)
-     * - Course (title or code)
-     * - Term (season, year, or code)
+     * - Course (by course_id)
+     * - Term (by term_id)
      * - Grade (specific grade or 'no-grade')
      *
      * @param Builder<Enrollment> $query The query builder instance
@@ -387,7 +387,6 @@ class EnrollmentService
      */
     private function applySearchFilters(Builder $query): Builder
     {
-        // Filter by student name or academic ID
         if ($searchStudent = request('search_student')) {
             $query->whereHas('student', function (Builder $q) use ($searchStudent) {
                 $q->where('name_en', 'LIKE', "%{$searchStudent}%")
@@ -395,24 +394,14 @@ class EnrollmentService
             });
         }
 
-        // Filter by course title or code
         if ($searchCourse = request('search_course')) {
-            $query->whereHas('course', function (Builder $q) use ($searchCourse) {
-                $q->where('title', 'LIKE', "%{$searchCourse}%")
-                    ->orWhere('code', 'LIKE', "%{$searchCourse}%");
-            });
+            $query->where('course_id', $searchCourse);
         }
 
-        // Filter by term season, year, or code
         if ($searchTerm = request('search_term')) {
-            $query->whereHas('term', function (Builder $q) use ($searchTerm) {
-                $q->where('season', 'LIKE', "%{$searchTerm}%")
-                    ->orWhere('year', 'LIKE', "%{$searchTerm}%")
-                    ->orWhere('code', 'LIKE', "%{$searchTerm}%");
-            });
+            $query->where('term_id', $searchTerm);
         }
 
-        // Filter by grade or no grade
         if ($searchGrade = request('search_grade')) {
             if ($searchGrade === 'no-grade') {
                 $query->whereNull('grade');

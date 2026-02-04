@@ -414,7 +414,8 @@ class EnrollmentController extends Controller
         $request->validate([
             'academic_id' => 'nullable|string',
             'national_id' => 'nullable|string',
-            'program_id' => 'nullable|exists:programs,id',
+            'program_id' => 'nullable|array',
+            'program_id.*' => 'exists:programs,id',
             'level_id' => 'nullable|exists:levels,id',
             'term_id' => 'required|exists:terms,id',
         ]);
@@ -426,9 +427,14 @@ class EnrollmentController extends Controller
             $isIndividual = !empty($filters['academic_id']) || !empty($filters['national_id']);
 
             if (!$isIndividual) {
-                // group export: require program_id and level_id
+                // group export: require program_id array and level_id
                 if (empty($filters['program_id']) || empty($filters['level_id'])) {
-                    return errorResponse('For group export please provide both program and level along with term.', [], 422);
+                    return errorResponse('For group export please provide both programs and level along with term.', [], 422);
+                }
+                
+                // Ensure program_id is an array and not empty
+                if (!is_array($filters['program_id']) || count($filters['program_id']) === 0) {
+                    return errorResponse('Please select at least one program for group export.', [], 422);
                 }
             }
 

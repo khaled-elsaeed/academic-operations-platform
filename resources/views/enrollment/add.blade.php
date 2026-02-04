@@ -726,23 +726,23 @@
             },
             display(student) {
                 const html = `
-                            <div class="col-12 col-md-4 mb-3 mb-md-0">
-                                <div class="student-info-item"><small class="text-muted">Full Name (English)</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.name_en)}</h6></div>
-                                <div class="student-info-item"><small class="text-muted">Full Name (Arabic)</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.name_ar || 'N/A')}</h6></div>
-                                <div class="student-info-item"><small class="text-muted">Academic Email</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.academic_email)}</h6></div>
-                                <div class="student-info-item"><small class="text-muted">Program</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.program?.name || 'Not Assigned')}</h6></div>
-                            </div>
-                            <div class="col-12 col-md-4 mb-3 mb-md-0">
-                                <div class="student-info-item"><small class="text-muted">Academic ID</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.academic_id)}</h6></div>
-                                <div class="student-info-item"><small class="text-muted">National ID</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.national_id)}</h6></div>
-                                <div class="student-info-item"><small class="text-muted">Level</small><h6 class="mb-0 text-dark">Level ${Utils.escapeHtml(student.level?.name || 'N/A')}</h6></div>
-                                <div class="student-info-item"><small class="text-muted">CGPA</small><h6 class="mb-0 text-dark">${student.cgpa || 'N/A'}</h6></div>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <div class="student-info-item"><small class="text-muted">Total Units Taken</small><h6 class="mb-0 text-dark">${student.taken_hours || 0} Units</h6></div>
-                                <div class="student-info-item"><small class="text-muted">Remaining Hours</small><h6 class="mb-0 text-dark">Unknown</h6></div>
-                            </div>
-                        `;
+                                    <div class="col-12 col-md-4 mb-3 mb-md-0">
+                                        <div class="student-info-item"><small class="text-muted">Full Name (English)</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.name_en)}</h6></div>
+                                        <div class="student-info-item"><small class="text-muted">Full Name (Arabic)</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.name_ar || 'N/A')}</h6></div>
+                                        <div class="student-info-item"><small class="text-muted">Academic Email</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.academic_email)}</h6></div>
+                                        <div class="student-info-item"><small class="text-muted">Program</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.program?.name || 'Not Assigned')}</h6></div>
+                                    </div>
+                                    <div class="col-12 col-md-4 mb-3 mb-md-0">
+                                        <div class="student-info-item"><small class="text-muted">Academic ID</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.academic_id)}</h6></div>
+                                        <div class="student-info-item"><small class="text-muted">National ID</small><h6 class="mb-0 text-dark">${Utils.escapeHtml(student.national_id)}</h6></div>
+                                        <div class="student-info-item"><small class="text-muted">Level</small><h6 class="mb-0 text-dark">Level ${Utils.escapeHtml(student.level?.name || 'N/A')}</h6></div>
+                                        <div class="student-info-item"><small class="text-muted">CGPA</small><h6 class="mb-0 text-dark">${student.cgpa || 'N/A'}</h6></div>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <div class="student-info-item"><small class="text-muted">Total Units Taken</small><h6 class="mb-0 text-dark">${student.taken_hours || 0} Units</h6></div>
+                                        <div class="student-info-item"><small class="text-muted">Remaining Hours</small><h6 class="mb-0 text-dark">Unknown</h6></div>
+                                    </div>
+                                `;
                 $('#studentInfo').html(html);
                 $('#studentDetails').show();
             }
@@ -789,17 +789,17 @@
                         : '<span class="badge bg-secondary text-white"><i class="bx bx-time me-1"></i>No Grade Yet</span>';
 
                     html += `
-                                <div class="history-item">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="mb-1 text-dark">${courseName}</h6>
-                                            <p class="text-muted mb-1"><i class="bx bx-calendar me-1"></i><strong>${termName}</strong></p>
-                                            <div class="mt-1">${gradeBadge}</div>
+                                        <div class="history-item">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <h6 class="mb-1 text-dark">${courseName}</h6>
+                                                    <p class="text-muted mb-1"><i class="bx bx-calendar me-1"></i><strong>${termName}</strong></p>
+                                                    <div class="mt-1">${gradeBadge}</div>
+                                                </div>
+                                                <span class="badge bg-success text-white">Enrolled</span>
+                                            </div>
                                         </div>
-                                        <span class="badge bg-success text-white">Enrolled</span>
-                                    </div>
-                                </div>
-                            `;
+                                    `;
                 });
                 $('#enrollmentHistoryBox').html(html);
             },
@@ -875,31 +875,31 @@
                     const disabled = !canEnroll ? 'disabled' : '';
 
                     html += `
-                                <div class="course-item ${!canEnroll ? 'disabled' : ''}" data-course-id="${course.available_course_id}">
-                                    <div class="form-check">
-                                        <input class="form-check-input course-checkbox" type="checkbox" name="available_course_ids[]"
-                                               value="${course.available_course_id}" data-credit-hours="${course.credit_hours}"
-                                               id="course_${course.available_course_id}" ${disabled}>
-                                        <label class="form-check-label w-100" for="course_${course.available_course_id}">
-                                            <div class="d-flex justify-content-between align-items-start">
-                                                <div style="flex:1;">
-                                                    <h6 class="mb-1 text-dark">${Utils.escapeHtml(course.name)}</h6>
-                                                    <p class="text-muted mb-0 small">
-                                                        <i class="bx bx-book me-1"></i><strong>${Utils.escapeHtml(course.code || 'N/A')}</strong>
-                                                        <span class="ms-2"><i class="bx bx-timer me-1"></i><strong class="text-primary">${course.credit_hours}</strong> CH</span>
-                                                    </p>
-                                                    ${this.renderPrerequisites(coursePrereqs)}
-                                                    <div class="selected-group-info" id="groupInfo_${course.available_course_id}" style="display:none;"></div>
-                                                </div>
-                                                <div class="text-end">
-                                                    <span class="badge bg-${capacityClass} mb-2">${remainingText}</span>
-                                                    ${hasUnfulfilled ? '<div><span class="badge bg-danger"><i class="bx bx-lock me-1"></i>Prerequisites Required</span></div>' : ''}
-                                                </div>
+                                        <div class="course-item ${!canEnroll ? 'disabled' : ''}" data-course-id="${course.available_course_id}">
+                                            <div class="form-check">
+                                                <input class="form-check-input course-checkbox" type="checkbox" name="available_course_ids[]"
+                                                       value="${course.available_course_id}" data-credit-hours="${course.credit_hours}"
+                                                       id="course_${course.available_course_id}" ${disabled}>
+                                                <label class="form-check-label w-100" for="course_${course.available_course_id}">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <div style="flex:1;">
+                                                            <h6 class="mb-1 text-dark">${Utils.escapeHtml(course.name)}</h6>
+                                                            <p class="text-muted mb-0 small">
+                                                                <i class="bx bx-book me-1"></i><strong>${Utils.escapeHtml(course.code || 'N/A')}</strong>
+                                                                <span class="ms-2"><i class="bx bx-timer me-1"></i><strong class="text-primary">${course.credit_hours}</strong> CH</span>
+                                                            </p>
+                                                            ${this.renderPrerequisites(coursePrereqs)}
+                                                            <div class="selected-group-info" id="groupInfo_${course.available_course_id}" style="display:none;"></div>
+                                                        </div>
+                                                        <div class="text-end">
+                                                            <span class="badge bg-${capacityClass} mb-2">${remainingText}</span>
+                                                            ${hasUnfulfilled ? '<div><span class="badge bg-danger"><i class="bx bx-lock me-1"></i>Prerequisites Required</span></div>' : ''}
+                                                        </div>
+                                                    </div>
+                                                </label>
                                             </div>
-                                        </label>
-                                    </div>
-                                </div>
-                            `;
+                                        </div>
+                                    `;
                 });
                 $('#coursesBox').html(html);
                 this.bindCheckboxes();
@@ -917,9 +917,9 @@
                     const text = p.is_enrolled ? 'Completed' : 'Missing';
                     const onclick = !p.is_enrolled ? `PrerequisiteManager.showMissing([${JSON.stringify(p).replace(/"/g, '&quot;')}])` : '';
                     html += `<div class="small ${statusClass}" style="cursor:${!p.is_enrolled ? 'pointer' : 'default'}" ${onclick ? 'onclick="' + onclick + '"' : ''}>
-                                <i class="bx ${icon} me-1"></i>${Utils.escapeHtml(p.course_name)} (${Utils.escapeHtml(p.course_code)})
-                                <span class="badge ${badge} ms-1">${text}</span>
-                            </div>`;
+                                        <i class="bx ${icon} me-1"></i>${Utils.escapeHtml(p.course_name)} (${Utils.escapeHtml(p.course_code)})
+                                        <span class="badge ${badge} ms-1">${text}</span>
+                                    </div>`;
                 });
                 return html;
             },
@@ -968,12 +968,12 @@
                 let html = '';
                 prereqs.forEach(p => {
                     html += `
-                                <div class="alert alert-danger mb-2">
-                                    <i class="bx bx-x-circle me-2"></i>
-                                    <strong>${Utils.escapeHtml(p.course_name)}</strong> (${Utils.escapeHtml(p.course_code || 'N/A')})
-                                    <small class="d-block">${p.credit_hours || 'N/A'} CH</small>
-                                </div>
-                            `;
+                                        <div class="alert alert-danger mb-2">
+                                            <i class="bx bx-x-circle me-2"></i>
+                                            <strong>${Utils.escapeHtml(p.course_name)}</strong> (${Utils.escapeHtml(p.course_code || 'N/A')})
+                                            <small class="d-block">${p.credit_hours || 'N/A'} CH</small>
+                                        </div>
+                                    `;
                 });
                 $('#missingPrerequisitesList').html(html);
                 PrerequisiteModal.show();
@@ -993,11 +993,11 @@
                 }
 
                 $('#courseActivityInfo').html(`
-                            <div class="alert alert-info">
-                                <h6>${Utils.escapeHtml(course.name)}</h6>
-                                <small>Code: <strong>${Utils.escapeHtml(course.code || 'N/A')}</strong> | CH: <strong>${course.credit_hours}</strong></small>
-                            </div>
-                        `);
+                                    <div class="alert alert-info">
+                                        <h6>${Utils.escapeHtml(course.name)}</h6>
+                                        <small>Code: <strong>${Utils.escapeHtml(course.code || 'N/A')}</strong> | CH: <strong>${course.credit_hours}</strong></small>
+                                    </div>
+                                `);
 
                 Utils.showLoading('#activitiesList', 'Loading schedules...');
                 this.currentCourseId = courseId;
@@ -1126,17 +1126,17 @@
 
                     const icon = type === 'lecture' ? 'bx-book-open' : type === 'lab' ? 'bx-flask' : 'bx-edit';
                     html += `
-                                <div class="activity-type-section mb-4" data-activity-type="${type}">
-                                    <div class="activity-type-header bg-light p-3 rounded-top border">
-                                        <h5 class="mb-0 text-dark">
-                                            <i class="bx ${icon} me-2"></i>
-                                            ${Utils.escapeHtml(type.charAt(0).toUpperCase() + type.slice(1))}
-                                            <span class="badge bg-primary ms-2">${schedules.length}</span>
-                                            <span class="badge bg-danger ms-1 text-white" style="font-size:0.75em;">* Required</span>
-                                        </h5>
-                                    </div>
-                                    <div class="activity-options border border-top-0 rounded-bottom p-3">
-                            `;
+                                        <div class="activity-type-section mb-4" data-activity-type="${type}">
+                                            <div class="activity-type-header bg-light p-3 rounded-top border">
+                                                <h5 class="mb-0 text-dark">
+                                                    <i class="bx ${icon} me-2"></i>
+                                                    ${Utils.escapeHtml(type.charAt(0).toUpperCase() + type.slice(1))}
+                                                    <span class="badge bg-primary ms-2">${schedules.length}</span>
+                                                    <span class="badge bg-danger ms-1 text-white" style="font-size:0.75em;">* Required</span>
+                                                </h5>
+                                            </div>
+                                            <div class="activity-options border border-top-0 rounded-bottom p-3">
+                                    `;
 
                     schedules.forEach(s => {
                         const conflict = TimeConflictManager.checkActivity(s);
@@ -1153,40 +1153,40 @@
                         } else {
                             // Fallback to primary slot display
                             timeDisplay = `
-                                    <div><i class="bx bx-time me-1"></i>${Utils.formatTimeRange(s.start_time, s.end_time)}</div>
-                                    <div><i class="bx bx-calendar me-1"></i>${Utils.escapeHtml(s.day_of_week || 'TBA')}</div>
-                                `;
+                                            <div><i class="bx bx-time me-1"></i>${Utils.formatTimeRange(s.start_time, s.end_time)}</div>
+                                            <div><i class="bx bx-calendar me-1"></i>${Utils.escapeHtml(s.day_of_week || 'TBA')}</div>
+                                        `;
                         }
 
                         html += `
-                                    <div class="activity-option mb-2 ${conflict ? 'activity-disabled' : ''}" data-activity-id="${s.id}" data-activity-type="${type}">
-                                        <div class="card ${conflictClass}">
-                                            <div class="card-body p-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input activity-radio" type="radio" name="activity_${type}"
-                                                           value="${s.id}" data-activity='${JSON.stringify(s).replace(/'/g, "&#39;")}' ${disabled}>
-                                                    <label class="form-check-label w-100">
-                                                        <div class="d-flex justify-content-between align-items-start">
-                                                            <div class="flex-grow-1">
-                                                                <h6 class="mb-1 text-dark">Group ${s.group_number} ${conflict ? '<span class="badge bg-danger ms-2">CONFLICT</span>' : ''}</h6>
-                                                                <div class="small text-muted">
-                                                                    ${timeDisplay}
-                                                                    ${s.location ? `<div><i class="bx bx-map me-1"></i>${Utils.escapeHtml(s.location)}</div>` : ''}
-                                                                    ${s.program ? `<div><i class="bx bx-book me-1"></i>${Utils.escapeHtml(s.program)}</div>` : ''}
-                                                                    ${s.level ? `<div><i class="bx bx-layer me-1"></i>${Utils.escapeHtml(s.level)}</div>` : ''} 
-                                                                    ${conflict ? '<div class="text-danger"><i class="bx bx-error-circle me-1"></i>Conflicts with current schedule</div>' : ''}
+                                            <div class="activity-option mb-2 ${conflict ? 'activity-disabled' : ''}" data-activity-id="${s.id}" data-activity-type="${type}">
+                                                <div class="card ${conflictClass}">
+                                                    <div class="card-body p-3">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input activity-radio" type="radio" name="activity_${type}"
+                                                                   value="${s.id}" data-activity='${JSON.stringify(s).replace(/'/g, "&#39;")}' ${disabled}>
+                                                            <label class="form-check-label w-100">
+                                                                <div class="d-flex justify-content-between align-items-start">
+                                                                    <div class="flex-grow-1">
+                                                                        <h6 class="mb-1 text-dark">Group ${s.group_number} ${conflict ? '<span class="badge bg-danger ms-2">CONFLICT</span>' : ''}</h6>
+                                                                        <div class="small text-muted">
+                                                                            ${timeDisplay}
+                                                                            ${s.location ? `<div><i class="bx bx-map me-1"></i>${Utils.escapeHtml(s.location)}</div>` : ''}
+                                                                            ${s.program ? `<div><i class="bx bx-book me-1"></i>${Utils.escapeHtml(s.program)}</div>` : ''}
+                                                                            ${s.level ? `<div><i class="bx bx-layer me-1"></i>${Utils.escapeHtml(s.level)}</div>` : ''} 
+                                                                            ${conflict ? '<div class="text-danger"><i class="bx bx-error-circle me-1"></i>Conflicts with current schedule</div>' : ''}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="text-end">
+                                                                        <span class="badge bg-info">${s.enrolled_count || 0}/${s.max_capacity}</span>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                            <div class="text-end">
-                                                                <span class="badge bg-info">${s.enrolled_count || 0}/${s.max_capacity}</span>
-                                                            </div>
+                                                            </label>
                                                         </div>
-                                                    </label>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                `;
+                                        `;
                     });
 
                     html += `</div></div>`;
@@ -1285,8 +1285,8 @@
                 ).join('');
 
                 $(`#groupInfo_${courseId}`).html(`
-                            <small class="text-primary fw-semibold"><i class="bx bx-chalkboard me-1"></i>Selected: ${summary}</small>
-                        `).show();
+                                    <small class="text-primary fw-semibold"><i class="bx bx-chalkboard me-1"></i>Selected: ${summary}</small>
+                                `).show();
 
                 $(`#course_${courseId}`).prop('checked', true);
                 $(`.course-item[data-course-id="${courseId}"]`).addClass('selected');
@@ -1400,14 +1400,14 @@
                 conflicts.forEach((c, i) => {
                     const typeLabel = c.type === 'enrolled' ? 'Already Enrolled' : c.type === 'intra' ? 'Same Course' : 'Selected Course';
                     html += `
-                                <div class="alert alert-warning mb-2">
-                                    <strong>Conflict ${i + 1}: ${Utils.escapeHtml(c.course)}</strong> <span class="badge bg-warning">${typeLabel}</span>
-                                    <div class="small">
-                                        Existing: ${formatActivityTime(c.existing)} (${c.existing.activity_type || 'N/A'})
-                                        <br>New: ${formatActivityTime(c.new)} (${c.new.activity_type || 'N/A'})
-                                    </div>
-                                </div>
-                            `;
+                                        <div class="alert alert-warning mb-2">
+                                            <strong>Conflict ${i + 1}: ${Utils.escapeHtml(c.course)}</strong> <span class="badge bg-warning">${typeLabel}</span>
+                                            <div class="small">
+                                                Existing: ${formatActivityTime(c.existing)} (${c.existing.activity_type || 'N/A'})
+                                                <br>New: ${formatActivityTime(c.new)} (${c.new.activity_type || 'N/A'})
+                                            </div>
+                                        </div>
+                                    `;
                 });
 
                 Utils.showConfirmDialog({
@@ -1522,9 +1522,9 @@
                                 const borderStyle = item.source === 'selected' ? 'border: 2px dashed #fff;' : '';
 
                                 cellContent += `<div class="activity-block ${sourceClass}" style="background-color: ${this.getActivityColor(activity.activity_type)}; ${borderStyle}">
-                                            <strong>${courseName}</strong><br>
-                                            <small>${activityType} G${groupNumber}${location}</small>
-                                        </div>`;
+                                                    <strong>${courseName}</strong><br>
+                                                    <small>${activityType} G${groupNumber}${location}</small>
+                                                </div>`;
 
                                 const sourceLabel = item.source === 'enrolled' ? 'Enrolled' : 'Selected';
                                 tooltipContent += `${courseName} (${activityType} G${groupNumber}) ${activity.start_time}-${activity.end_time}${location} [${sourceLabel}]\n`;
@@ -1622,11 +1622,11 @@
             showException(hours) {
                 if (hours > 0) {
                     $('#exceptionAlert').html(`
-                                <div class="alert alert-warning mt-2">
-                                    <i class="bx bx-shield-check me-2"></i>
-                                    <strong>Admin Exception:</strong> +${hours} additional credit hours granted
-                                </div>
-                            `).show();
+                                        <div class="alert alert-warning mt-2">
+                                            <i class="bx bx-shield-check me-2"></i>
+                                            <strong>Admin Exception:</strong> +${hours} additional credit hours granted
+                                        </div>
+                                    `).show();
                 } else {
                     $('#exceptionAlert').hide();
                 }
@@ -1723,19 +1723,19 @@
                 $('#missingCount').text(missingTotal);
 
                 $('#guideSummaryStats').html(`
-                            <div class="text-center">
-                                <small class="text-muted d-block">Completed</small>
-                                <span class="fw-bold text-success">${passedCount}</span>
-                            </div>
-                            <div class="text-center">
-                                <small class="text-muted d-block">Current</small>
-                                <span class="fw-bold text-primary">${currentTotal}</span>
-                            </div>
-                            <div class="text-center">
-                                <small class="text-muted d-block">Missing</small>
-                                <span class="fw-bold text-warning">${missingTotal}</span>
-                            </div>
-                        `);
+                                    <div class="text-center">
+                                        <small class="text-muted d-block">Completed</small>
+                                        <span class="fw-bold text-success">${passedCount}</span>
+                                    </div>
+                                    <div class="text-center">
+                                        <small class="text-muted d-block">Current</small>
+                                        <span class="fw-bold text-primary">${currentTotal}</span>
+                                    </div>
+                                    <div class="text-center">
+                                        <small class="text-muted d-block">Missing</small>
+                                        <span class="fw-bold text-warning">${missingTotal}</span>
+                                    </div>
+                                `);
 
                 this.renderList('#passedCoursesList', history.passed_courses || [], 'course');
 
@@ -1757,10 +1757,10 @@
                     const slotCodes = (studyPlan.elective_info.codes || []).join(', ');
                     const codesDisplay = slotCodes ? ` (${slotCodes})` : '';
                     let electiveHtml = `<div class="mt-3">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <strong class="text-primary">Elective Courses${codesDisplay}: Choose ${studyPlan.elective_info.count}</strong>
-                                </div>
-                                <div class="ms-1">`;
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <strong class="text-primary">Elective Courses${codesDisplay}: Choose ${studyPlan.elective_info.count}</strong>
+                                        </div>
+                                        <div class="ms-1">`;
                     this.renderElectivePool(studyPlan.elective_info.pool, electiveHtml, '#studyPlanCoursesList');
                 }
 
@@ -1768,10 +1768,10 @@
                     const slotCodes = (studyPlan.university_req_info.codes || []).join(', ');
                     const codesDisplay = slotCodes ? ` (${slotCodes})` : '';
                     let urHtml = `<div class="mt-3">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <strong class="text-primary">University Requirements${codesDisplay}: Choose ${studyPlan.university_req_info.count}</strong>
-                                </div>
-                                <div class="ms-1">`;
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <strong class="text-primary">University Requirements${codesDisplay}: Choose ${studyPlan.university_req_info.count}</strong>
+                                        </div>
+                                        <div class="ms-1">`;
                     this.renderElectivePool(studyPlan.university_req_info.pool, urHtml, '#studyPlanCoursesList');
                 }
 
@@ -1781,10 +1781,10 @@
                     const slotCodes = (missing.electives.codes || []).join(', ');
                     const codesDisplay = slotCodes ? ` (${slotCodes})` : '';
                     let electiveHtml = `<div class="mt-3">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <strong class="text-warning">Missing Electives${codesDisplay}: Need ${missing.electives.count}</strong>
-                                </div>
-                                <div class="ms-1">`;
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <strong class="text-warning">Missing Electives${codesDisplay}: Need ${missing.electives.count}</strong>
+                                        </div>
+                                        <div class="ms-1">`;
                     this.renderElectivePool(missing.electives.pool, electiveHtml, '#missingCoursesList');
                 }
 
@@ -1792,10 +1792,10 @@
                     const slotCodes = (missing.university_reqs.codes || []).join(', ');
                     const codesDisplay = slotCodes ? ` (${slotCodes})` : '';
                     let urHtml = `<div class="mt-3">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <strong class="text-warning">Missing University Reqs${codesDisplay}: Need ${missing.university_reqs.count}</strong>
-                                </div>
-                                <div class="ms-1">`;
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <strong class="text-warning">Missing University Reqs${codesDisplay}: Need ${missing.university_reqs.count}</strong>
+                                        </div>
+                                        <div class="ms-1">`;
                     this.renderElectivePool(missing.university_reqs.pool, urHtml, '#missingCoursesList');
                 }
             },
@@ -1827,10 +1827,10 @@
                         }
 
                         html += `<div class="ps-3 mb-1 small ${itemColorClass} d-flex align-items-center">
-                                    <i class="bx ${statusIcon} me-1"></i>
-                                    <span>${courseName}</span>
-                                    ${statusBadge}
-                                </div>`;
+                                            <i class="bx ${statusIcon} me-1"></i>
+                                            <span>${courseName}</span>
+                                            ${statusBadge}
+                                        </div>`;
                     });
                 }
                 html += `</div></div>`;
@@ -1926,10 +1926,10 @@
                             if (result.isConfirmed && documentUrl) {
                                 window.open(documentUrl, '_blank');
                             }
-                            
+
                             // Continue with the rest of the success handling
                             Utils.showSuccess('Enrollment successful!');
-                            
+
                             // Refresh enrollment history
                             const enrollmentsResponse = await ApiService.fetchStudentEnrollments(AppState.student.id);
                             if (Utils.isResponseSuccess(enrollmentsResponse)) {
@@ -1948,14 +1948,14 @@
                             Utils.setLoadingState($btn, false);
                         });
 
-                        return; // Exit early since the rest is handled in the then callback
+                        return;
                     }
                 } catch (error) {
                     Utils.handleError(error);
                     Utils.setLoadingState($btn, false);
                 }
-        }
-            };
+            }
+        };
 
         const UI = {
             updateEnrollButton() {

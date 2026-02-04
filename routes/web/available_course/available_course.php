@@ -33,6 +33,11 @@ Route::middleware('auth')
         Route::get('/import/status/{uuid}', 'importStatus')->name('import.status')->middleware('can:available_course.import');
         Route::post('/import/cancel/{uuid}', 'importCancel')->name('import.cancel')->middleware('can:available_course.import');
         Route::get('/import/download/{uuid}', 'importDownload')->name('import.download')->middleware('can:available_course.import');
+        // Export operations
+        Route::post('/export', 'export')->name('export')->middleware('can:available_course.view');
+        Route::get('/export/status/{uuid}', 'exportStatus')->name('export.status')->middleware('can:available_course.view');
+        Route::post('/export/cancel/{uuid}', 'exportCancel')->name('export.cancel')->middleware('can:available_course.view');
+        Route::get('/export/download/{uuid}', 'exportDownload')->name('export.download')->middleware('can:available_course.view');
 
         // ===== CRUD Operations =====
         // List & View

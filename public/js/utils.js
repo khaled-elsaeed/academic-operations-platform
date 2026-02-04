@@ -834,7 +834,7 @@ const Utils = {
         return false;
       }
 
-      $table.DataTable().ajax.reload(callback, !resetPaging);
+      $table.DataTable().ajax.reload(callback, resetPaging);
       return true;
     } catch (error) {
       console.error('DataTable reload error:', error);

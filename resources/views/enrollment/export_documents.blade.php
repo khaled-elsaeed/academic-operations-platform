@@ -68,17 +68,17 @@
                         <div class="tab-pane fade" id="groups" role="tabpanel" aria-labelledby="groups-tab">
                             <div class="row g-4">
                                 <div class="col-lg-3 col-md-6">
-                                    <label for="program_id" class="form-label fw-semibold">Program <span
-                                            class="text-danger">*</span></label>
-                                    <select id="program_id" name="program_id" class="form-select">
-                                        <option value="">Select Program</option>
-                                    </select>
-                                </div>
-                                <div class="col-lg-3 col-md-6">
                                     <label for="level_id" class="form-label fw-semibold">Level <span
                                             class="text-danger">*</span></label>
                                     <select id="level_id" name="level_id" class="form-select">
                                         <option value="">Select Level</option>
+                                    </select>
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label for="program_id" class="form-label fw-semibold">Programs <span
+                                            class="text-danger">*</span></label>
+                                    <select id="program_id" name="program_id[]" class="form-select" multiple>
+                                        <option value="">Select Programs</option>
                                     </select>
                                 </div>
                                 <div class="col-lg-3 col-md-6">
@@ -166,7 +166,9 @@
                     placeholder: 'Select Term'
                 });
                 Utils.initSelect2(SELECTORS.programSelect, {
-                    placeholder: 'Select Program'
+                    placeholder: 'Select Programs',
+                    allowClear: true,
+                    multiple: true
                 });
                 Utils.initSelect2(SELECTORS.levelSelect, {
                     placeholder: 'Select Level'
@@ -291,19 +293,19 @@
                     }
                 } else {
                     const termId = $(SELECTORS.groupTermSelect).val();
-                    const programId = $(SELECTORS.programSelect).val();
+                    const programIds = $(SELECTORS.programSelect).val();
                     const levelId = $(SELECTORS.levelSelect).val();
 
                     if (!termId) {
                         Utils.showError('Please select a term.');
                         return;
                     }
-                    if (!programId) {
-                        Utils.showError('Please select a program.');
-                        return;
-                    }
                     if (!levelId) {
                         Utils.showError('Please select a level.');
+                        return;
+                    }
+                    if (!programIds || programIds.length === 0) {
+                        Utils.showError('Please select at least one program.');
                         return;
                     }
                 }

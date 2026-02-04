@@ -36,10 +36,12 @@ class ProcessImportService
         'summary' => [
             'total_processed' => 0,
             'created' => 0,
-            'updated' => 0,
+            'skipped' => 0,
             'failed' => 0,
         ],
-        'rows' => [],
+        'created' => [],
+        'skipped' => [],
+        'failed' => [],
     ];
 
     public function __construct(
@@ -112,13 +114,34 @@ class ProcessImportService
         $group = (string)($row[self::GROUP_CODE] ?? '');
 
         $studentLevelId = $student->level_id;
-
         $studentProgramId = $student->program_id;
 
         if (Enrollment::where('student_id', $student->id)
             ->where('course_id', $course->id)
             ->where('term_id', $term->id)
             ->exists()) {
+            
+            $this->recordSkippedItem($rowNum, $row, [
+                'reason' => 'Enrollment already exists',
+                'student' => [
+                    'id' => $student->id,
+                    'academic_id' => $student->academic_id,
+                    'name' => $student->first_name . ' ' . $student->last_name,
+                    'program' => $student->program->name ?? 'Unknown',
+                    'level' => $student->level->name ?? 'Unknown',
+                ],
+                'course' => [
+                    'id' => $course->id,
+                    'code' => $course->code,
+                    'name' => $course->name,
+                    'credit_hours' => $course->credit_hours,
+                ],
+                'term' => [
+                    'id' => $term->id,
+                    'code' => $term->code,
+                    'name' => $term->name,
+                ],
+            ]);
             return;
         }
 
@@ -132,15 +155,55 @@ class ProcessImportService
 
         $this->validateTimeConflicts($student->id, $term->id, $availableCourseSchedules);
 
-        $enrollment = $this->createOrUpdateEnrollment($row, $student, $course, $term);
+        $enrollment = $this->createEnrollment($row, $student, $course, $term);
 
         $this->createEnrollmentSchedules($enrollment, $availableCourseSchedules);
 
-        if ($enrollment->wasRecentlyCreated) {
-            $this->results['summary']['created']++;
-        } else {
-            $this->results['summary']['updated']++;
-        }
+        $enrollmentDetails = [
+            'enrollment' => [
+                'id' => $enrollment->id,
+                'created_at' => $enrollment->created_at,
+                'updated_at' => $enrollment->updated_at,
+            ],
+            'student' => [
+                'id' => $student->id,
+                'academic_id' => $student->academic_id,
+                'name' => $student->first_name . ' ' . $student->last_name,
+                'program' => $student->program->name ?? 'Unknown',
+                'level' => $student->level->name ?? 'Unknown',
+            ],
+            'course' => [
+                'id' => $course->id,
+                'code' => $course->code,
+                'name' => $course->name,
+                'credit_hours' => $course->credit_hours,
+            ],
+            'term' => [
+                'id' => $term->id,
+                'code' => $term->code,
+                'name' => $term->name,
+            ],
+            'group' => $group,
+            'schedules' => $availableCourseSchedules->map(function($schedule) {
+                return [
+                    'id' => $schedule->id,
+                    'activity_type' => $schedule->activity_type,
+                    'section' => $schedule->section,
+                    'instructor' => $schedule->instructor,
+                    'location' => $schedule->location,
+                    'capacity' => [
+                        'max' => $schedule->max_capacity,
+                        'current' => $schedule->current_capacity,
+                        'remaining' => $schedule->max_capacity ? ($schedule->max_capacity - $schedule->current_capacity) : 'Unlimited'
+                    ]
+                ];
+            })->toArray(),
+            'row_number' => $rowNum,
+            'original_data' => $row
+        ];
+
+        $this->results['summary']['created']++;
+        $this->results['created'][] = $enrollmentDetails;
     }
 
     /**
@@ -165,7 +228,9 @@ class ProcessImportService
      */
     private function findStudent(string $academicId): Student
     {
-        $student = Student::where('academic_id', $academicId)->first();
+        $student = Student::with(['program', 'level'])
+            ->where('academic_id', $academicId)
+            ->first();
 
         if (!$student) {
             throw new BusinessValidationException("Student with academic ID '{$academicId}' not found.");
@@ -356,28 +421,20 @@ class ProcessImportService
     }
 
     /**
-     * Create or update enrollment
+     * Create enrollment (only creates since we check for existing ones earlier)
      */
-    private function createOrUpdateEnrollment(array $row, Student $student, Course $course, Term $term): Enrollment
+    private function createEnrollment(array $row, Student $student, Course $course, Term $term): Enrollment
     {
-        return Enrollment::updateOrCreate(
-            [
-                'student_id' => $student->id,
-                'course_id' => $course->id,
-                'term_id' => $term->id,
-            ],
-            [
-                'student_id' => $student->id,
-                'course_id' => $course->id,
-                'term_id' => $term->id,
-            ]
-        );
+        return Enrollment::create([
+            'student_id' => $student->id,
+            'course_id' => $course->id,
+            'term_id' => $term->id,
+        ]);
     }
 
     /**
      * Create enrollment schedules
-     */
-    private function createEnrollmentSchedules(Enrollment $enrollment, \Illuminate\Support\Collection $availableCourseSchedules): void
+     */    private function createEnrollmentSchedules(Enrollment $enrollment, \Illuminate\Support\Collection $availableCourseSchedules): void
     {
         foreach ($availableCourseSchedules as $availableCourseSchedule) {
             $exists = EnrollmentSchedule::where('enrollment_id', $enrollment->id)
@@ -393,7 +450,6 @@ class ProcessImportService
                     'status' => self::STATUS_ACTIVE,
                 ]);
 
-                // Increment capacities
                 $availableCourseSchedule->increment('current_capacity');
                 ScheduleAssignment::where('available_course_schedule_id', $availableCourseSchedule->id)->increment('enrolled');
             }
@@ -419,10 +475,25 @@ class ProcessImportService
     {
         $this->results['summary']['failed']++;
 
-        $this->results['rows'][] = [
-            'row' => $rowNum,
+        $this->results['failed'][] = [
+            'row_number' => $rowNum,
             'errors' => $errors,
             'original_data' => $originalData,
+            'timestamp' => now()->toISOString(),
         ];
+    }
+
+    /**
+     * Record skipped item with detailed information
+     */
+    private function recordSkippedItem(int $rowNum, array $originalData, array $details): void
+    {
+        $this->results['summary']['skipped']++;
+
+        $this->results['skipped'][] = array_merge($details, [
+            'row_number' => $rowNum,
+            'original_data' => $originalData,
+            'timestamp' => now()->toISOString(),
+        ]);
     }
 }

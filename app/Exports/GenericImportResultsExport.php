@@ -43,17 +43,37 @@ class GenericImportResultsExport implements FromArray
         }
 
         foreach ($this->details as $detail) {
+            $normalized = [];
+
             if (empty($headings)) {
-                $rows[] = array_values((array) $detail);
-            } else {
-                $row = [];
-                foreach ($headings as $h) {
-                    $row[] = $detail[$h] ?? '';
+                $values = array_values((array) $detail);
+                foreach ($values as $value) {
+                    $normalized[] = $this->stringify($value);
                 }
-                $rows[] = $row;
+                $rows[] = $normalized;
+                continue;
             }
+
+            foreach ($headings as $h) {
+                $value = $detail[$h] ?? '';
+                $normalized[] = $this->stringify($value);
+            }
+
+            $rows[] = $normalized;
         }
 
         return $rows;
+    }
+
+    /**
+     * Convert complex values to string for export.
+     */
+    private function stringify(mixed $value): string
+    {
+        if (is_scalar($value) || $value === null) {
+            return (string) ($value ?? '');
+        }
+
+        return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 }

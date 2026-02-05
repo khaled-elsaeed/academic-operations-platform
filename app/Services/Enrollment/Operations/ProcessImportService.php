@@ -39,9 +39,7 @@ class ProcessImportService
             'skipped' => 0,
             'failed' => 0,
         ],
-        'created' => [],
-        'skipped' => [],
-        'failed' => [],
+        'rows' => [],
     ];
 
     public function __construct(
@@ -203,7 +201,7 @@ class ProcessImportService
         ];
 
         $this->results['summary']['created']++;
-        $this->results['created'][] = $enrollmentDetails;
+        $this->recordRowResult('created', 'enrollment', $rowNum, $row, $enrollmentDetails);
     }
 
     /**
@@ -475,12 +473,11 @@ class ProcessImportService
     {
         $this->results['summary']['failed']++;
 
-        $this->results['failed'][] = [
-            'row_number' => $rowNum,
+        $reason = collect($errors)->flatten()->first() ?? 'Unknown error';
+
+        $this->recordRowResult('failed', $reason, $rowNum, $originalData, [
             'errors' => $errors,
-            'original_data' => $originalData,
-            'timestamp' => now()->toISOString(),
-        ];
+        ]);
     }
 
     /**
@@ -490,10 +487,26 @@ class ProcessImportService
     {
         $this->results['summary']['skipped']++;
 
-        $this->results['skipped'][] = array_merge($details, [
+        $detailReason = $details['reason'] ?? null;
+        unset($details['reason']);
+
+        $payload = $detailReason ? array_merge(['detail_reason' => $detailReason], $details) : $details;
+
+        $this->recordRowResult('skipped', 'old enrollment', $rowNum, $originalData, $payload);
+    }
+
+    /**
+     * Record a standardized per-row result entry.
+     */
+    private function recordRowResult(string $status, string $reason, int $rowNum, array $originalData, array $payload = []): void
+    {
+        $this->results['rows'][] = [
+            'status' => $status,
+            'reason' => $reason,
             'row_number' => $rowNum,
             'original_data' => $originalData,
+            'details' => $payload,
             'timestamp' => now()->toISOString(),
-        ]);
+        ];
     }
 }

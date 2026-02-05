@@ -312,8 +312,10 @@ class EnrollmentService
      */
     public function getStats(): array
     {
+        $userId = auth()->id() ?? 'guest';
+        $cacheKey = "enrollment_stats_{$userId}";
 
-        $stats = Cache::remember('enrollment_stats', now()->addMinutes(10), function () {
+        $stats = Cache::remember($cacheKey, now()->addMinutes(10), function () {
             return Enrollment::selectRaw('
                 COUNT(*) as total,
                 COUNT(CASE WHEN grade IS NOT NULL THEN 1 END) as graded,

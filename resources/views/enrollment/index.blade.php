@@ -430,7 +430,7 @@
             completionFields: [
                 { key: 'processed', label: 'Records Processed', type: 'number' },
                 { key: 'created', label: 'Records Created', type: 'number' },
-                { key: 'updated', label: 'Records Updated', type: 'number' },
+                { key: 'skipped', label: 'Records Skipped', type: 'number' },
                 { key: 'failed', label: 'Records Failed', type: 'number' }
             ],
             translations: {

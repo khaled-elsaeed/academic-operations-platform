@@ -136,6 +136,9 @@ class ExportGuidingJob implements ShouldQueue
             $currentRow = 2;
             $processed = 0;
             $courseCounts = [];
+            
+            $minRemaining = isset($parameters['min_remaining_hours']) && $parameters['min_remaining_hours'] !== '' ? (float) $parameters['min_remaining_hours'] : null;
+            $maxRemaining = isset($parameters['max_remaining_hours']) && $parameters['max_remaining_hours'] !== '' ? (float) $parameters['max_remaining_hours'] : null;
 
             foreach ($studentIds as $studentId) {
                 // Check cancellation
@@ -148,6 +151,24 @@ class ExportGuidingJob implements ShouldQueue
                     $student = Student::with(['program', 'level'])->find($studentId);
                     if (!$student)
                         continue;
+
+                    // Filter by remaining to graduate hours if requested
+                    if ($minRemaining !== null || $maxRemaining !== null) {
+                        $programGradHours = $student->program?->total_credit_hours;
+                        if ($programGradHours !== null && $student->taken_credit_hours !== null) {
+                            $remainingToGraduate = max(0, $programGradHours - $student->taken_credit_hours);
+                            
+                            if ($minRemaining !== null && $remainingToGraduate < $minRemaining) {
+                                continue;
+                            }
+                            if ($maxRemaining !== null && $remainingToGraduate > $maxRemaining) {
+                                continue;
+                            }
+                        } else {
+                            // Cannot determine remaining hours; skip if there's a strict constraint
+                            continue;
+                        }
+                    }
 
                     $guidingService = new EnrollmentGuidingService($student->id, $termId);
                     $guide = $guidingService->guide();

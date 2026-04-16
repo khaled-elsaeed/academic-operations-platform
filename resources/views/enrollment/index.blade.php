@@ -242,6 +242,16 @@
                                 <option value="">All Levels</option>
                             </select>
                         </div>
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label for="export_guiding_min_remaining_hours" class="form-label">Min Remaining Hours <span class="text-muted small">(optional)</span></label>
+                                <input type="number" class="form-control" id="export_guiding_min_remaining_hours" name="min_remaining_hours" min="0" placeholder="e.g. 9">
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label for="export_guiding_max_remaining_hours" class="form-label">Max Remaining Hours <span class="text-muted small">(optional)</span></label>
+                                <input type="number" class="form-control" id="export_guiding_max_remaining_hours" name="max_remaining_hours" min="0" placeholder="e.g. 13">
+                            </div>
+                        </div>
                     </form>
                 </x-slot>
                 <x-slot name="footer">
@@ -641,11 +651,15 @@
 
                     const programId = $('#export_guiding_program_id').val();
                     const levelId   = $('#export_guiding_level_id').val();
+                    const minRemaining = $('#export_guiding_min_remaining_hours').val();
+                    const maxRemaining = $('#export_guiding_max_remaining_hours').val();
 
                     const formData = new FormData();
                     formData.append('term_id', termId);
                     if (programId) formData.append('program_id', programId);
                     if (levelId)   formData.append('level_id', levelId);
+                    if (minRemaining !== '') formData.append('min_remaining_hours', minRemaining);
+                    if (maxRemaining !== '') formData.append('max_remaining_hours', maxRemaining);
 
                     ExportGuidingTaskManager.start(formData, {
                         button: $('#submitExportGuidingBtn')

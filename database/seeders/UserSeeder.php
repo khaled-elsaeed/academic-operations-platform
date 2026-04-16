@@ -17,13 +17,14 @@ class UserSeeder extends Seeder
         $user = User::create([
             'first_name' => 'System',
             'last_name' => 'User',
-            'email' => User::SYSTEM_EMAIL,
+            'email' => 'admin2@acadops.com',
             'password' => bcrypt('password'),
         ]);
+
 
         $user->assignRole('admin');
 
         // $adminUser = User::factory()->admin()->create();
         // $adminUser->assignRole('admin');
     }
-} 
+}

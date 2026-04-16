@@ -578,10 +578,12 @@ class EnrollmentController extends Controller
             'term_id'    => 'required|exists:terms,id',
             'program_id' => 'nullable|exists:programs,id',
             'level_id'   => 'nullable|exists:levels,id',
+            'min_remaining_hours' => 'nullable|numeric|min:0',
+            'max_remaining_hours' => 'nullable|numeric|min:0',
         ]);
 
         try {
-            $parameters = $request->only(['term_id', 'program_id', 'level_id']);
+            $parameters = $request->only(['term_id', 'program_id', 'level_id', 'min_remaining_hours', 'max_remaining_hours']);
             $result = $this->exportGuidingTask($parameters);
             return successResponse(__('Guiding export initiated successfully.'), $result);
         } catch (Exception $e) {

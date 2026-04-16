@@ -117,6 +117,11 @@ require __DIR__.'/web/student.php';
 
 require __DIR__.'/web/credit_hours_exceptions.php';
 
+// ====================
+// Include Prerequisite Exceptions Routes
+// ====================
+
+require __DIR__.'/web/prerequisite_exceptions.php';
 
 // ====================
 // Include Academic Advisor Access Routes

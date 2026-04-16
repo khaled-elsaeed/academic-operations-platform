@@ -10,6 +10,7 @@ use App\Services\CreditHoursExceptionService;
 use App\Models\Enrollment;
 use App\Rules\AcademicAdvisorAccessRule;
 use App\Exceptions\BusinessValidationException;
+use App\Jobs\Enrollment\ExportGuidingJob;
 use Exception;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -559,5 +560,142 @@ class EnrollmentController extends Controller
             logError('EnrollmentController@getGuiding', $e, ['student_id' => $request->student_id]);
             return errorResponse('Failed to fetch enrollment guide.', [], 500);
         }
+    }
+
+    // =========================================================================
+    // Guiding Export
+    // =========================================================================
+
+    /**
+     * Start an async guiding export.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function exportGuiding(Request $request): JsonResponse
+    {
+        $request->validate([
+            'term_id'    => 'required|exists:terms,id',
+            'program_id' => 'nullable|exists:programs,id',
+            'level_id'   => 'nullable|exists:levels,id',
+        ]);
+
+        try {
+            $parameters = $request->only(['term_id', 'program_id', 'level_id']);
+            $result = $this->exportGuidingTask($parameters);
+            return successResponse(__('Guiding export initiated successfully.'), $result);
+        } catch (Exception $e) {
+            logError('EnrollmentController@exportGuiding', $e, ['request' => $request->all()]);
+            return errorResponse(__('Failed to initiate guiding export.'), [], 500);
+        }
+    }
+
+    /**
+     * Dispatch the guiding export job and return task info.
+     */
+    private function exportGuidingTask(array $parameters): array
+    {
+        $userId = auth()->id() ?? \App\Models\User::systemUser()->id;
+
+        $task = \App\Traits\Progressable::createTask(
+            type: 'export',
+            userId: $userId,
+            parameters: array_merge(['requested_at' => now()->toIso8601String()], $parameters),
+            subtype: 'guiding',
+        );
+
+        ExportGuidingJob::dispatch($task);
+
+        return [
+            'task_id' => $task->id,
+            'uuid'    => $task->uuid,
+        ];
+    }
+
+    /**
+     * Get guiding export status by UUID.
+     *
+     * @param string $uuid
+     * @return JsonResponse
+     */
+    public function exportGuidingStatus(string $uuid): JsonResponse
+    {
+        try {
+            $task = \App\Models\Task::where('uuid', $uuid)->first();
+            if (!$task) {
+                return errorResponse(__('Export not found.'), [], 404);
+            }
+            $status = [
+                'task_id'        => $task->id,
+                'uuid'           => $task->uuid,
+                'status'         => $task->status,
+                'progress'       => $task->progress,
+                'message'        => $task->message,
+                'status_message' => $task->message,
+                'error'          => $task->error,
+                'result'         => $task->result,
+                'download_url'   => $task->status === 'completed'
+                    ? route('enrollments.exportGuiding.download', ['uuid' => $uuid])
+                    : null,
+            ];
+            return successResponse(__('Export status retrieved successfully.'), $status);
+        } catch (Exception $e) {
+            logError('EnrollmentController@exportGuidingStatus', $e, ['uuid' => $uuid]);
+            return errorResponse(__('Failed to retrieve export status.'), [], 500);
+        }
+    }
+
+    /**
+     * Cancel guiding export task by UUID.
+     *
+     * @param string $uuid
+     * @return JsonResponse
+     */
+    public function exportGuidingCancel(string $uuid): JsonResponse
+    {
+        try {
+            $task = \App\Models\Task::where('uuid', $uuid)->first();
+            if (!$task) {
+                return errorResponse(__('Export not found.'), [], 404);
+            }
+            if (in_array($task->status, ['completed', 'failed'])) {
+                return errorResponse(__('Cannot cancel a completed or failed export.'), [], 422);
+            }
+            $task->update(['status' => 'cancelled', 'error' => 'Export was cancelled by user.']);
+            return successResponse(__('Export cancelled successfully.'));
+        } catch (Exception $e) {
+            logError('EnrollmentController@exportGuidingCancel', $e, ['uuid' => $uuid]);
+            return errorResponse(__('Failed to cancel export.'), [], 500);
+        }
+    }
+
+    /**
+     * Download completed guiding export file by UUID.
+     *
+     * @param string $uuid
+     * @return BinaryFileResponse|JsonResponse
+     */
+    public function exportGuidingDownload(string $uuid): BinaryFileResponse|JsonResponse
+    {
+        $task = \App\Models\Task::where('uuid', $uuid)->first();
+
+        if (!$task) {
+            return response()->json(['success' => false, 'message' => __('Export not found.')], 404);
+        }
+        if ($task->status !== 'completed') {
+            return response()->json(['success' => false, 'message' => __('Export is not ready for download.'), 'current_status' => $task->status], 400);
+        }
+
+        $result   = $task->result ?? [];
+        $filePath = $result['file_path'] ?? null;
+        $filename = $result['filename']  ?? 'guiding_export.xlsx';
+
+        if (!$filePath || !\Illuminate\Support\Facades\Storage::disk('local')->exists($filePath)) {
+            return response()->json(['success' => false, 'message' => __('Export file not found.')], 404);
+        }
+
+        return response()
+            ->download(\Illuminate\Support\Facades\Storage::disk('local')->path($filePath), $filename)
+            ->deleteFileAfterSend(false);
     }
 }

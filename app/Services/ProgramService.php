@@ -28,7 +28,8 @@ class ProgramService
         return Program::create([
             'name' => $data['name'],
             'code' => $data['code'],
-            'faculty_id' => $data['faculty_id']
+            'faculty_id' => $data['faculty_id'],
+            'total_credit_hours' => $data['total_credit_hours'] ?? null,
         ]);
     }
 
@@ -52,7 +53,8 @@ class ProgramService
         $program->update([
             'name' => $data['name'],
             'code' => $data['code'],
-            'faculty_id' => $data['faculty_id']
+            'faculty_id' => $data['faculty_id'],
+            'total_credit_hours' => $data['total_credit_hours'] ?? null,
         ]);
         return $program;
     }
@@ -142,6 +144,7 @@ class ProgramService
                 'code' => $program->code,
                 'faculty_id' => $program->faculty_id,
                 'faculty_name' => $program->faculty ? $program->faculty->name : 'N/A',
+                'total_credit_hours' => $program->total_credit_hours,
             ];
         })->toArray();
     }

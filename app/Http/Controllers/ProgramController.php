@@ -71,7 +71,8 @@ class ProgramController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:50|unique:programs,code',
-            'faculty_id' => 'required|exists:faculties,id'
+            'faculty_id' => 'required|exists:faculties,id',
+            'total_credit_hours' => 'nullable|integer|min:0'
         ]);
 
         try {
@@ -113,7 +114,8 @@ class ProgramController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:50|unique:programs,code,' . $program->id,
-            'faculty_id' => 'required|exists:faculties,id'
+            'faculty_id' => 'required|exists:faculties,id',
+            'total_credit_hours' => 'nullable|integer|min:0'
         ]);
 
         try {

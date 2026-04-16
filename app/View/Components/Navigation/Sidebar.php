@@ -177,7 +177,7 @@ class Sidebar extends Component
                 'icon' => 'bx bx-user-plus',
                 'route' => '#',
                 'type' => 'group',
-                'active' => $this->isActiveGroup(['students', 'enrollments', 'credit-hours-exceptions']),
+                'active' => $this->isActiveGroup(['students', 'enrollments', 'credit-hours-exceptions', 'prerequisite-exceptions']),
                 'children' => [
                     [
                         'title' => 'Students',
@@ -228,6 +228,13 @@ class Sidebar extends Component
                         'route' => route('credit-hours-exceptions.index'),
                         'active' => request()->routeIs('credit-hours-exceptions.*'),
                         'permission' => 'credit_hours_exception.view',
+                    ],
+                    [
+                        'title' => 'Prerequisite Exceptions',
+                        'icon' => 'bx bx-skip-previous',
+                        'route' => route('prerequisite-exceptions.index'),
+                        'active' => request()->routeIs('prerequisite-exceptions.*'),
+                        'permission' => 'prerequisite_exception.view',
                     ],
                 ],
             ],

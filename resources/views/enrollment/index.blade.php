@@ -29,6 +29,9 @@
                     <button class="btn btn-success" id="exportBtn">
                         <i class="bx bx-download"></i> Export
                     </button>
+                    <button class="btn btn-info text-white" id="exportGuidingBtn">
+                        <i class="bx bx-compass"></i> Export Guiding
+                    </button>
                 @endcan
                 <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse"
                     data-bs-target="#enrollmentSearchCollapse">
@@ -200,9 +203,64 @@
             </x-ui.modal>
         @endcan
 
-        <!-- Progress Modal -->
+        @can('enrollment.export')
+            <!-- Export Guiding Modal -->
+            <x-ui.modal id="exportGuidingModal" :title="'Export Guiding'" scrollable="false" class="export-guiding-modal">
+                <x-slot name="slot">
+                    <form id="exportGuidingForm">
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="d-flex align-items-center p-3 rounded" style="background: linear-gradient(135deg, #EFF6FF, #DBEAFE);">
+                                    <div class="flex-shrink-0">
+                                        <i class="bx bx-compass fs-2 text-info"></i>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-1 text-info">Guiding Export</h6>
+                                        <p class="mb-0 text-muted small">
+                                            Export an Excel sheet with every student's recommendations and missing courses for the selected term.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="export_guiding_term_id" class="form-label fw-semibold">Term <span class="text-danger">*</span></label>
+                            <select class="form-select" id="export_guiding_term_id" name="term_id" required>
+                                <option value="">Select a term</option>
+                            </select>
+                            <div class="invalid-feedback d-block" id="export_guiding_term_error"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="export_guiding_program_id" class="form-label">Program <span class="text-muted small">(optional)</span></label>
+                            <select class="form-select" id="export_guiding_program_id" name="program_id">
+                                <option value="">All Programs</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="export_guiding_level_id" class="form-label">Level <span class="text-muted small">(optional)</span></label>
+                            <select class="form-select" id="export_guiding_level_id" name="level_id">
+                                <option value="">All Levels</option>
+                            </select>
+                        </div>
+                    </form>
+                </x-slot>
+                <x-slot name="footer">
+                    <div class="d-flex justify-content-between w-100">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="bx bx-x me-1"></i>Cancel
+                        </button>
+                        <button type="button" class="btn btn-info text-white" id="submitExportGuidingBtn">
+                            <i class="bx bx-download me-1"></i>Export Guiding
+                        </button>
+                    </div>
+                </x-slot>
+            </x-ui.modal>
+        @endcan
+
+        <!-- Progress Modals -->
         <x-progress-modal modalId="importProgressModal" modalTitle="Importing Enrollments" />
         <x-progress-modal modalId="exportProgressModal" modalTitle="Exporting Enrollments" />
+        <x-progress-modal modalId="exportGuidingProgressModal" modalTitle="Exporting Guiding" />
 
     </div>
 @endsection
@@ -227,7 +285,11 @@
                 export: @json(route('enrollments.export')),
                 exportStatus: @json(route('enrollments.export.status', ['uuid' => ':uuid'])),
                 exportCancel: @json(route('enrollments.export.cancel', ['uuid' => ':uuid'])),
-                exportDownload: @json(route('enrollments.export.download', ['uuid' => ':uuid']))
+                exportDownload: @json(route('enrollments.export.download', ['uuid' => ':uuid'])),
+                exportGuiding: @json(route('enrollments.exportGuiding')),
+                exportGuidingStatus: @json(route('enrollments.exportGuiding.status', ['uuid' => ':uuid'])),
+                exportGuidingCancel: @json(route('enrollments.exportGuiding.cancel', ['uuid' => ':uuid'])),
+                exportGuidingDownload: @json(route('enrollments.exportGuiding.download', ['uuid' => ':uuid']))
             },
             terms: {
                 all: @json(route('terms.all.with_inactive'))
@@ -285,6 +347,7 @@
         // ===========================
         const ImportModal = Utils.createModalManager('importModal');
         const ExportModal = Utils.createModalManager('exportModal');
+        const ExportGuidingModal = Utils.createModalManager('exportGuidingModal');
 
         // ===========================
         // STATS MANAGER
@@ -317,6 +380,11 @@
                 Utils.initSelect2('#export_term_id', { dropdownParent: $('#exportModal') });
                 Utils.initSelect2('#export_program_id', { dropdownParent: $('#exportModal') });
                 Utils.initSelect2('#export_level_id', { dropdownParent: $('#exportModal') });
+
+                // Initialize export guiding modal select2
+                Utils.initSelect2('#export_guiding_term_id', { dropdownParent: $('#exportGuidingModal') });
+                Utils.initSelect2('#export_guiding_program_id', { dropdownParent: $('#exportGuidingModal') });
+                Utils.initSelect2('#export_guiding_level_id', { dropdownParent: $('#exportGuidingModal') });
             },
 
             async loadSearchOptions() {
@@ -364,9 +432,16 @@
                         Utils.populateSelect('#export_term_id', Utils.getResponseData(termsRes), {
                             valueField: 'id', textField: 'name', placeholder: 'All Terms'
                         });
+                        // Also populate the guiding export term select
+                        Utils.populateSelect('#export_guiding_term_id', Utils.getResponseData(termsRes), {
+                            valueField: 'id', textField: 'name', placeholder: 'Select a term'
+                        }, false);
                     }
                     if (Utils.isResponseSuccess(programsRes)) {
                         Utils.populateSelect('#export_program_id', Utils.getResponseData(programsRes), {
+                            valueField: 'id', textField: 'name', placeholder: 'All Programs'
+                        });
+                        Utils.populateSelect('#export_guiding_program_id', Utils.getResponseData(programsRes), {
                             valueField: 'id', textField: 'name', placeholder: 'All Programs'
                         });
                     }
@@ -374,9 +449,10 @@
                         Utils.populateSelect('#export_level_id', Utils.getResponseData(levelsRes), {
                             valueField: 'id', textField: 'name', placeholder: 'All Levels'
                         });
+                        Utils.populateSelect('#export_guiding_level_id', Utils.getResponseData(levelsRes), {
+                            valueField: 'id', textField: 'name', placeholder: 'All Levels'
+                        });
                     }
-
-
                 } catch (error) {
                     console.error("Failed to load export options", error);
                     Utils.showError("Failed to load some export options");
@@ -468,6 +544,30 @@
         });
 
         // ===========================
+        // EXPORT GUIDING TASK MANAGER
+        // ===========================
+        const ExportGuidingTaskManager = Utils.createAsyncTaskManager({
+            startRoute: ROUTES.enrollments.exportGuiding,
+            checkStatusRoute: ROUTES.enrollments.exportGuidingStatus,
+            cancelRoute: ROUTES.enrollments.exportGuidingCancel,
+            downloadRoute: ROUTES.enrollments.exportGuidingDownload,
+            progressModalId: 'exportGuidingProgressModal',
+            taskName: 'Guiding Export',
+            onStart() {
+                ExportGuidingModal.hide();
+            },
+            completionFields: [],
+            translations: {
+                processing: 'The guiding export is being processed. This may take a few minutes.',
+                taskInitializing: 'The guiding export task is initializing.',
+                taskPreparing: 'The guiding export task is preparing the data.',
+                taskCompleted: 'The guiding export task has completed.',
+                taskFailed: 'The guiding export task has failed.',
+                statusCheckFailed: 'Failed to check the status of the guiding export task.'
+            }
+        });
+
+        // ===========================
         // IMPORT MANAGER
         // ===========================
         const ImportManager = {
@@ -521,6 +621,40 @@
         };
 
         // ===========================
+        // EXPORT GUIDING MANAGER
+        // ===========================
+        const ExportGuidingManager = {
+            init() {
+                $('#exportGuidingBtn').on('click', () => {
+                    // Reset validation
+                    $('#export_guiding_term_error').text('');
+                    ExportGuidingModal.show();
+                });
+
+                $('#submitExportGuidingBtn').on('click', () => {
+                    const termId = $('#export_guiding_term_id').val();
+                    if (!termId) {
+                        $('#export_guiding_term_error').text('Please select a term to export guiding for.');
+                        return;
+                    }
+                    $('#export_guiding_term_error').text('');
+
+                    const programId = $('#export_guiding_program_id').val();
+                    const levelId   = $('#export_guiding_level_id').val();
+
+                    const formData = new FormData();
+                    formData.append('term_id', termId);
+                    if (programId) formData.append('program_id', programId);
+                    if (levelId)   formData.append('level_id', levelId);
+
+                    ExportGuidingTaskManager.start(formData, {
+                        button: $('#submitExportGuidingBtn')
+                    });
+                });
+            }
+        };
+
+        // ===========================
         // DELETE MANAGER
         // ===========================
         const DeleteManager = {
@@ -567,6 +701,8 @@
             ImportTaskManager.init();
             ExportManager.init();
             ExportTaskManager.init();
+            ExportGuidingManager.init();
+            ExportGuidingTaskManager.init();
             TemplateManager.init();
             DeleteManager.init();
 

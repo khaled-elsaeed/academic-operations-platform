@@ -149,7 +149,7 @@ class ProcessImportService
 
         $this->validateTotalCreditHours($student->id, $term->id, $course);
 
-        $this->validatePrerequisites($student, $course);
+        $this->validatePrerequisites($student, $course, $term->id);
 
         $this->validateTimeConflicts($student->id, $term->id, $availableCourseSchedules);
 
@@ -313,12 +313,22 @@ class ProcessImportService
     /**
      * Validate course prerequisites are met.
      */
-    private function validatePrerequisites(Student $student, Course $course): void
+    private function validatePrerequisites(Student $student, Course $course, int $termId): void
     {
         $course->loadMissing('prerequisites');
 
-        $unmetPrerequisites = $course->prerequisites->filter(function ($prerequisite) use ($student) {
-            return !$this->hasPassedCourse($student->id, $prerequisite->id);
+        $unmetPrerequisites = $course->prerequisites->filter(function ($prerequisite) use ($student, $course, $termId) {
+            // Check if student has passed the prerequisite course
+            if ($this->hasPassedCourse($student->id, $prerequisite->id)) {
+                return false;
+            }
+
+            // Check if student has an active exception for this prerequisite
+            if ($this->hasPrerequisiteException($student->id, $course->id, $prerequisite->id, $termId)) {
+                return false;
+            }
+
+            return true;
         });
 
         if ($unmetPrerequisites->isNotEmpty()) {
@@ -327,6 +337,19 @@ class ProcessImportService
                 "Prerequisite not met: {$prerequisiteName} must be passed before enrolling in {$course->name}."
             );
         }
+    }
+
+    /**
+     * Check if student has an active prerequisite exception.
+     */
+    private function hasPrerequisiteException(int $studentId, int $courseId, int $prerequisiteId, int $termId): bool
+    {
+        return \App\Models\PrerequisiteException::where('student_id', $studentId)
+            ->where('course_id', $courseId)
+            ->where('prerequisite_id', $prerequisiteId)
+            ->where('term_id', $termId)
+            ->where('is_active', true)
+            ->exists();
     }
 
     /**

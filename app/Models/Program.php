@@ -20,6 +20,7 @@ class Program extends Model
         'name',
         'code',
         'faculty_id',
+        'total_credit_hours',
     ];
 
     /**

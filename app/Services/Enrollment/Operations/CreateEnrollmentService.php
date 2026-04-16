@@ -131,7 +131,7 @@ class CreateEnrollmentService
         array $enrollmentData
     ): void {
         $this->checkDuplicateEnrollment($studentId, $termId, $availableCourse->course_id, $availableCourse->course->name);
-        $this->validatePrerequisites($studentId, $availableCourse->course);
+        $this->validatePrerequisites($studentId, $termId, $availableCourse->course);
         
         if ($this->shouldAttachSchedules($enrollmentData)) {
             $this->validateScheduleIds($enrollmentData['selected_schedule_ids'] ?? []);
@@ -160,10 +160,20 @@ class CreateEnrollmentService
     /**
      * Validate course prerequisites are met.
      */
-    private function validatePrerequisites(int $studentId, Course $course): void
+    private function validatePrerequisites(int $studentId, int $termId, Course $course): void
     {
-        $unmetPrerequisites = $course->prerequisites->filter(function ($prerequisite) use ($studentId) {
-            return !$this->hasPassedCourse($studentId, $prerequisite->id);
+        $unmetPrerequisites = $course->prerequisites->filter(function ($prerequisite) use ($studentId, $termId, $course) {
+            // Check if student has passed the prerequisite course
+            if ($this->hasPassedCourse($studentId, $prerequisite->id)) {
+                return false;
+            }
+
+            // Check if student has an active exception for this prerequisite
+            if ($this->hasPrerequisiteException($studentId, $course->id, $prerequisite->id, $termId)) {
+                return false;
+            }
+
+            return true;
         });
 
         if ($unmetPrerequisites->isNotEmpty()) {
@@ -173,6 +183,19 @@ class CreateEnrollmentService
                 422
             );
         }
+    }
+
+    /**
+     * Check if student has an active prerequisite exception.
+     */
+    private function hasPrerequisiteException(int $studentId, int $courseId, int $prerequisiteId, int $termId): bool
+    {
+        return \App\Models\PrerequisiteException::where('student_id', $studentId)
+            ->where('course_id', $courseId)
+            ->where('prerequisite_id', $prerequisiteId)
+            ->where('term_id', $termId)
+            ->where('is_active', true)
+            ->exists();
     }
 
     /**

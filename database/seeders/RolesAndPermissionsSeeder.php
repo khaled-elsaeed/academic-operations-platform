@@ -64,6 +64,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'credit_hours_exception.create',
             'credit_hours_exception.edit',
             'credit_hours_exception.delete',
+            // Prerequisite Exception Permissions
+            'prerequisite_exception.view',
+            'prerequisite_exception.create',
+            'prerequisite_exception.edit',
+            'prerequisite_exception.delete',
             // Home Dashboard Permissions
             'home.view',
             'home.admin',

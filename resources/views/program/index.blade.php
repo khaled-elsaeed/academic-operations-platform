@@ -76,11 +76,12 @@
 
     {{-- ===== DATA TABLE ===== --}}
     <x-ui.datatable
-        :headers="['Name', 'Code', 'Faculty', 'Students Count', 'Action']"
+        :headers="['Name', 'Code', 'Faculty', 'Total Hours', 'Students Count', 'Action']"
         :columns="[
             ['data' => 'name', 'name' => 'name'],
             ['data' => 'code', 'name' => 'code'],
             ['data' => 'faculty_name', 'name' => 'faculty_name'],
+            ['data' => 'total_credit_hours', 'name' => 'total_credit_hours'],
             ['data' => 'students_count', 'name' => 'students_count'],
             ['data' => 'action', 'name' => 'action', 'orderable' => false, 'searchable' => false],
         ]"
@@ -110,12 +111,16 @@
                         <label for="code" class="form-label">Program Code</label>
                         <input type="text" class="form-control" id="code" name="code" required>
                     </div>
-                    <div class="col-md-12 mb-3">
+                    <div class="col-md-6 mb-3">
                         <label for="faculty_id" class="form-label">Faculty</label>
                         <select class="form-control" id="faculty_id" name="faculty_id" required>
                             <option value="">Select Faculty</option>
                             <!-- Options will be loaded via AJAX -->
                         </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="total_credit_hours" class="form-label">Total Credit Hours for Graduation</label>
+                        <input type="number" class="form-control" id="total_credit_hours" name="total_credit_hours" min="0" placeholder="e.g. 144">
                     </div>
                 </div>
             </form>
@@ -308,6 +313,7 @@ const ProgramManager = {
     $(SELECTORS.addProgramBtn).on('click', () => {
       $(SELECTORS.programForm)[0].reset();
       $('#program_id').val('');
+      $('#total_credit_hours').val('');
       $(SELECTORS.programModal + ' .modal-title').text('Add Program');
       $(SELECTORS.saveProgramBtn).text('Save');
       DropdownManager.loadFaculties(SELECTORS.facultySelect);
@@ -348,6 +354,7 @@ const ProgramManager = {
           $('#program_id').val(prog.id);
           $('#name').val(prog.name);
           $('#code').val(prog.code);
+          $('#total_credit_hours').val(prog.total_credit_hours);
           DropdownManager.loadFaculties(SELECTORS.facultySelect, prog.faculty_id);
           $(SELECTORS.programModal + ' .modal-title').text('Edit Program');
           $(SELECTORS.saveProgramBtn).text('Update');

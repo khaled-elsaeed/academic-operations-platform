@@ -42,6 +42,11 @@ Route::middleware('auth')
         Route::post('/export-documents/cancel/{uuid}', 'exportDocumentsCancel')->name('exportDocuments.cancel')->middleware('can:enrollment.export');
         Route::get('/export-documents/download/{uuid}', 'exportDocumentsDownload')->name('exportDocuments.download')->middleware('can:enrollment.export');
         Route::post('remaining-credit-hours', 'getRemainingCreditHours')->name('remainingCreditHours')->middleware('can:enrollment.view');
+        // Guiding export
+        Route::post('export-guiding', 'exportGuiding')->name('exportGuiding')->middleware('can:enrollment.export');
+        Route::get('/export-guiding/status/{uuid}', 'exportGuidingStatus')->name('exportGuiding.status')->middleware('can:enrollment.export');
+        Route::post('/export-guiding/cancel/{uuid}', 'exportGuidingCancel')->name('exportGuiding.cancel')->middleware('can:enrollment.export');
+        Route::get('/export-guiding/download/{uuid}', 'exportGuidingDownload')->name('exportGuiding.download')->middleware('can:enrollment.export');
 
         // ===== CRUD Operations =====
         // List & View

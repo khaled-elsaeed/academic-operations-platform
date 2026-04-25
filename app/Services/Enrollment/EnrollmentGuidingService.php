@@ -18,8 +18,8 @@ use InvalidArgumentException;
 
 class EnrollmentGuidingService
 {
-    private const PASSING_GRADES = ['A+','A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'P'];
-    
+    private const PASSING_GRADES = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'P'];
+
     private int $studentLvl;
 
     private int $semesterNo;
@@ -32,15 +32,25 @@ class EnrollmentGuidingService
         'incomplete_courses' => [],
     ];
 
+    // Added property to store courses that have been taken globally
+    private array $globallyEnrolledCourseIds = [];
+
     public function __construct(
         private readonly int $studentId,
         private readonly ?int $termId = null
-    ) {}
+    ) {
+    }
 
     public function guide(): array
     {
         try {
             $this->assignStudentInfo();
+
+            // Fetch all unique course IDs that have ever been enrolled by any student
+            $this->globallyEnrolledCourseIds = Enrollment::whereNotNull('course_id')
+                ->distinct()
+                ->pluck('course_id')
+                ->toArray();
 
             $this->coursesHistory = $this->getStudentCoursesHistory();
 
@@ -119,9 +129,9 @@ class EnrollmentGuidingService
 
         foreach ($enrollments as $enrollment) {
             $course = $enrollment->course;
-            
+
             if (!$course) {
-                continue; 
+                continue;
             }
 
             $entry = [
@@ -150,18 +160,17 @@ class EnrollmentGuidingService
             ->where('program_id', $this->programId)
             ->where('semester_no', $this->semesterNo)
             ->get();
-        
+
         $passedCourseIds = collect($this->coursesHistory['passed_courses'])
             ->pluck('course.id')
             ->toArray();
-            
+
         $incompleteCourseIds = collect($this->coursesHistory['incomplete_courses'])
             ->pluck('course.id')
             ->toArray();
 
         $courses = [];
-        $courses = [];
-        
+
         // Program Electives (Original E1, E2...)
         $electiveSlotCount = 0;
         $electiveSlotCodes = [];
@@ -176,55 +185,65 @@ class EnrollmentGuidingService
 
         foreach ($studyPlans as $studyPlan) {
             if ($studyPlan->course) {
-                $available = $this->arePrerequisitesMet($studyPlan->course, $passedCourseIds);
-                $courses[] = [
-                    'course' => $studyPlan->course,
-                    'available' => $available,
-                    'is_passed' => in_array($studyPlan->course->id, $passedCourseIds),
-                    'is_incomplete' => in_array($studyPlan->course->id, $incompleteCourseIds),
-                    'reason' => $available ? null : 'Prerequisites not met'
-                ];
+                // Check if course has been taken globally before
+                if (in_array($studyPlan->course->id, $this->globallyEnrolledCourseIds)) {
+                    $available = $this->arePrerequisitesMet($studyPlan->course, $passedCourseIds);
+                    $courses[] = [
+                        'course' => $studyPlan->course,
+                        'available' => $available,
+                        'is_passed' => in_array($studyPlan->course->id, $passedCourseIds),
+                        'is_incomplete' => in_array($studyPlan->course->id, $incompleteCourseIds),
+                        'reason' => $available ? null : 'Prerequisites not met'
+                    ];
+                }
             } elseif ($studyPlan->electiveCourse) {
                 $electiveSlotCount++;
                 $electiveSlotCodes[] = $studyPlan->electiveCourse->code;
-                
+
                 $groupSetId = $this->getGroupSetIdForElective($studyPlan->electiveCourse->id);
                 if ($groupSetId && !isset($processedElectiveGroupSets[$groupSetId])) {
                     $processedElectiveGroupSets[$groupSetId] = true;
                     $pool = $this->getElectivePoolForGroupSet($groupSetId);
                     foreach ($pool as $courseId => $course) {
-                        $electiveMasterPool[$courseId] = $course;
+                        // Filter elective pool by globally enrolled courses
+                        if (in_array($courseId, $this->globallyEnrolledCourseIds)) {
+                            $electiveMasterPool[$courseId] = $course;
+                        }
                     }
                 }
             } elseif ($studyPlan->universityRequirement) {
                 $req = $studyPlan->universityRequirement;
-                
+
                 if ($req->type === 'elective') {
-                    if ($req->course) {
-                         $available = $this->arePrerequisitesMet($req->course, $passedCourseIds);
-                         $courses[] = [
+                    // Check if university requirement elective has been taken globally before
+                    if ($req->course && in_array($req->course->id, $this->globallyEnrolledCourseIds)) {
+                        $available = $this->arePrerequisitesMet($req->course, $passedCourseIds);
+                        $courses[] = [
                             'course' => $req->course,
                             'available' => $available,
                             'is_passed' => in_array($req->course->id, $passedCourseIds),
                             'is_incomplete' => in_array($req->course->id, $incompleteCourseIds),
                             'reason' => $available ? null : 'Prerequisites not met'
-                         ];
+                        ];
                     }
                 } elseif ($req->type === 'compulsory') {
-                    $groupSet = $req->groupSet;                     
+                    $groupSet = $req->groupSet;
                     if ($groupSet) {
-                        $urSlotCount++; 
+                        $urSlotCount++;
                         $urSlotCodes[] = $req->code;
-                        
-                        $gsId = 'UR_' . $groupSet->id; 
-                        
+
+                        $gsId = 'UR_' . $groupSet->id;
+
                         if (!isset($processedUrGroupSets[$gsId])) {
                             $processedUrGroupSets[$gsId] = true;
-                           if ($groupSet->courses) {
-                               foreach ($groupSet->courses as $course) {
-                                   $urMasterPool[$course->id] = $course;
-                               }
-                           }
+                            if ($groupSet->courses) {
+                                foreach ($groupSet->courses as $course) {
+                                    // Filter compulsory UR pool by globally enrolled courses
+                                    if (in_array($course->id, $this->globallyEnrolledCourseIds)) {
+                                        $urMasterPool[$course->id] = $course;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -259,7 +278,7 @@ class EnrollmentGuidingService
         foreach ($masterPool as $courseId => $course) {
             $available = $this->arePrerequisitesMet($course, $passedCourseIds);
             $isTaken = in_array($courseId, $passedCourseIds) || in_array($courseId, $incompleteCourseIds);
-            
+
             $formattedPool[] = [
                 'course' => $course,
                 'available' => $available,
@@ -270,12 +289,12 @@ class EnrollmentGuidingService
             ];
         }
 
-        usort($formattedPool, function($a, $b) {
+        usort($formattedPool, function ($a, $b) {
             $scoreA = ($a['is_taken'] ? 3 : ($a['available'] ? 1 : 2));
             $scoreB = ($b['is_taken'] ? 3 : ($b['available'] ? 1 : 2));
             return $scoreA <=> $scoreB;
         });
-        
+
         return $formattedPool;
     }
 
@@ -285,7 +304,7 @@ class EnrollmentGuidingService
     private function arePrerequisitesMet(Course $course, array $passedCourseIds): bool
     {
         $prerequisiteIds = $course->prerequisites->pluck('id')->toArray();
-        
+
         if (empty($prerequisiteIds)) {
             return true;
         }
@@ -317,7 +336,7 @@ class EnrollmentGuidingService
         $passedCourseIds = collect($this->coursesHistory['passed_courses'])
             ->pluck('course.id')
             ->toArray();
-            
+
         $incompleteCourseIds = collect($this->coursesHistory['incomplete_courses'])
             ->pluck('course.id')
             ->toArray();
@@ -329,10 +348,11 @@ class EnrollmentGuidingService
 
         foreach ($previousPlans as $plan) {
             if ($plan->course) {
-                if (!in_array($plan->course->id, $passedCourseIds)) {
+                // Ensure core missing course has been taken globally before
+                if (in_array($plan->course->id, $this->globallyEnrolledCourseIds) && !in_array($plan->course->id, $passedCourseIds)) {
                     $available = $this->arePrerequisitesMet($plan->course, $passedCourseIds);
                     $isTaken = in_array($plan->course->id, $incompleteCourseIds);
-                    
+
                     $missingCore[] = [
                         'course' => $plan->course,
                         'semester' => $plan->semester_no,
@@ -342,43 +362,44 @@ class EnrollmentGuidingService
                     ];
                 }
             } elseif ($plan->electiveCourse) {
-                 $electiveId = $plan->electiveCourse->id;
-                 $code = $plan->electiveCourse->code;
-                 $groupSetId = $this->getGroupSetIdForElective($electiveId);
-                 
-                 // Track requirements by group set ID to consolidate
-                 if ($groupSetId) {
-                     if (!isset($electiveRequirements[$groupSetId])) {
-                         $electiveRequirements[$groupSetId] = ['count' => 0, 'codes' => []];
-                     }
-                     $electiveRequirements[$groupSetId]['count']++;
-                     $electiveRequirements[$groupSetId]['codes'][] = $code;
-                 }
+                $electiveId = $plan->electiveCourse->id;
+                $code = $plan->electiveCourse->code;
+                $groupSetId = $this->getGroupSetIdForElective($electiveId);
+
+                // Track requirements by group set ID to consolidate
+                if ($groupSetId) {
+                    if (!isset($electiveRequirements[$groupSetId])) {
+                        $electiveRequirements[$groupSetId] = ['count' => 0, 'codes' => []];
+                    }
+                    $electiveRequirements[$groupSetId]['count']++;
+                    $electiveRequirements[$groupSetId]['codes'][] = $code;
+                }
             } elseif ($plan->universityRequirement) {
                 $req = $plan->universityRequirement;
-                
+
                 if ($req->type === 'elective') {
-                    if ($req->course && !in_array($req->course->id, $passedCourseIds)) {
-                         $available = $this->arePrerequisitesMet($req->course, $passedCourseIds);
-                         $isTaken = in_array($req->course->id, $incompleteCourseIds);
-                         $missingCore[] = [
+                    // Ensure UR missing elective course has been taken globally before
+                    if ($req->course && in_array($req->course->id, $this->globallyEnrolledCourseIds) && !in_array($req->course->id, $passedCourseIds)) {
+                        $available = $this->arePrerequisitesMet($req->course, $passedCourseIds);
+                        $isTaken = in_array($req->course->id, $incompleteCourseIds);
+                        $missingCore[] = [
                             'course' => $req->course,
                             'semester' => $plan->semester_no,
                             'available' => $available,
                             'is_incomplete' => $isTaken,
                             'reason' => $available ? null : 'Prerequisites not met'
-                         ];
+                        ];
                     }
                 } elseif ($req->type === 'compulsory') {
-                     $groupSet = $req->groupSet;
-                     if ($groupSet) {
-                         $gsId = 'UR_' . $groupSet->id;
-                         if (!isset($urRequirements[$gsId])) {
-                              $urRequirements[$gsId] = ['count' => 0, 'codes' => [], 'group_set' => $groupSet];
-                         }
-                         $urRequirements[$gsId]['count']++;
-                         $urRequirements[$gsId]['codes'][] = $req->code;
-                     }
+                    $groupSet = $req->groupSet;
+                    if ($groupSet) {
+                        $gsId = 'UR_' . $groupSet->id;
+                        if (!isset($urRequirements[$gsId])) {
+                            $urRequirements[$gsId] = ['count' => 0, 'codes' => [], 'group_set' => $groupSet];
+                        }
+                        $urRequirements[$gsId]['count']++;
+                        $urRequirements[$gsId]['codes'][] = $req->code;
+                    }
                 }
             }
         }
@@ -401,52 +422,58 @@ class EnrollmentGuidingService
             'codes' => [],
             'pool' => []
         ];
-        
+
         $masterPool = [];
 
         foreach ($requirements as $groupSetId => $data) {
-             $requiredCount = $data['count'];
-             $codes = $data['codes'];
-             
-             if ($isUr) {
-                 $pool = $data['group_set']->courses ?? [];
-             } else {
-                 $pool = $this->getElectivePoolForGroupSet($groupSetId);
-             }
-             
-             // Count how many from this pool are passed
-             $passedCount = 0;
-             foreach ($pool as $course) {
-                 if (in_array($course->id, $passedCourseIds)) {
-                     $passedCount++;
-                 }
-             }
-             
-             $missingCount = max(0, $requiredCount - $passedCount);
-             
-             if ($missingCount > 0) {
-                 $missingData['count'] += $missingCount;
-                 $missingData['codes'] = array_merge($missingData['codes'], $codes);
+            $requiredCount = $data['count'];
+            $codes = $data['codes'];
 
-                 // Add available courses to master pool
-                 foreach ($pool as $course) {
-                     if (isset($masterPool[$course->id])) continue;
-                     if (in_array($course->id, $passedCourseIds)) continue;
+            if ($isUr) {
+                $pool = $data['group_set']->courses ?? [];
+            } else {
+                $pool = $this->getElectivePoolForGroupSet($groupSetId);
+            }
 
-                     $available = $this->arePrerequisitesMet($course, $passedCourseIds);
-                     $isTaken = in_array($course->id, $incompleteCourseIds);
+            // Count how many from this pool are passed
+            $passedCount = 0;
+            foreach ($pool as $course) {
+                if (in_array($course->id, $passedCourseIds)) {
+                    $passedCount++;
+                }
+            }
 
-                     $masterPool[$course->id] = $course;
-                 }
-             }
+            $missingCount = max(0, $requiredCount - $passedCount);
+
+            if ($missingCount > 0) {
+                $missingData['count'] += $missingCount;
+                $missingData['codes'] = array_merge($missingData['codes'], $codes);
+
+                // Add available courses to master pool
+                foreach ($pool as $course) {
+                    // Check if pool item has been taken globally before
+                    if (!in_array($course->id, $this->globallyEnrolledCourseIds))
+                        continue;
+
+                    if (isset($masterPool[$course->id]))
+                        continue;
+                    if (in_array($course->id, $passedCourseIds))
+                        continue;
+
+                    $available = $this->arePrerequisitesMet($course, $passedCourseIds);
+                    $isTaken = in_array($course->id, $incompleteCourseIds);
+
+                    $masterPool[$course->id] = $course;
+                }
+            }
         }
 
         $missingData['codes'] = array_values(array_unique($missingData['codes']));
         $missingData['pool'] = $this->formatAndSortPool($masterPool, $passedCourseIds, $incompleteCourseIds);
-        
+
         return $missingData;
     }
-    
+
 
     /**
      * Get the ElectiveGroupSet ID for a given ElectiveCourse (e.g., E1, E2) that belongs to this program
@@ -454,17 +481,17 @@ class EnrollmentGuidingService
     private function getGroupSetIdForElective(int $electiveId): ?int
     {
         $setItems = ElectiveGroupSetItem::where('elective_group_id', $electiveId)->get();
-        
+
         foreach ($setItems as $setItem) {
             $curriculumGroup = CurriculumElectiveGroup::where('program_id', $this->programId)
                 ->where('elective_group_set_id', $setItem->elective_group_set_id)
                 ->first();
-            
+
             if ($curriculumGroup) {
                 return $setItem->elective_group_set_id;
             }
         }
-        
+
         return null;
     }
 
